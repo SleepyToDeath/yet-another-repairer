@@ -35,5 +35,8 @@ RUN raco pkg config --set catalogs \
 RUN echo "Installing Rosette" \
     && raco pkg install --batch --deps search-auto rosette
 
-CMD ["racket"]
+WORKDIR /repairer
+COPY src /repairer/src
+COPY test /repairer/test
+CMD ["raco", "test", "test"]
 
