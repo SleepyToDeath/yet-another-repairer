@@ -8,4 +8,3 @@
 
 (provide my-plus
          my-minus)
-
