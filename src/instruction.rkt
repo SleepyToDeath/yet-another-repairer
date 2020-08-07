@@ -11,18 +11,18 @@
 	(machine (machine-prog m) (machine-mem m) pc-fin)
 )
 
-(define (inst-ass-const var-l const)
+(define/debug (inst-ass-const var-l const)
 	(define (update m)
 		(machine (machine-prog m) (hash-set (machine-mem m) var-l const) (+ (machine-pc m) 1)))
 	update)
 
-(define (inst-ass-var var-l var-r)
+(define/debug (inst-ass-var var-l var-r)
 	(define (update m)
 		(define var-r-v (hash-ref (machine-mem m) var-r))
 		(machine (machine-prog m) (hash-set (machine-mem m) var-l ) (+ (machine-pc m) 1)))
 	update)
 
-(define (inst-ass-op var-l var-r1 op var-r2)
+(define/debug (inst-ass-op var-l var-r1 op var-r2)
 	(define (update m)
 		(define var-r1-v (hash-ref (machine-mem m) var-r1))
 		(define var-r2-v (hash-ref (machine-mem m) var-r2))
