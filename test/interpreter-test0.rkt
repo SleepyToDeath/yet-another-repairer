@@ -4,4 +4,4 @@
          "../src/demo.rkt")
 
 (test-case "interpreter"
-           (check-equal? result 2 "interpreter 0"))
+           (check-equal? (m2) 0 "interpreter 0"))
