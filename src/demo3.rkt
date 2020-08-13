@@ -2,6 +2,7 @@
 
 (require rosette/query/debug rosette/lib/render)
 (require "interpreter3.rkt")
+(require "util.rkt")
 
 
 (define/debug m
@@ -14,7 +15,7 @@
 
 m
 
-(define/debug m2 
+(define/debug (m2)
 	(jimple
 		(ass-const 0 = 1)
 		(ass-const 1 = 2)
@@ -24,9 +25,9 @@ m
 		(halt)
 		(nop)))
 	
-m2 
+(m2)
 
-(define ucore (debug [integer?] (assert (= m2 0))))
+(define ucore (debug [integer?] (assert (= (m2) 6))))
 
-(render ucore)
+(save-pict (render ucore) "debug.jpeg")
 
