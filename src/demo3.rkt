@@ -26,7 +26,7 @@ m
 	
 m2 
 
-(define ucore (debug [function?] (assert (= m2 6))))
+(define ucore (debug [integer?] (assert (= m2 0))))
 
 (render ucore)
 
