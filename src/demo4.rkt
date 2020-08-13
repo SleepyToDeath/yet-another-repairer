@@ -4,12 +4,16 @@
 
 (define f (~> integer? integer?))
 
-(define/debug ret 
-              (equal? (f 1) (f 1)))
+(define/debug (foo x)
+  (+ (f x) 1))
 
-ret
+(define (bar x)
+  (+ 1 (f x)))
 
-(define ucore (debug [f integer? boolean?] (assert (= ret #t))))
+(define (same f1 f2 x)
+  (assert (= (f1 x) (f2 x))))
+
+(define ucore (debug [integer?] (same foo bar 100)))
 
 (render ucore)
 
