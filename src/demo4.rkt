@@ -2,39 +2,24 @@
 
 (require rosette/query/debug rosette/lib/render)
 
-(define f (~> integer? integer?))
+(define-symbolic f (~> integer? integer?))
 
-(define vec (list 1 2))
+(define fp (~> integer? integer?))
 
-;(define-symbolic idx integer?)
+(f 1)
 
-(define sol (solve 
-	(begin
-		(assert (= (f 0) (list-ref vec 0)))
-		(assert (= (f 1) (list-ref vec 1))))))
+(define/debug (foo x)
+  (+ (f x) 1))
 
-(define g (evaluate f sol))
+(define (bar x)
+  (+ 1 (f x)))
 
-g
+(define (same f1 f2 x)
+  (assert (= (f1 x) (f2 x))))
 
-(define v0 (g 0))
-(define v1 (list-ref vec 0))
+(= (foo 100) (bar 100))
 
-v0
-v1
-
-
-(define/debug ret 
-              (equal? (f 1) (f 1)))
-
-
-ret
-
-(define cmp (equal? ret #t))
-
-cmp
-
-(define ucore (debug [f integer? boolean?] (assert (equal? ret #t))))
+(define ucore (debug [integer?] (same foo bar 100)))
 
 (render ucore)
 
