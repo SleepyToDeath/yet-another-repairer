@@ -2,10 +2,10 @@
 
 (require rosette/query/debug rosette/lib/render)
 
-(define f (~> integer? integer?))
+(define-symbolic f (~> integer? integer?))
 
 (define/debug (foo x)
-  (+ (f x) 1))
+  (+ (f x) 2))
 
 (define (bar x)
   (+ 1 (f x)))
@@ -15,5 +15,5 @@
 
 (define ucore (debug [integer?] (same foo bar 100)))
 
-(render ucore)
+ucore
 
