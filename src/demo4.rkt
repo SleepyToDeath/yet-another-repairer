@@ -5,7 +5,9 @@
 (define-symbolic f (~> integer? integer?))
 
 (define/debug (foo x)
-  (+ (f x) 2))
+  (if (positive? x)
+      (+ (f x) 2)
+      (+ (f x) 1)))
 
 (define (bar x)
   (+ 1 (f x)))
@@ -15,5 +17,5 @@
 
 (define ucore (debug [integer?] (same foo bar 100)))
 
-ucore
+(render ucore)
 
