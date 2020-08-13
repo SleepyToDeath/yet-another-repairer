@@ -11,6 +11,9 @@
 	#:transparent
 )
 
+(define pc-init 0)
+(define pc-fin -1)
+
 (define (craft-program src)
 	(define (program pc) 
 		(list-ref src pc)
@@ -22,16 +25,20 @@
 	(machine (craft-program src) input pc-init)
 )
 
-(define pc-init 0)
-(define pc-fin -1)
-
-; run: init machine -> finish machine
-(define (run m)
-	(cond
-		[(= (machine-pc m) pc-fin) m]
-		[else (run (((machine-prog m) (machine-pc m)) m))]
-	)
+;[TODO] dummy
+(define (lookup-label m l)
+	0
 )
 
-(provide (struct-out machine) craft-machine run pc-init pc-fin)
+(define (continue m)
+	(((machine-prog m) (machine-pc m)) m))
+
+(define (update-ass m v)
+	(continue (struct-copy machine m [mem (append (machine-mem m) (list v))][pc (+ (machine-pc m) 1)])))
+
+(define (update-br m l)
+	(continue (struct-copy machine m [pc (lookup-label m l)])))
+	
+
+(provide (struct-out machine) craft-machine pc-init pc-fin continue update-ass update-br lookup-label)
 
