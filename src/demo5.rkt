@@ -4,14 +4,18 @@
 
 (require "util.rkt")
 
-(define vec (vector 0 1))
+(define f (~> _ boolean?))
 
-(define num (vector-ref vec 1))
+(define/debug (pos? x)
+	(if (< x 0) #t #f))
 
-(define/debug (sum x)
-	(+ x (vector-ref vec 1)))
+f 
+pos?
+
+(define (succ x)
+	(if (pos? x) (+ x 1) (- x 1)))
  
-(define ucore (debug [integer?] (assert (= (sum 1) 0))))
+(define ucore (debug [f] (assert (= (succ 1) 2))))
 
 (save-pict (render ucore) "debug.jpeg")
 
