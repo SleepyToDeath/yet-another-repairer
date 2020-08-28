@@ -24,11 +24,11 @@
 (define (mymap-store mmap value indices)
   (define oldf (mymap-func mmap))
   (define newf (lambda args
-                 (if (andmap equal? args indices) value (apply oldf args))))
+                 (if (equal? args indices) value (apply oldf args))))
   (mymap newf))
 
 (define (default-func x)
-	-1)
+	0)
 
 (define addr-counter 0)
 
@@ -51,6 +51,7 @@
 
 	(define-symbolic* zp00 zp01 zp02 boolean?)
 	
+	;[TODO] global memory
 	(define (tf-init-ip secs this zp0) 
 
 		(set! addr-counter (+ addr-counter 1))
@@ -70,19 +71,19 @@
 		(and
 			(= this current-addr)
 ;        r0 := @this: IPv4Address;
-			(implies lp0 (equal? zp0 (and (= rp0 this) zp1)))
+			(equal? zp0 (and (implies lp0 (= rp0 this)) zp1))
 
 ;        i0 := @parameter0: int;
-			(implies lp1 (equal? zp1 (and (= ip0 secs) zp2)))
+			(equal? zp1 (and (implies lp1 (= ip0 secs)) zp2))
 
 ;        specialinvoke r0.<java.lang.Object: void <init>()>();
 		;[TODO]
 
 ;        r0.<IPv4Address: int secs> = i0;
-			(implies lp2 (equal? zp2
-									(and 
-										(= rp0-shadow (if zp2 rp0 0))
-										(= (mymap-load secs-map2 rp0) ip0))))))
+			(equal? zp2
+						(implies lp2 
+							(= rp0-shadow (if zp2 rp0 0))))))
+;							(= (mymap-load secs-map2 rp0) ip0)
 ;        return;
 ;    }
 
@@ -91,23 +92,23 @@
 
 ; 		init
 	(define tf-set-ip (and 
-					(implies l0 (equal? z0 (and (equal? ret-e1 #f) zi1)))
-					(implies l0 (equal? zi1 (and zc0 zi2)))
-					(implies l0 (equal? zi2 (and zp01 z1)))
+					(equal? z0 (and (implies l0 (equal? ret-e1 #f)) zi1))
+					(equal? zi1 (and zc0 zi2))
+					(equal? zi2 (and zp01 z1))
 
 ;        r2 := @this: DHCPInstance;
-					(implies l1 (equal? z1 (and (= r2 this) z2)))
+					(equal? z1 (and (implies l1 (= r2 this)) z2))
 
 ;        r0 := @parameter0: IPv4Address;
-					(implies l2 (equal? z2 (and (= r0 paramIP-obj) z3)))
+					(equal? z2 (and (implies l2 (= r0 paramIP-obj)) z3))
 
 ;        $r1 = <IPv4Address: IPv4Address NONE>;
-					(implies l3 (equal? z3 (and (= $r1 IPv4Address-NONE) z4)))
+					(equal? z3 (and (implies l3 (= $r1 IPv4Address-NONE)) z4))
 
 ;        if r0 != $r1 goto label1;
-					(implies l4 (equal? z4 (and 
-												(equal? guard1 (not (= r0 $r1))) 
-												(or (and (not guard1) z5) (and guard1 z6)))))
+					(equal? z4 (and 
+									(implies l4 (equal? guard1 (not (= r0 $r1))))
+									(or (and (implies l4 (not guard1)) z5) (and (implies l4 guard1) z6))))
 					;A /\ (B \/ C) === (A /\ B) \/ (A /\ C)
 
 ;        --$r3 = new java.lang.IllegalArgumentException;
@@ -116,25 +117,27 @@
 
 ;        --throw $r3;
 ;		 ret-e = true;
-					(implies l5 (equal? z5 (and 
-												(equal? ret-e2 #t) 
-												(equal? ret-e3 ret-e2)
-												z7)))
+					(equal? z5 (and (implies l5 
+												(and (equal? ret-e2 #t) 
+												(equal? ret-e3 ret-e2)))
+												z7))
 ;		 return;
 
 ;     label1:
 ;        r2.<DHCPInstance: IPv4Address serverIP> = r0;
-					(implies l6 (equal? z6 
+					(equal? z6 
 									(and 
-										(= r2-shadow (if z6 r2 0))
-										(= (mymap-load serverIP-map2 r2) r0)
-										(equal? ret-e3 ret-e1)
-										z7)))))
+										(implies l6 
+											(and
+											(= r2-shadow (if z6 r2 0))
+;											(= (mymap-load serverIP-map2 r2) r0)
+											(equal? ret-e3 ret-e1)))
+										z7))))
 
 	(define-symbolic* rc0 integer?)
 	(define-symbolic* zc1 zc2 boolean?)
 
-	(define tf-init-ip-0 (tf-init-ip 0 rc0 zp00))
+	(define tf-init-ip-0 (implies lc1 (tf-init-ip 0 rc0 zp00)))
 
 	(define tf-clinit (and 
 ;    static void <clinit>()
@@ -145,10 +148,10 @@
 		 ; [TODO] dtype[rc0] = IPv4Address
 
 ;        specialinvoke $r0.<IPv4Address: void <init>(int)>(0);
-			(implies lc1 (equal? zc0 (and zp00 zc1)))
+			(equal? zc0 (and (implies lc1 zp00) zc1))
 
 ;        <IPv4Address: IPv4Address NONE> = $r0;
-			(implies lc2 (equal? zc1 (= IPv4Address-NONE rc0)))))
+			(equal? zc1 (implies lc2 (= IPv4Address-NONE rc0)))))
 
 ;        return;
 ;    }
@@ -162,13 +165,14 @@
 	(and z0 tf-set-ip in out tf-clinit tf-init-ip-0 tf-init-ip-1 this-0))
 
 (define tf1 (get-tf 0 #t))
+(define tf2 (get-tf 1 #f))
 
-(define hard-constraint (and tf1 l0 lc1 lc2 (or lp0 l1) lp1 lp2))
+(define hard-constraint (and tf1 tf2 l0 l1 l2 lc1 lc2 lp0 lp1 lp2))
 
 (define (b2i b)
   (if b 1 0))
 
-(optimize #:maximize (list (+ (b2i lc1) (b2i lc2) (b2i lp0) (b2i lp1) (b2i lp2) (b2i l0) (b2i l1) (b2i l2) (b2i l3) (b2i l4) (b2i l5) (b2i l6)))
+(optimize #:maximize (list (+ (b2i l1) (b2i l2) (b2i l3) (b2i l4) (b2i l5) (b2i l6)))
           #:guarantee (assert hard-constraint))
 
 
