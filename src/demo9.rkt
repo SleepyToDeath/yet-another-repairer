@@ -30,6 +30,8 @@
 (define (default-func x)
 	-1)
 
+(define addr-counter 0)
+
 (define (get-tf x y)
 	(define-symbolic* paramIP integer?)
 	(define-symbolic* this paramIP-obj integer?)
@@ -51,6 +53,9 @@
 	
 	(define (tf-init-ip secs this zp0) 
 
+		(set! addr-counter (+ addr-counter 1))
+		(define current-addr addr-counter)
+
 		(define-symbolic* rp0 rp0-shadow integer?)
 		(define-symbolic* ip0 integer?)
 		(define-symbolic* zp1 zp2 boolean?)
@@ -63,6 +68,7 @@
 ;        IPv4Address r0;
 ;        int i0;
 		(and
+			(= this current-addr)
 ;        r0 := @this: IPv4Address;
 			(implies lp0 (equal? zp0 (and (= rp0 this) zp1)))
 
@@ -151,12 +157,13 @@
 
 	(define in (= x paramIP))
 	(define out (equal? y ret-e3))
+	(define this-0 (= this 0))
 
-	(and z0 tf-set-ip in out tf-clinit tf-init-ip-0 tf-init-ip-1))
+	(and z0 tf-set-ip in out tf-clinit tf-init-ip-0 tf-init-ip-1 this-0))
 
 (define tf1 (get-tf 0 #t))
 
-(define hard-constraint (and tf1 l0 lp0 lp1 lp2 lc1 lc2))
+(define hard-constraint (and tf1 l0 lc1 lc2 (or lp0 l1) lp1 lp2))
 
 (define (b2i b)
   (if b 1 0))
