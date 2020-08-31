@@ -15,20 +15,23 @@
 ;		 ret_exception
 
 
-(struct mymap (func))
+(struct mymap (func) #:transparent )
 
-(define (mymap-load mmap indices)
+(define (mymap-load mmap index)
   (define f (mymap-func mmap))
-  (apply f indices))
+  (f index))
 
-(define (mymap-store mmap value indices)
+(define (mymap-store mmap index value)
   (define oldf (mymap-func mmap))
-  (define newf (lambda args
-                 (if (equal? args indices) value (apply oldf args))))
+  (define newf (lambda (args)
+                 (if (equal? args index) value (oldf args))))
   (mymap newf))
 
+(define nullptr -1)
+
 (define (default-func x)
-	0)
+	nullptr)
+
 
 (define addr-counter 0)
 
@@ -62,7 +65,7 @@
 		(define-symbolic* zp1 zp2 boolean?)
 
 		(define secs-map1 (mymap default-func))
-		(define secs-map2 (mymap-store secs-map1 ip0 rp0-shadow))
+		(define secs-map2 (mymap-store secs-map1 rp0-shadow ip0))
 
 ;    public void <init>(int)
 ;    {
@@ -82,8 +85,9 @@
 ;        r0.<IPv4Address: int secs> = i0;
 			(equal? zp2
 						(implies lp2 
-							(= rp0-shadow (if zp2 rp0 0))))))
-;							(= (mymap-load secs-map2 rp0) ip0)
+							(and
+								(= rp0-shadow (if zp2 rp0 nullptr))
+								(= (mymap-load secs-map2 rp0) ip0))))))
 ;        return;
 ;    }
 
@@ -129,8 +133,8 @@
 									(and 
 										(implies l6 
 											(and
-											(= r2-shadow (if z6 r2 0))
-;											(= (mymap-load serverIP-map2 r2) r0)
+											(= r2-shadow (if z6 r2 nullptr))
+											(= (mymap-load serverIP-map2 r2) r0)
 											(equal? ret-e3 ret-e1)))
 										z7))))
 
