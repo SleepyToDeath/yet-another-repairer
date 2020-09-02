@@ -1,42 +1,8 @@
 #lang rosette/safe
 
+(require "syntax.rkt")
 
-(define-generics ast
-	[ast-check ast])
-
-(define-generics expanded
-	[expanded-check expanded])
-
-(provide gen:ast gen:expanded ast-check expanded-check)
-
-
-
-
-
-
-
-(define-syntax (id2pred stx)
-	(define pred (string->symbol (string-append (symbol->string (car (cdr (syntax->datum stx)))) "?")))
-	(datum->syntax stx pred))
-
-(define-syntax (id2accessor stx)
-	(define acc 
-		(string->symbol 
-			(string-append 
-				(symbol->string (car (cdr (syntax->datum stx))))
-				"-"
-				(symbol->string (car (cdr (cdr (syntax->datum stx))))))))
-	(datum->syntax stx acc))
-
-(provide id2pred id2accessor)
-
-
-
-
-
-
-; [TODO] there's some problem with expansion order of exported macros
-;		 these three macros must be copy-pasted in the file defining the syntax
+;================== Boilerplate =================
 (define-syntax-rule (LHS name ( rname ::= rhs ... ))
 	(struct name (rname) #:transparent
 		#:methods gen:ast
@@ -77,7 +43,22 @@
 		]
 	)
 )
+;=================================================
 
 
-(provide LHS RHS TERM)
+
+(LHS stat (rhs ::= stat-ass stat-jmp stat-label))
+	(RHS stat-ass (target : variable) (value : expr))
+	(RHS stat-jmp (condition : expr) (target : label))
+	(RHS stat-label (name : label))
+
+(LHS expr (rhs ::= expr-const expr-var expr-binary))
+	(RHS expr-const (value : const))
+	(RHS expr-var (name : variable))
+	(RHS expr-binary (operand1 : expr) (operator : op) (operand2 : expr))
+
+(TERM variable v)
+(TERM const v)
+(TERM label v)
+(TERM op v)
 

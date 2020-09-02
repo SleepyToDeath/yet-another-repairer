@@ -2,7 +2,7 @@
 
 (require "syntax.rkt")
 
-(define-syntax-rule (LHS name rname rhs ...)
+(define-syntax-rule (LHS name ( rname ::= rhs ... ))
 	(struct name (rname) #:transparent
 		#:methods gen:ast
 		[ 
@@ -17,7 +17,7 @@
 	)
 )
 
-(define-syntax-rule (RHS name (lname lhs) ...)
+(define-syntax-rule (RHS name (lname : lhs) ...)
 	(struct name (lname ...) #:transparent
 		#:methods gen:expanded
 		[
@@ -49,9 +49,9 @@
 ;		  | node
 ;node ::= int
 
-(LHS expr et expr-1 expr-2)
-(RHS expr-1 (t1 expr) (t2 expr))
-(RHS expr-2 (t node))
+(LHS expr (et ::= expr-1 expr-2))
+(RHS expr-1 (t1 : expr) (t2 : expr))
+(RHS expr-2 (t : node))
 
 (TERM node i)
 
