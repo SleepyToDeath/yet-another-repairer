@@ -1,5 +1,6 @@
 #lang rosette/safe
 
+(require (for-syntax racket/match))
 
 (define-generics ast
 	[ast-check ast])
@@ -11,9 +12,9 @@
 
 
 
-
-
-
+(define-syntax (id2enum stx)
+	(define enum (string->symbol (string-append (symbol->string (car (cdr (syntax->datum stx)))) "-enum")))
+	(datum->syntax stx enum))
 
 (define-syntax (id2pred stx)
 	(define pred (string->symbol (string-append (symbol->string (car (cdr (syntax->datum stx)))) "?")))
@@ -28,16 +29,31 @@
 				(symbol->string (car (cdr (cdr (syntax->datum stx))))))))
 	(datum->syntax stx acc))
 
-(provide id2pred id2accessor)
+(provide id2pred id2accessor id2enum)
 
 
 
-
+(begin-for-syntax
+	(define (id2enum id)
+		(define enum (string->symbol (string-append (symbol->string (syntax->datum id)) "-enum")))
+		(datum->syntax id enum))
+)
 
 
 ; [TODO] there's some problem with expansion order of exported macros
 ;		 these three macros must be copy-pasted in the file defining the syntax
+
+;(define-syntax (LHS stx)
+;	(match (syntax->list stx)
+;		[(list LHS name ( rname ::= rhs ... ))
+;
+;			(datum->syntax stx `(begin
+;
+;		))]))
+;
+
 (define-syntax-rule (LHS name ( rname ::= rhs ... ))
+	(begin
 	(struct name (rname) #:transparent
 		#:methods gen:ast
 		[ 
@@ -49,6 +65,7 @@
 					)
 					(expanded-check __et)))
 		]
+	)
 	)
 )
 
@@ -78,6 +95,8 @@
 	)
 )
 
-
 (provide LHS RHS TERM)
+
+
+
 
