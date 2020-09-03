@@ -5,6 +5,7 @@
 
 (require "syntax.rkt")
 
+
 ;================== Boilerplate =================
 (define-syntax-rule (LHS-C name ( rname ::= rhs ... ))
 	(struct name (rname) #:transparent
@@ -66,6 +67,10 @@
 
 ;================== Real Syntax =================
 ;syntax check
+(LHS-C stats (rhs ::= stats-multi stats-single))
+	(RHS-C stats-multi (l : stats) (r : stats))
+	(RHS-C stats-single (head : stat))
+
 (LHS-C stat (rhs ::= stat-ass stat-jmp stat-label))
 	(RHS-C stat-ass (target : variable) (value : expr))
 	(RHS-C stat-jmp (condition : expr) (target : label))
@@ -83,7 +88,12 @@
 
 (TERM invalid any)
 
+
 ;enumerator
+(LHS-E stats -> (stats-enum ::= stats-multi-enum stats-single-enum))
+	(RHS-E stats-multi -> stats-multi-enum (stats-enum stats-enum))
+	(RHS-E stats-single -> stats-single-enum (stat-enum))
+
 (LHS-E stat -> (stat-enum ::= stat-ass-enum stat-jmp-enum stat-label-enum))
 	(RHS-E stat-ass -> stat-ass-enum (variable-enum expr-enum))
 	(RHS-E stat-jmp -> stat-jmp-enum (expr-enum label-enum))
@@ -104,9 +114,11 @@
 ;=================================================
 
 
+(provide stats stat expr variable const label op invalid)
+(provide stats-enum stat-enum expr-enum variable-enum const-enum label-enum op-enum invalid-enum)
 
 ;test
 (stat null)
 
-(stat-enum null 10)
+(stats-enum null 10)
 

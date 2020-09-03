@@ -8,7 +8,10 @@
 (define-generics expanded
 	[expanded-check expanded])
 
+(struct context (vars nums) #:transparent)
+
 (provide gen:ast gen:expanded ast-check expanded-check)
+(provide all-defined-out)
 
 
 
