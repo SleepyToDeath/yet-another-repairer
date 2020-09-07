@@ -2,7 +2,7 @@
 
 (require "memory.rkt")
 
-(define mem0 (memory-alloc empty-memory))
+(define mem0 (memory-alloc memory-empty))
 (define addr0 (memory-top mem0))
 (define value0 233)
 (define mem0-w (memory-store mem0 addr0 value0))

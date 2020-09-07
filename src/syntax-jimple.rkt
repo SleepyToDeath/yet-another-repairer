@@ -9,10 +9,12 @@
 	(RHS-C stats-multi (l : stats) (r : stats))
 	(RHS-C stats-single (head : stat))
 
-(LHS-C stat (rhs ::= stat-ass stat-jmp stat-label))
-	(RHS-C stat-ass (target : variable) (value : expr))
+(LHS-C stat (rhs ::= stat-ass stat-jmp stat-label stat-nop stat-ret))
+	(RHS-C stat-ass (lvalue : variable) (rvalue : expr))
 	(RHS-C stat-jmp (condition : expr) (target : label))
 	(RHS-C stat-label (name : label))
+	(RHS-C stat-nop (any : nop))
+	(RHS-C stat-ret (any : nop))
 
 (LHS-C expr (rhs ::= expr-const expr-var expr-binary))
 	(RHS-C expr-const (value : const))
@@ -23,6 +25,7 @@
 (TERM const v)
 (TERM label v)
 (TERM op v)
+(TERM nop any)
 ;=====================================================
 
 

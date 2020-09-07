@@ -1,21 +1,19 @@
 #lang rosette/safe
 
 (require racket/base)
+(require "map.rkt")
 
 (provide (all-defined-out))
 
 ;============= Definition & Operations ===========
-(struct memory (func top) #:transparent )
+(struct memory (imap top) #:transparent )
 
 (define (memory-load mem index)
-	(define f (memory-func mem))
-	(f index))
+	(imap-get (memory-imap mem) index))
 
 (define (memory-store mem index value)
-	(define oldf (memory-func mem))
-	(define newf (lambda (args)
-                 (if (equal? args index) value (oldf args))))
-	(struct-copy memory mem [func newf]))
+	(struct-copy memory mem 
+		[imap (imap-set (memory-imap mem) index value)]))
 
 ;only used to update memory
 ;will return new memory
@@ -26,10 +24,6 @@
 
 
 ;============= Default Values ===========
-(define nullptr -1)
-
-(define (default-func x) nullptr)
-
-(define empty-memory (memory default-func nullptr))
+(define memory-empty (memory imap-empty nullptr))
 ;========================================
 
