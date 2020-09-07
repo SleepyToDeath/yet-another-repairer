@@ -5,6 +5,8 @@
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
 
+(provide (all-defined-out))
+
 ;=================== AST interface ================
 (define-generics ast
 	[ast-check ast])
@@ -13,16 +15,12 @@
 	[expanded-check expanded])
 
 (struct syntax-context (vars nums ops labels) #:transparent)
-
-(provide gen:ast gen:expanded ast-check expanded-check)
-(provide syntax-context)
 ;==================================================
 
 
 
 ;============ Syntax Defining Macros ==============
 (define-syntax-rule (LHS-C name ( rname ::= rhs ... ))
-	(begin
 	(struct name (rname) #:transparent
 		#:methods gen:ast
 		[ 
@@ -35,11 +33,9 @@
 					(expanded-check __et)))
 		]
 	)
-	(provide name))
 )
 
 (define-syntax-rule (RHS-C name (lname : lhs) ...)
-	(begin
 	(struct name (lname ...) #:transparent
 		#:methods gen:expanded
 		[
@@ -53,12 +49,11 @@
 					)))
 		] 
 	)
-	(provide name))
 )
+
 ;[!] users should define their own enumerator for each terminal
 ;	 name-enum: ctxt -> name
 (define-syntax-rule (TERM name val ...)
-	(begin
 	(struct name (val ...) #:transparent
 		#:methods gen:ast
 		[
@@ -66,26 +61,18 @@
 				#t)
 		]
 	)
-	(provide name))
 )
 
 (define-syntax-rule (LHS-E name -> (name-enum ::= rhs-enum ...))
-	(begin
 	(define (name-enum ctxt depth-limit) 
 		(if (> depth-limit 0)
 			(name (choose* 
 					(rhs-enum ctxt (- depth-limit 1)) ... ))
-			(invalid 0)))
-	(provide name-enum)))
+			(invalid 0))))
 
 (define-syntax-rule (RHS-E name -> name-enum (lhs-enum ...))
-	(begin
 	(define (name-enum ctxt depth-limit) 
-		(name (lhs-enum ctxt depth-limit) ... ))
-	(provide name-enum)))
-
-
-(provide LHS-C LHS-E RHS-C RHS-E TERM)
+		(name (lhs-enum ctxt depth-limit) ... )))
 ;=================================================
 
 
@@ -107,11 +94,11 @@
 	(define acc (format-symbol "~a-~a" (syntax->datum id-s) (syntax->datum id-f)))
 	(datum->syntax id-f acc))
 
-(TERM invalid any)
+(struct invalid (any) #:transparent
+		#:methods gen:ast
+		[(define (ast-check __t) #f)])
 
-(define (invalid-enum ctxt depth-limit) (invalid 0))
-
-(provide id2pred id2acc id2enum invalid)
+(define (invalid-enum ctxt depth-limit) (invalid -1))
 ;==================================================
 
 

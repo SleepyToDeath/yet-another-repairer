@@ -1,28 +1,35 @@
 #lang rosette/safe
 
-(struct mymap (func) #:transparent )
+(require racket/base)
 
-(define (mymap-load mmap index)
-  (define f (mymap-func mmap))
-  (f index))
+(provide (all-defined-out))
 
-(define (mymap-store mmap index value)
-  (define oldf (mymap-func mmap))
-  (define newf (lambda (args)
+;============= Definition & Operations ===========
+(struct memory (func top) #:transparent )
+
+(define (memory-load mem index)
+	(define f (memory-func mem))
+	(f index))
+
+(define (memory-store mem index value)
+	(define oldf (memory-func mem))
+	(define newf (lambda (args)
                  (if (equal? args index) value (oldf args))))
-  (mymap newf))
+	(struct-copy memory mem [func newf]))
 
+;only used to update memory
+;will return new memory
+;use memory-top to get the allocated address
+(define (memory-alloc mem)
+	(struct-copy memory mem [top (+ (memory-top mem) 1)]))
+;==================================================
+
+
+;============= Default Values ===========
 (define nullptr -1)
 
-(define (default-func x)
-	nullptr)
+(define (default-func x) nullptr)
 
-(define addr-counter 0)
-
-(define (malloc)
-	(begin
-		(set! addr-counter (+ addr-counter 1))
-		addr-counter))
-
-(provide all-defined-out)
+(define empty-memory (memory default-func nullptr))
+;========================================
 

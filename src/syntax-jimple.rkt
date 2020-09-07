@@ -2,6 +2,7 @@
 
 (require "syntax.rkt")
 
+(provide (all-defined-out))
 
 ;============= Syntax Definition & Check =============
 (LHS-C stats (rhs ::= stats-multi stats-single))
