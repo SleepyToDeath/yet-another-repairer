@@ -23,30 +23,37 @@
 (define-generics expression
 	[expr-eval expression machine])
 
+;[TODO?] What is the clean way to do this?
+(define (expr-eval-dispatch e m) (expr-eval e m))
+
 (define pc-ret -1)
 (define pc-init 0)
 (define machine-empty (machine null imap-empty memory-empty pc-init))
 
 (define (compute m)
-	(define (inst-cur m) (list-ref (machine-prog m) (machine-pc m)))
-	(if (= (machine-pc m) pc-ret) m	(inst-exec m (inst-cur m))))
+	(if (= (machine-pc m) pc-ret) 
+		m	
+		(let ([inst-cur (list-ref (machine-prog m) (machine-pc m))])
+			(compute (inst-exec inst-cur m)))))
 
 
 
-;top-level input should always use machine-empty
 ;[TODO?] memory allocation
-(define (ast->machine ast m)
+(define (ast->machine ast)
+	(__ast->machine ast machine-empty))
+
+(define (__ast->machine ast m)
 	(match ast
 		[(stats (stats-multi l r))
 			(begin
-				(define m1 (ast->machine l m))
-				(ast->machine r m1))]
+				(define m1 (__ast->machine l m))
+				(__ast->machine r m1))]
 		[(stats (stats-single head))
 			(begin
 				(define ret-pair (ast->instruction head m))
 				(define i-new (car ret-pair))
 				(define m-new (cdr ret-pair))
-				(define prog-new (if i-new (append (machine-prog m) '(i-new)) (machine-prog m)))
+				(define prog-new (if i-new (append (machine-prog m) (list i-new)) (machine-prog m)))
 				(struct-copy machine m-new [prog prog-new]))]))
 
 ;ast -> instruction X machine(lmap updated)
@@ -65,13 +72,13 @@
 	(match ast
 		[(expr (expr-const (const v))) (iexpr-const v)]
 		[(expr (expr-var (variable v))) (iexpr-var v)]
-		[(expr (expr-binary expr1 op expr2)) (iexpr-var op (ast->expression expr1) (ast->expression expr2))]))
+		[(expr (expr-binary expr1 (op v) expr2)) (iexpr-binary v (ast->expression expr1) (ast->expression expr2))]))
 
 
 
 
 ;addr(int) X expr
-(struct inst-ass (vl vr)
+(struct inst-ass (vl vr) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m) 
 
@@ -85,7 +92,7 @@
 		(struct-copy machine m-new [mem mem-new] [pc pc-next]))])
 
 ;expr X label(int)
-(struct inst-jmp (condition label)
+(struct inst-jmp (condition label) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m)
 
@@ -94,7 +101,7 @@
 		(define pc-jmp (imap-get lmap iaddr))
 		(define pc-next (+ 1 (machine-pc m)))
 
-		(define ret-pair (expr-eval (inst-ass-vr i) m))
+		(define ret-pair (expr-eval (inst-jmp-condition i) m))
 		(define m-new (cdr ret-pair))
 		(define c (car ret-pair))
 		(define pc-new (if c pc-jmp pc-next))
@@ -126,11 +133,12 @@
 		(define value (memory-load (machine-mem m) (iexpr-var-addr e) ))
 		(cons value m))])
 
+
 (struct iexpr-binary (op expr1 expr2) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
-		(define v1 (car (expr-eval (iexpr-binary-expr1 e) m)))
-		(define v2 (car (expr-eval (iexpr-binary-expr2 e) m)))
+		(define v1 (car (expr-eval-dispatch (iexpr-binary-expr1 e) m)))
+		(define v2 (car (expr-eval-dispatch (iexpr-binary-expr2 e) m)))
 		(define ret ((iexpr-binary-op e) v1 v2))
 		(cons ret m))])
 
