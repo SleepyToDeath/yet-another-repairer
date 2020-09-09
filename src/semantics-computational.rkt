@@ -77,19 +77,17 @@
 
 
 
-;addr(int) X expr
+;addr(int) X iexpr
 (struct inst-ass (vl vr) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m) 
 
-		(define ret-pair (expr-eval (inst-ass-vr i) m))
-		(define m-new (cdr ret-pair))
-		(define v-new (car ret-pair))
+		(define v-new (expr-eval (inst-ass-vr i) m))
 
-		(define mem-new (memory-store (machine-mem m-new) (inst-ass-vl i) v-new))
+		(define mem-new (memory-store (machine-mem m) (inst-ass-vl i) v-new))
 		(define pc-next (+ 1 (machine-pc m)))
 
-		(struct-copy machine m-new [mem mem-new] [pc pc-next]))])
+		(struct-copy machine m [mem mem-new] [pc pc-next]))])
 
 ;expr X label(int)
 (struct inst-jmp (condition label) #:transparent
@@ -101,12 +99,10 @@
 		(define pc-jmp (imap-get lmap iaddr))
 		(define pc-next (+ 1 (machine-pc m)))
 
-		(define ret-pair (expr-eval (inst-jmp-condition i) m))
-		(define m-new (cdr ret-pair))
-		(define c (car ret-pair))
+		(define c (expr-eval (inst-jmp-condition i) m))
 		(define pc-new (if c pc-jmp pc-next))
 
-		(struct-copy machine m-new [pc pc-new]))])
+		(struct-copy machine m [pc pc-new]))])
 
 (struct inst-nop (any) #:transparent
 	#:methods gen:instruction
@@ -125,21 +121,20 @@
 (struct iexpr-const (value) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
-		(cons (iexpr-const-value e) m))])
+		(iexpr-const-value e))])
 
 (struct iexpr-var (addr) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
 		(define value (memory-load (machine-mem m) (iexpr-var-addr e) ))
-		(cons value m))])
+		value)])
 
 
 (struct iexpr-binary (op expr1 expr2) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
-		(define v1 (car (expr-eval-dispatch (iexpr-binary-expr1 e) m)))
-		(define v2 (car (expr-eval-dispatch (iexpr-binary-expr2 e) m)))
-		(define ret ((iexpr-binary-op e) v1 v2))
-		(cons ret m))])
+		(define v1 (expr-eval-dispatch (iexpr-binary-expr1 e) m))
+		(define v2 (expr-eval-dispatch (iexpr-binary-expr2 e) m))
+		((iexpr-binary-op e) v1 v2))])
 
 
