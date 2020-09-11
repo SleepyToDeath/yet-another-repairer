@@ -96,15 +96,15 @@
 	test-program))
 
 ;f(0) = 2
-(define input1 (memory-store memory-empty 1 0))
+(define input1 (list (cons 1 0)))
 (define output1 (list (cons 3 2)))
 
 ;f(1) = 2
-(define input2 (memory-store memory-empty 1 1))
+(define input2 (list (cons 1 1)))
 (define output2 (list (cons 3 2)))
 
 ;f(2) = 3
-(define input3 (memory-store memory-empty 1 2))
+(define input3 (list (cons 1 2)))
 (define output3 (list (cons 3 3)))
 
 
@@ -121,6 +121,8 @@
   (if b 1 0))
 
 (define hard-constraint (and tf1 tf2 tf3))
+
+tf2
 
 (optimize #:maximize (list (foldl (lambda (b s) (+ s (b2i b))) 0 ids))
           #:guarantee (assert hard-constraint))

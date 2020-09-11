@@ -10,7 +10,7 @@
 
 (provide (all-defined-out))
 
-;ast ->  line ids(list of sym bool) X (input(memory) -> output(list of key & value) -> relation)
+;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
 (define (ast->relation ast)
 	(define mac (ast->machine ast))
 
@@ -28,7 +28,17 @@
 				(define-symbolic* path-mark boolean?) 
 				(cons inst (cons id path-mark)))
 			(machine-prog mac) line-ids))
-		(define mac-input (std:struct-copy machine mac [mem input][prog inst-tris]))
+		(define mem-input (foldl (lambda (kv mem) (define-symbolic* vs integer?) (memory-store mem (car kv) vs)) memory-empty input))
+		(define fml-input (foldl 
+			(lambda (kv fml) 
+				(and fml 
+					(equal? 
+						(memory-load mem-input (car kv))
+						(cdr kv))))
+			#t
+			input))
+
+		(define mac-input (std:struct-copy machine mac [mem mem-input][prog inst-tris]))
 
 		;encode program
 		(define pc-fml-mac (foldl inst->relation.wrapper (cons 0 (cons #t mac-input)) (machine-prog mac-input)))
@@ -40,7 +50,7 @@
 		(define mark0 (cddr (car (machine-prog mac-input))))
 		
 		;final result
-		(and mark0 fml-exec fml-output))))
+		(and mark0 fml-exec fml-input fml-output))))
 
 (define (inst->relation.wrapper inst-tri pc-fml-mac)
 	(define inst (car inst-tri))
