@@ -4,47 +4,98 @@
 (require "syntax-jimple.rkt")
 (require "memory.rkt")
 (require "map.rkt")
-(require "semantics-computationl.rkt")
-(require racket/base)
+(require "semantics-computational.rkt")
+(require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
 
 (provide (all-defined-out))
 
-;[TODO] include l & z
-
-;ast -> input -> relation
+;ast ->  line ids(list of sym bool) X (input(memory) -> output(list of key & value) -> relation)
 (define (ast->relation ast)
-	(define ma (ast->mahchine))
-	(lambda (input)
-		(foldl (inst->relation-wrapper) (cons #t ma) (machine-prog ma))))
+	(define mac (ast->machine ast))
 
-(define (inst->relation-wrapper inst fm)
-	(define ret-pair (inst->relation inst (cdr fm)))
-	(define fml-new (and (car fm) (car ret-pair)))
-	(define ma-new (cdr ret-pair))
-	(cons fml-new ma-new))
+	;global line id
+	(define line-ids (map 
+		(lambda (any) (define-symbolic* id boolean?) id)
+		(machine-prog mac)))
+
+	(cons 
+	line-ids
+	(lambda (input output)
+		;example-specific path mark
+		(define inst-tris (map
+			(lambda (inst id) 
+				(define-symbolic* path-mark boolean?) 
+				(cons inst (cons id path-mark)))
+			(machine-prog mac) line-ids))
+		(define mac-input (std:struct-copy machine mac [mem input][prog inst-tris]))
+
+		;encode program
+		(define pc-fml-mac (foldl inst->relation.wrapper (cons 0 (cons #t mac-input)) (machine-prog mac-input)))
+
+		;encode output
+		(define fml-exec (cadr pc-fml-mac))
+		(define mem-output (machine-mem (cddr pc-fml-mac)))
+		(define fml-output (foldl (lambda (kv fml) (and fml (equal? (memory-load mem-output (car kv)) (cdr kv)))) #t output))
+		(define mark0 (cddr (car (machine-prog mac-input))))
+		
+		;final result
+		(and mark0 fml-exec fml-output))))
+
+(define (inst->relation.wrapper inst-tri pc-fml-mac)
+	(define inst (car inst-tri))
+	(define id (cadr inst-tri))
+	(define mark (cddr inst-tri))
+	(define pc (car pc-fml-mac))
+	(define fml (cadr pc-fml-mac))
+	(define mac (cddr pc-fml-mac))
+
+	(define ret-pair (inst->relation pc inst id mark mac))
+
+	(define pc-new (+ pc 1))
+	(define fml-new (and fml (car ret-pair)))
+	(define mac-new (cdr ret-pair))
+
+	(cons pc-new (cons fml-new mac-new)))
 
 ;instruction X machine -> relation X machine
-(define (inst->relation inst ma)
+(define (inst->relation pc inst id mark mac)
+
 	(define-symbolic* vs integer?)
+	(define (next-mark) (cddr (list-ref (machine-prog mac) (+ 1 pc))))
+	(define (label-mark label) 
+		(define new-pc (imap-get (machine-lmap mac) label))
+		(cddr (list-ref (machine-prog mac) new-pc)))
+
 	(match inst 
-		[(inst-nop _) (cons #t ma)]
-		[(inst-ret _) (cons #t ma)]
+		[(inst-nop _) 
+			(letrec 
+				([fml-switch (implies id #t)]
+				[fml-path (equal? mark (and fml-switch (next-mark)))])
+			(cons fml-path mac))]
+
+		[(inst-ret _) (cons #t mac)]
+
 		[(inst-ass vl vr) 
 			(letrec 
-				([mem (machine-mem ma)]
-				[value (expr-eval vr ma)]
-				[mem-new (memory-set mem vl vs)]
-				[ma-new (struct-copy machine ma [mem mem-new])]
-				[fml-new (= value vs)])
-				(cons fml-new ma-new))]
+				([mem (machine-mem mac)]
+				[value (expr-eval vr mac)]
+				[mem-new (memory-store mem vl vs)]
+				[mac-new (std:struct-copy machine mac [mem mem-new])]
+				[fml-new (equal? value vs)]
+				[fml-switch (implies id fml-new)]
+				[fml-path (equal? mark (and fml-switch (next-mark)))])
+				(cons fml-path mac-new))]
+
 		[(inst-jmp condition label)
 			(letrec
-				([mem (machine-mem ma)]
-				[lmap (machine-lmap ma)]
-				[value (expr-eval condition ma)]
-				[fml-new (cdar ret-tuple)])
-				(cons #t ma))]))
+				([mem (machine-mem mac)]
+				[lmap (machine-lmap mac)]
+				[value (expr-eval condition mac)]
+				[fml-t (and (implies id value) (label-mark label))]
+				[fml-f (and (implies id (not value)) (next-mark))]
+				[fml-path (equal? mark (or fml-t fml-f))])
+				(cons fml-path mac))]))
 				
 	
 
