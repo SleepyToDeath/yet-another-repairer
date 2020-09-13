@@ -4,7 +4,7 @@
 (require "syntax-jimple.rkt")
 (require "memory.rkt")
 (require "map.rkt")
-(require racket/base)
+(require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
 
 (provide (all-defined-out))
@@ -54,7 +54,7 @@
 				(define i-new (car ret-pair))
 				(define m-new (cdr ret-pair))
 				(define prog-new (if i-new (append (machine-prog m) (list i-new)) (machine-prog m)))
-				(struct-copy machine m-new [prog prog-new]))]))
+				(std:struct-copy machine m-new [prog prog-new]))]))
 
 ;ast -> instruction X machine(lmap updated)
 (define (ast->instruction ast m)
@@ -64,7 +64,7 @@
 		[(stat (stat-label (label here)))
 			(begin
 				(define lmap-new (imap-set (machine-lmap m) here (length (machine-prog m))))
-				(cons #f (struct-copy machine m [lmap lmap-new])))]
+				(cons #f (std:struct-copy machine m [lmap lmap-new])))]
 		[(stat (stat-nop any)) (cons (inst-nop nullptr) m)]
 		[(stat (stat-ret any)) (cons (inst-ret nullptr) m)]))
 
@@ -87,7 +87,7 @@
 		(define mem-new (memory-store (machine-mem m) (inst-ass-vl i) v-new))
 		(define pc-next (+ 1 (machine-pc m)))
 
-		(struct-copy machine m [mem mem-new] [pc pc-next]))])
+		(std:struct-copy machine m [mem mem-new] [pc pc-next]))])
 
 ;expr X label(int)
 (struct inst-jmp (condition label) #:transparent
@@ -102,18 +102,18 @@
 		(define c (expr-eval (inst-jmp-condition i) m))
 		(define pc-new (if c pc-jmp pc-next))
 
-		(struct-copy machine m [pc pc-new]))])
+		(std:struct-copy machine m [pc pc-new]))])
 
 (struct inst-nop (any) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m)
 		(define pc-next (+ 1 (machine-pc m)))
-		(struct-copy machine m [pc pc-next]))])
+		(std:struct-copy machine m [pc pc-next]))])
 
 (struct inst-ret (any) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m)
-		(struct-copy machine m [pc pc-ret]))])
+		(std:struct-copy machine m [pc pc-ret]))])
 
 
 

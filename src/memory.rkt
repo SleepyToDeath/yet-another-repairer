@@ -1,6 +1,6 @@
 #lang rosette/safe
 
-(require racket/base)
+(require (prefix-in std: racket/base))
 (require "map.rkt")
 
 (provide (all-defined-out))
@@ -12,14 +12,14 @@
 	(imap-get (memory-imap mem) index))
 
 (define (memory-store mem index value)
-	(struct-copy memory mem 
+	(std:struct-copy memory mem 
 		[imap (imap-set (memory-imap mem) index value)]))
 
 ;only used to update memory
 ;will return new memory
 ;use memory-top to get the allocated address
 (define (memory-alloc mem)
-	(struct-copy memory mem [top (+ (memory-top mem) 1)]))
+	(std:struct-copy memory mem [top (+ (memory-top mem) 1)]))
 ;==================================================
 
 

@@ -122,8 +122,6 @@
 
 (define hard-constraint (and tf1 tf2 tf3))
 
-tf2
-
 (optimize #:maximize (list (foldl (lambda (b s) (+ s (b2i b))) 0 ids))
           #:guarantee (assert hard-constraint))
 

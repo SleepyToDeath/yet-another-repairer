@@ -1,6 +1,6 @@
 #lang rosette/safe
 
-(require racket/base)
+(require (prefix-in std: racket/base))
 
 (provide (all-defined-out))
 
@@ -14,8 +14,8 @@
 (define (imap-set m index value)
 	(define oldf (imap-func m))
 	(define newf (lambda (args)
-                 (if (equal? args index) value (oldf args))))
-	(struct-copy imap m [func newf]))
+                 (if (= args index) value (oldf args))))
+	(std:struct-copy imap m [func newf]))
 ;==================================================
 
 

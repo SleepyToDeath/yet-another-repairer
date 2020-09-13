@@ -32,7 +32,7 @@
 		(define fml-input (foldl 
 			(lambda (kv fml) 
 				(and fml 
-					(equal? 
+					(=
 						(memory-load mem-input (car kv))
 						(cdr kv))))
 			#t
@@ -46,7 +46,7 @@
 		;encode output
 		(define fml-exec (cadr pc-fml-mac))
 		(define mem-output (machine-mem (cddr pc-fml-mac)))
-		(define fml-output (foldl (lambda (kv fml) (and fml (equal? (memory-load mem-output (car kv)) (cdr kv)))) #t output))
+		(define fml-output (foldl (lambda (kv fml) (and fml (= (memory-load mem-output (car kv)) (cdr kv)))) #t output))
 		(define mark0 (cddr (car (machine-prog mac-input))))
 		
 		;final result
@@ -72,6 +72,8 @@
 (define (inst->relation pc inst id mark mac)
 
 	(define-symbolic* vs integer?)
+	(define-symbolic* shadow-key integer?)
+
 	(define (next-mark) (cddr (list-ref (machine-prog mac) (+ 1 pc))))
 	(define (label-mark label) 
 		(define new-pc (imap-get (machine-lmap mac) label))
@@ -90,22 +92,32 @@
 			(letrec 
 				([mem (machine-mem mac)]
 				[value (expr-eval vr mac)]
-				[mem-new (memory-store mem vl vs)]
+				[mem-new (memory-store mem shadow-key vs)]
 				[mac-new (std:struct-copy machine mac [mem mem-new])]
-				[fml-new (equal? value vs)]
+
+				[fml-key (= shadow-key (if mark vl nullptr))]
+				[fml-value (= value vs)]
+				[fml-new fml-value]
 				[fml-switch (implies id fml-new)]
-				[fml-path (equal? mark (and fml-switch (next-mark)))])
-				(cons fml-path mac-new))]
+				[fml-path (and 
+					fml-key
+					(equal? mark (and fml-switch (next-mark))))])
+
+				(cons fml-path mac-new))
+		]
 
 		[(inst-jmp condition label)
 			(letrec
 				([mem (machine-mem mac)]
 				[lmap (machine-lmap mac)]
 				[value (expr-eval condition mac)]
-				[fml-t (and (implies id value) (label-mark label))]
-				[fml-f (and (implies id (not value)) (next-mark))]
-				[fml-path (equal? mark (or fml-t fml-f))])
-				(cons fml-path mac))]))
+				[fml-t (equal? (implies id value) (label-mark label))]
+				[fml-f (equal? (implies id (not value)) (next-mark))]
+				[fml-switch (and fml-t fml-f)]
+				[fml-br (or (label-mark label) (next-mark))]
+				[fml-path (equal? mark (and fml-switch fml-br))])
+				(cons fml-path mac))
+		]))
 				
 	
 
