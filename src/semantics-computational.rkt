@@ -30,13 +30,23 @@
 (define pc-init 0)
 (define machine-empty (machine null imap-empty memory-empty pc-init))
 
+;machine(init) -> machine(fin)
 (define (compute m)
 	(if (= (machine-pc m) pc-ret) 
 		m	
 		(let ([inst-cur (list-ref (machine-prog m) (machine-pc m))])
 			(compute (inst-exec inst-cur m)))))
 
+;machine X list of (key, value) -> machine(with input inserted into memory)
+(define (assign-input mac input)
+	(define mem0 (machine-mem mac))
+	(define mem-ass (foldl (lambda (kv mem-cur) (memory-store mem-cur (car kv) (cdr kv))) mem0 input))
+	(std:struct-copy machine mac [mem mem-ass]))
 
+;machine X list of (key, value) -> boolean
+(define (compare-output mac output)
+	(define mem0 (machine-mem mac))
+	(foldl (lambda (kv fml-cur) (= (cdr kv) (memory-load mem0 (car kv)))) #t output))
 
 ;[TODO?] memory allocation
 (define (ast->machine ast)
