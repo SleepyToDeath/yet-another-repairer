@@ -54,11 +54,12 @@
 
 (define (__ast->machine ast m)
 	(match ast
-		[(stats (stats-multi l r))
+		[(stats s) (__ast->machine s m)]
+		[(stats-multi l r)
 			(begin
 				(define m1 (__ast->machine l m))
 				(__ast->machine r m1))]
-		[(stats (stats-single head))
+		[(stats-single head)
 			(begin
 				(define ret-pair (ast->instruction head m))
 				(define i-new (car ret-pair))
@@ -69,20 +70,22 @@
 ;ast -> instruction X machine(lmap updated)
 (define (ast->instruction ast m)
 	(match ast
-		[(stat (stat-ass (variable addr) rvalue)) (cons (inst-ass addr (ast->expression rvalue)) m)]
-		[(stat (stat-jmp condition (label target))) (cons (inst-jmp (ast->expression condition) target) m)]
-		[(stat (stat-label (label here)))
+		[(stat s) (ast->instruction s m)]
+		[(stat-ass addr rvalue) (cons (inst-ass (variable-v addr) (ast->expression rvalue)) m)]
+		[(stat-jmp condition target) (cons (inst-jmp (ast->expression condition) (label-v target)) m)]
+		[(stat-label here)
 			(begin
-				(define lmap-new (imap-set (machine-lmap m) here (length (machine-prog m))))
+				(define lmap-new (imap-set (machine-lmap m) (label-v here) (length (machine-prog m))))
 				(cons #f (std:struct-copy machine m [lmap lmap-new])))]
-		[(stat (stat-nop any)) (cons (inst-nop nullptr) m)]
-		[(stat (stat-ret any)) (cons (inst-ret nullptr) m)]))
+		[(stat-nop any) (cons (inst-nop nullptr) m)]
+		[(stat-ret any) (cons (inst-ret nullptr) m)]))
 
 (define (ast->expression ast)
 	(match ast
-		[(expr (expr-const (const v))) (iexpr-const v)]
-		[(expr (expr-var (variable v))) (iexpr-var v)]
-		[(expr (expr-binary expr1 (op v) expr2)) (iexpr-binary v (ast->expression expr1) (ast->expression expr2))]))
+		[(expr e) (ast->expression e)]
+		[(expr-const c) (iexpr-const (const-v c))]
+		[(expr-var v) (iexpr-var (variable-v v))]
+		[(expr-binary expr1 o expr2) (iexpr-binary (op-v o) (ast->expression expr1) (ast->expression expr2))]))
 
 
 

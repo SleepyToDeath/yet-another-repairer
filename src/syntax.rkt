@@ -14,7 +14,7 @@
 (define-generics expanded
 	[expanded-check expanded])
 
-(struct syntax-context (vars nums ops labels) #:transparent)
+(struct syntax-context (vars consts ops labels) #:transparent)
 ;==================================================
 
 
@@ -64,10 +64,10 @@
 )
 
 (define-syntax-rule (LHS-E name -> (name-enum ::= rhs-enum ...))
-	(define (name-enum ctxt depth-limit) 
+	(define (name-enum ctxt depth-limit)
 		(if (> depth-limit 0)
-			(name (choose* 
-					(rhs-enum ctxt (- depth-limit 1)) ... ))
+			(let ([rhs-list (list (rhs-enum ctxt (- depth-limit 1)) ... )])
+			(name (apply choose* rhs-list)))
 			(invalid 0))))
 
 (define-syntax-rule (RHS-E name -> name-enum (lhs-enum ...))

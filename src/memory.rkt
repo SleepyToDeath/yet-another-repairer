@@ -27,3 +27,12 @@
 (define memory-empty (memory imap-empty nullptr))
 ;========================================
 
+
+;============== Helpers =================
+(define (memory->list mem from to)
+	(define app (lambda (i)
+		(if (= i to) null
+		(cons (memory-load mem i) (app (+ i 1)))))) 
+	(app from))
+;========================================
+

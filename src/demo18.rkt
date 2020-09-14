@@ -1,5 +1,10 @@
 #lang rosette/safe
 
+(require rosette/lib/angelic  ; provides `choose*`
+         rosette/lib/match)   ; provides `match`
+
+(require (prefix-in std: racket/base))
+
 (require "syntax.rkt")
 (require "syntax-jimple.rkt")
 (require "memory.rkt")
@@ -33,6 +38,8 @@
 ;	| jimple -> ast
 ;	V
 ;
+
+;(current-bitwidth #f)
 
 (define test-ast
 	(letrec 
@@ -125,6 +132,7 @@
 (define debug-sol (optimize #:maximize (list (foldl (lambda (b s) (+ s (b2i b))) 0 ids))
           #:guarantee (assert hard-constraint)))
 
+debug-sol
 
 (define SEARCH-DEPTH 5)
 
@@ -133,7 +141,31 @@
 		[(stats (stats-single any)) 1]
 		[(stats (stats-multi l r)) (+ (count-lines l) (count-lines r))]))
 
-(define ctxt-enum #f)
+(define (extract-vars ast)
+	(match ast
+		[(stats (stats-multi l r)) (append (extract-vars l) (extract-vars r))]
+		[(stats (stats-single s)) (extract-vars s)]
+		[(stat (stat-ass l r)) (append (extract-vars l) (extract-vars r))]
+		[(variable v) (list v)]
+		[(expr (expr-var v)) (extract-vars v)]
+		[(expr (expr-binary l o r)) (append (extract-vars l) (extract-vars r))]
+		[_ null]))
+
+(define (extract-labels ast)
+	(match ast
+		[(stats (stats-multi l r)) (append (extract-labels l) (extract-labels r))]
+		[(stats (stats-single s)) (extract-labels s)]
+		[(stat (stat-label v)) (extract-labels v)]
+		[(label v) (list v)]
+		[_ null]))
+
+(define consts (list 0 1 2 3 4 5))
+(define ops (list + -))
+(define vars (remove-duplicates (extract-vars test-ast)))
+(define labels (extract-labels test-ast))
+(define ctxt-enum (syntax-context vars consts ops labels))
+
+ctxt-enum
 
 ;ast X int -> ast
 (define (enum-line ast line)
@@ -146,8 +178,7 @@
 					(stats (stats-multi (enum-line l line) r)) 
 					(stats (stats-multi l (enum-line r (- line l-count))))))]
 			[(stats (stats-single any))
-				(if (= line 0) (stats (stats-single (stat-enum ctxt-enum SEARCH-DEPTH))) (error "Line number over end of program"))])))
-		
+				(if (= line 0) (stats (stats-single (stat-enum ctxt-enum SEARCH-DEPTH))) (std:error "Line number over end of program"))])))
 
 (define sketch (cdr (foldl 
 	(lambda (id pc-ast)
@@ -157,16 +188,76 @@
 	(cons 0 test-ast)
 	ids)))
 
+(ast-print sketch)
+
 (define (sketch->spec skt input output)
 	(compare-output (compute (assign-input (ast->machine skt) input)) output))
+
+(define (compute-output-list skt input)
+	(define mem (machine-mem (compute (assign-input (ast->machine skt) input))))
+	(memory->list mem 0 5)
+)
+
+(sketch->spec test-ast input1 output1)
+(sketch->spec test-ast input2 output2)
+(sketch->spec test-ast input3 output3)
+
+(ast-check test-ast)
+(ast-check sketch)
+
+(op-enum ctxt-enum 1)
 
 (define syn-sol 
 	(synthesize
 		#:forall null
-		#:guarantee (assert (and 
-			(sketch->spec sketch input1 output1)
-			(sketch->spec sketch input2 output2)
-			(sketch->spec sketch input3 output3)))))
+		#:guarantee (assert 
+			(and 
+				(ast-check sketch)
+				(sketch->spec sketch input1 output1)
+				(sketch->spec sketch input2 output2)
+				(sketch->spec sketch input3 output3)
+			)
+		)))
 
-(evaluate syn-sol sketch)
+(define result (evaluate sketch syn-sol))
+
+(ast-print result)
+
+;(define test2-ast (stats (stats-multi
+;	(stats (stats-single (stat (stat-ass 
+;		(variable 3) 
+;		(expr-enum ctxt-enum SEARCH-DEPTH)))))
+;	(stats (stats-single (stat (stat-ret (nop 0))))))))
+;
+;(display "\n Spec:\n")
+
+;(println
+;		(sketch->spec test2-ast input2 output2))
+;(println
+;		(sketch->spec test2-ast input3 output3))
+
+;(println
+;		(compute-output-list test2-ast input2))
+;(println
+;		(compute-output-list test2-ast input3))
+
+;(define syn-sol2
+;	(synthesize
+;		#:forall null
+;		#:guarantee (assert 
+;			(and 
+;				(ast-check test2-ast)
+;				(sketch->spec test2-ast input2 output2)
+;				(sketch->spec test2-ast input3 output3)
+;			)
+;		)))
+;
+;(display "\n Solution:\n")
+;
+;(evaluate test2-ast syn-sol2)
+;
+;(display "\n Assignment:\n")
+;
+;syn-sol2
+;
 
