@@ -1,47 +1,37 @@
-#lang rosette
+#lang racket
 
-(require brag/support)
-(require br-parser-tools/lex)
+(require syntax/parse)
 (require "grammar.rkt")
+(require "demo-lexer.rkt")
 
-(define-lex-abbrevs
-  [letter (:or (:/ "a" "z") (:/ #\A #\Z))]
-  [digit (:/ #\0 #\9)])
+(define (interpret-program program-stx)
+  (syntax-parse program-stx
+    [({~literal program} stmt-stxs ...)
+	 (for ([stmt-stx (syntax->list #'(stmt-stxs ...))])
+	      (interpret-stmt stmt-stx))]))
 
-(define (tokenize ip)
-    (port-count-lines! ip)
-    (define my-lexer
-      (lexer-src-pos
-       [(:+ digit)
-        (token 'INTEGER (string->number lexeme))]
-       [(:or "+" "-" "*" "/")
-        (token 'AOP lexeme)]
-       [(:or "<" "<=" ">" ">=" "==" "!=")
-        (token 'BOP lexeme)]
-       ["("
-        (token "(" lexeme)]
-       [")"
-        (token ")" lexeme)]
-       [";"
-        (token ";" lexeme)]
-       [":"
-        (token ":" lexeme)]
-       ["="
-        (token "=" lexeme)]
-       ["jmp"
-        (token "jmp" lexeme)]
-       ["label"
-        (token "label" lexeme)]
-       ["return"
-        (token "return" lexeme)]
-       [(:: (:or letter "_") (:* (:or letter digit "_")))
-        (token 'ID lexeme)]
-       [whitespace
-        (token 'WHITESPACE lexeme #:skip? #t)]
-       [(eof)
-        (void)]))
-    (define (next-token) (my-lexer ip))
-    next-token)
+(define (interpret-stmt stmt-stx)
+  (syntax-parse stmt-stx
+    [({~literal statement} ({~literal stmt-ass} stmt-ass-stx ...))
+     (interpret-stmt-ass #'(stmt-ass-stx ...))]
+    [({~literal statement} ({~literal stmt-jmp} stmt-jmp-stx ...))
+     (interpret-stmt-jmp #'(stmt-jmp-stx ...))]
+    [({~literal statement} ({~literal stmt-label} stmt-label-stx ...))
+     (interpret-stmt-label #'(stmt-label-stx ...))]
+    [({~literal statement} ({~literal stmt-ret} stmt-ret-stx ...))
+     (interpret-stmt-ret #'(stmt-ret-stx ...))]))
+
+(define (interpret-stmt-ass stmt-ass-stx)
+  (display "ass") (newline))
+
+(define (interpret-stmt-jmp stmt-ass-stx)
+  (display "jmp") (newline))
+
+(define (interpret-stmt-label stmt-ass-stx)
+  (display "label") (newline))
+
+(define (interpret-stmt-ret stmt-ass-stx)
+  (display "ret") (newline))
 
 (define program-text
   (string-append
@@ -58,5 +48,7 @@
 (define parsed-program
     (parse (tokenize (open-input-string program-text))))
 
-(syntax->datum parsed-program)
+;(syntax->datum parsed-program)
+
+(interpret-program parsed-program)
 
