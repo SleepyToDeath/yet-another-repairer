@@ -7,13 +7,17 @@ statement ::= stmt-ass
             | stmt-label
             | stmt-ret
 
-stmt-ass   ::= ID "=" expr ";"
-stmt-jmp   ::= "jmp" expr ID ";"
-stmt-label ::= "label" ID ":"
-stmt-ret   ::= "return" expr ";"
+stmt-ass   ::= ident "=" j-expr ";"
+stmt-jmp   ::= "jmp" j-expr ident ";"
+stmt-label ::= "label" ident ":"
+stmt-ret   ::= "return" ";"
 
-expr ::= INTEGER
-       | ID
-       | expr AOP expr
-       | expr BOP expr
-       | "(" expr ")"
+j-expr ::= literal
+       | ident
+       | j-expr BOP j-expr
+       | "(" j-expr ")"
+
+literal ::= INTEGER
+
+ident ::= ID
+
