@@ -4,16 +4,16 @@
 (require "grammar.rkt")
 (require "demo-lexer.rkt")
 (require "syntax.rkt")
-(require "syntax-jimple.rkt")
+(require (prefix-in j: "syntax-jimple.rkt"))
 
 (define (interpret-program program-stx)
   (demo:syntax-parse program-stx
     [({demo:~literal program} stmt-stxs ...)
      (begin
        (define tree
-         (stats (stats-single (stat (stat-nop (nop 0))))))
+         (j:stats (j:stats-single (j:stat (j:stat-nop (j:nop 0))))))
        (for ([stmt-stx (syntax->list #'(stmt-stxs ...))])
-            (set! tree (stats (stats-multi tree (stats (stats-single (interpret-stmt stmt-stx)))))))
+            (set! tree (j:stats (j:stats-multi tree (j:stats (j:stats-single (j:stat (interpret-stmt stmt-stx))))))))
        tree)]))
 
 (define (interpret-stmt stmt-stx)
@@ -30,61 +30,64 @@
 (define (interpret-stmt-ass stmt-ass-stx)
   (demo:syntax-parse stmt-ass-stx
     [(id-stx "=" expr-stx ";")
-     (stat-ass
+     (j:stat-ass
        (interpret-id #'id-stx)
        (interpret-expr #'expr-stx))]))
 
 (define (interpret-stmt-jmp stmt-jmp-stx)
   (demo:syntax-parse stmt-jmp-stx
     [("jmp" expr-stx label-stx ";")
-     (stat-jmp
+     (j:stat-jmp
        (interpret-expr #'expr-stx)
        (interpret-label #'label-stx))]))
 
 (define (interpret-stmt-label stmt-label-stx)
   (demo:syntax-parse stmt-label-stx
     [("label" label-stx ":")
-     (stat-label
+     (j:stat-label
        (interpret-label #'label-stx))]))
 
 (define (interpret-stmt-ret stmt-ret-stx)
-  (stat-ret (nop 0)))
+  (j:stat-ret (j:nop 0)))
 
 (define (interpret-expr expr-stx)
-  (variable 1000))
-;  (demo:syntax-parse expr-stx
-;    [({demo:~literal j-expr} ({demo:~literal ident} id-stx))
-;     (interpret-id #'id-stx)]
-;    [({demo:~literal j-expr} "(" paren-stx ")")
-;     (interpret-expr-paren #'paren-stx)]
-;    [({demo:~literal j-expr} ({demo:~literal expr} lhs-stx) op-text ({demo:~literal expr} rhs-stx))
-;     (variable 1000)]
-;))
+  (demo:syntax-parse expr-stx
+    [({demo:~literal j-expr} ({demo:~literal literal} literal-stx))
+     (interpret-literal #'literal-stx)]
+    [({demo:~literal j-expr} ({demo:~literal ident} id-stx))
+     (interpret-id #'(ident id-stx))]
+    [({demo:~literal j-expr} lhs-stx op-stx rhs-stx)
+     (interpret-expr-bop #'lhs-stx #'op-stx #'rhs-stx)]
+))
 
 (define (interpret-label label-stx)
   (demo:syntax-parse label-stx
     [({demo:~literal ident} l)
-     (label (syntax-e #'l))]))
+     (j:label (syntax-e #'l))]))
 
 (define (interpret-id id-stx)
   (demo:syntax-parse id-stx
-    [({demo:~literal ident} l)
-     (variable (syntax-e #'l))]))
+    [({demo:~literal ident} id)
+     (j:expr (j:expr-var (j:variable (syntax-e #'id))))]))
 
-(define (interpret-int int-stx)
-  (const (syntax-e int-stx)))
+(define (interpret-literal literal-stx)
+  (j:expr (j:expr-const (j:const (syntax-e literal-stx)))))
 
-(define (interpret-expr-bop bop-stx)
-  (demo:syntax-parse bop-stx
-    [(lhs op rhs)
-     (expr-binary
-       (interpret-expr #'lhs)
-       (interpret-op #'op)
-       (interpret-expr #'rhs))]))
+(define (interpret-expr-bop lhs-stx op-stx rhs-stx)
+  (j:expr (j:expr-binary
+    (interpret-expr lhs-stx)
+    (interpret-op op-stx)
+    (interpret-expr rhs-stx))))
 
 (define (interpret-op op-stx)
-  (op (syntax-e op-stx)))
-     
+  (demo:syntax-parse op-stx
+    [({demo:~literal binop} "+")
+     (j:op +)]
+    [({demo:~literal binop} "-")
+     (j:op -)]
+    [({demo:~literal binop} "<")
+     (j:op <)]))
+
 (define (interpret-expr-paren paren-stx)
   (demo:syntax-parse paren-stx
     [("(" expr ")")
@@ -93,15 +96,16 @@
 
 (define program-text
   (string-append
-    "v1 = x; \n"
-    "jmp (v1 < 1) l1; \n"
+;    "v1 = x; \n"
+    "jmp v1 < 1 l1; \n"
     "v2 = v1 + 2; \n"
-    "jmp (1) l2; \n"
+    "jmp 1 l2; \n"
     "label l1: \n"
     "v2 = 2; \n"
     "label l2: \n"
     "v3 = v2; \n"
-    "y = v3; \n"))
+    "return; \n"))
+;    "y = v3; \n"))
 
 (define parsed-program
   (parse (tokenize (open-input-string program-text))))
@@ -113,5 +117,7 @@
 
 ;parsed-ast
 
-(ast-print parsed-ast)
+(j:ast-print parsed-ast)
+
+(provide parsed-ast)
 

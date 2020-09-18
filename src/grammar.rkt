@@ -14,8 +14,9 @@ stmt-ret   ::= "return" ";"
 
 j-expr ::= literal
        | ident
-       | j-expr BOP j-expr
-       | "(" j-expr ")"
+       | j-expr binop j-expr
+
+binop ::= BOP
 
 literal ::= INTEGER
 
