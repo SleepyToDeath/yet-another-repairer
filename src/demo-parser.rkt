@@ -1,10 +1,11 @@
-#lang racket
+#lang rosette/safe
 
+(require (prefix-in std: racket/base))
 (require (prefix-in demo: syntax/parse))
 (require "grammar.rkt")
 (require "demo-lexer.rkt")
-(require "syntax.rkt")
-(require (prefix-in j: "syntax-jimple.rkt"))
+(require "demo2/syntax.rkt")
+(require (prefix-in j: "demo2/syntax-jimple.rkt"))
 
 (define (interpret-program program-stx)
   (demo:syntax-parse program-stx
@@ -12,7 +13,7 @@
      (begin
        (define tree
          (j:stats (j:stats-single (j:stat (j:stat-nop (j:nop 0))))))
-       (for ([stmt-stx (syntax->list #'(stmt-stxs ...))])
+       (std:for ([stmt-stx (std:syntax->list #'(stmt-stxs ...))])
             (set! tree (j:stats (j:stats-multi tree (j:stats (j:stats-single (j:stat (interpret-stmt stmt-stx))))))))
        tree)]))
 
@@ -53,9 +54,9 @@
 (define (interpret-expr expr-stx)
   (demo:syntax-parse expr-stx
     [({demo:~literal j-expr} ({demo:~literal literal} literal-stx))
-     (interpret-literal #'literal-stx)]
+     (j:expr (j:expr-const (interpret-literal #'literal-stx)))]
     [({demo:~literal j-expr} ({demo:~literal ident} id-stx))
-     (interpret-id #'(ident id-stx))]
+     (j:expr (j:expr-var (interpret-id #'(ident id-stx))))]
     [({demo:~literal j-expr} lhs-stx op-stx rhs-stx)
      (interpret-expr-bop #'lhs-stx #'op-stx #'rhs-stx)]
 ))
@@ -63,15 +64,15 @@
 (define (interpret-label label-stx)
   (demo:syntax-parse label-stx
     [({demo:~literal ident} l)
-     (j:label (syntax-e #'l))]))
+     (j:label (std:syntax-e #'l))]))
 
 (define (interpret-id id-stx)
   (demo:syntax-parse id-stx
     [({demo:~literal ident} id)
-     (j:expr (j:expr-var (j:variable (syntax-e #'id))))]))
+     (j:variable (std:syntax-e #'id))]))
 
 (define (interpret-literal literal-stx)
-  (j:expr (j:expr-const (j:const (syntax-e literal-stx)))))
+  (j:const (std:syntax-e literal-stx)))
 
 (define (interpret-expr-bop lhs-stx op-stx rhs-stx)
   (j:expr (j:expr-binary
@@ -85,6 +86,8 @@
      (j:op +)]
     [({demo:~literal binop} "-")
      (j:op -)]
+    [({demo:~literal binop} "==")
+     (j:op =)]
     [({demo:~literal binop} "<")
      (j:op <)]))
 
@@ -95,11 +98,11 @@
 
 
 (define program-text
-  (string-append
+  (std:string-append
 ;    "v1 = x; \n"
     "jmp v1 < 1 l1; \n"
     "v2 = v1 + 2; \n"
-    "jmp 1 l2; \n"
+    "jmp 1 == 1 l2; \n"
     "label l1: \n"
     "v2 = 2; \n"
     "label l2: \n"
@@ -108,9 +111,9 @@
 ;    "y = v3; \n"))
 
 (define parsed-program
-  (parse (tokenize (open-input-string program-text))))
+  (parse (tokenize (std:open-input-string program-text))))
 
-;(syntax->datum parsed-program)
+(std:syntax->datum parsed-program)
 
 (define parsed-ast
   (interpret-program parsed-program))

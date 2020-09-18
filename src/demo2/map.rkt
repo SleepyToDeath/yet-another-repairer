@@ -14,7 +14,10 @@
 (define (imap-set m index value)
 	(define oldf (imap-func m))
 	(define newf (lambda (args)
-                 (if (= args index) value (oldf args))))
+                 (if (if (std:string? args)
+                         (std:equal? args index)
+                         (= args index))
+                     value (oldf args))))
 	(std:struct-copy imap m [func newf]))
 ;==================================================
 
