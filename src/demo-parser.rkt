@@ -69,7 +69,7 @@
 (define (interpret-id id-stx)
   (demo:syntax-parse id-stx
     [({demo:~literal ident} id)
-     (j:variable (std:syntax-e #'id))]))
+     (j:variable (std:string->number (std:substring (std:syntax-e #'id) 1)))]))
 
 (define (interpret-literal literal-stx)
   (j:const (std:syntax-e literal-stx)))
@@ -96,31 +96,5 @@
     [("(" expr ")")
      (interpret-expr #'expr)]))
 
-
-(define program-text
-  (std:string-append
-;    "v1 = x; \n"
-    "jmp v1 < 1 l1; \n"
-    "v2 = v1 + 2; \n"
-    "jmp 1 == 1 l2; \n"
-    "label l1: \n"
-    "v2 = 2; \n"
-    "label l2: \n"
-    "v3 = v2; \n"
-    "return; \n"))
-;    "y = v3; \n"))
-
-(define parsed-program
-  (parse (tokenize (std:open-input-string program-text))))
-
-(std:syntax->datum parsed-program)
-
-(define parsed-ast
-  (interpret-program parsed-program))
-
-;parsed-ast
-
-(j:ast-print parsed-ast)
-
-(provide parsed-ast)
+(provide parse tokenize interpret-program)
 

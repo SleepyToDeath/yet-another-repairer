@@ -43,37 +43,39 @@
 
 ;(current-bitwidth #f)
 
+(define program-text
+  (std:string-append
+    "jmp v1 < 1 l1; \n"
+    "v2 = v1 + 2; \n"
+    "jmp 1 < 2 l2; \n"
+    "label l1: \n"
+    "v2 = 2; \n"
+    "label l2: \n"
+    "v3 = v2; \n"
+    "return; \n"))
+
+(define parsed-program
+  (parse (tokenize (std:open-input-string program-text))))
+
+(define parsed-ast
+  (interpret-program parsed-program))
+
 (define test-ast parsed-ast)
 
 ;f(0) = 2
-(define input1 (list (cons "v1" 0)))
-(define output1 (list (cons "v3" 2)))
+(define input1 (list (cons 1 0)))
+(define output1 (list (cons 3 2)))
 
 ;f(1) = 2
-(define input2 (list (cons "v1" 1)))
-(define output2 (list (cons "v3" 2)))
+(define input2 (list (cons 1 1)))
+(define output2 (list (cons 3 2)))
 
 ;f(2) = 3
-(define input3 (list (cons "v1" 2)))
-(define output3 (list (cons "v3" 3)))
+(define input3 (list (cons 1 2)))
+(define output3 (list (cons 3 3)))
 
-(newline) (display "1111111") (newline)
-
-(display test-ast)
-
-(newline) (display "1111111") (newline)
-
-(ast-print test-ast)
-
-(newline) (display "000") (newline)
-
-(ast-check test-ast)
-
-(newline) (display "aaa") (newline)
 
 (define lf (ast->relation test-ast))
-
-(newline) (display "bbb") (newline)
 
 (define ids (car lf))
 (define fml-gen (cdr lf))
@@ -81,10 +83,6 @@
 (define tf1 (fml-gen input1 output1))
 (define tf2 (fml-gen input2 output2))
 (define tf3 (fml-gen input3 output3))
-
-(newline) (display "ccc") (newline)
-
-(display tf2)
 
 (define (b2i b)
   (if b 1 0))
@@ -94,7 +92,9 @@
 (define debug-sol (optimize #:maximize (list (foldl (lambda (b s) (+ s (b2i b))) 0 ids))
           #:guarantee (assert hard-constraint)))
 
+(display "\n Debug: \n")
 debug-sol
+
 
 (define SEARCH-DEPTH 5)
 
@@ -127,6 +127,8 @@ debug-sol
 (define labels (extract-labels test-ast))
 (define ctxt-enum (syntax-context vars consts ops labels))
 
+(display "\n Enumeration Context: \n")
+
 ctxt-enum
 
 ;ast X int -> ast
@@ -150,6 +152,7 @@ ctxt-enum
 	(cons 0 test-ast)
 	ids)))
 
+(display "\n Sketch: \n")
 (ast-print sketch)
 
 (define (sketch->spec skt input output)
@@ -160,14 +163,14 @@ ctxt-enum
 	(memory->list mem 0 5)
 )
 
-(sketch->spec test-ast input1 output1)
-(sketch->spec test-ast input2 output2)
-(sketch->spec test-ast input3 output3)
+;(sketch->spec test-ast input1 output1)
+;(sketch->spec test-ast input2 output2)
+;(sketch->spec test-ast input3 output3)
 
-(ast-check test-ast)
-(ast-check sketch)
+;(ast-check test-ast)
+;(ast-check sketch)
 
-(op-enum ctxt-enum 1)
+;(op-enum ctxt-enum 1)
 
 (define syn-sol 
 	(synthesize
@@ -183,43 +186,7 @@ ctxt-enum
 
 (define result (evaluate sketch syn-sol))
 
+(display "\n Synthesis Result: \n")
 (ast-print result)
 
-;(define test2-ast (stats (stats-multi
-;	(stats (stats-single (stat (stat-ass 
-;		(variable 3) 
-;		(expr-enum ctxt-enum SEARCH-DEPTH)))))
-;	(stats (stats-single (stat (stat-ret (nop 0))))))))
-;
-;(display "\n Spec:\n")
-
-;(println
-;		(sketch->spec test2-ast input2 output2))
-;(println
-;		(sketch->spec test2-ast input3 output3))
-
-;(println
-;		(compute-output-list test2-ast input2))
-;(println
-;		(compute-output-list test2-ast input3))
-
-;(define syn-sol2
-;	(synthesize
-;		#:forall null
-;		#:guarantee (assert 
-;			(and 
-;				(ast-check test2-ast)
-;				(sketch->spec test2-ast input2 output2)
-;				(sketch->spec test2-ast input3 output3)
-;			)
-;		)))
-;
-;(display "\n Solution:\n")
-;
-;(evaluate test2-ast syn-sol2)
-;
-;(display "\n Assignment:\n")
-;
-;syn-sol2
-;
 
