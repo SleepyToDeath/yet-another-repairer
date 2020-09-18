@@ -84,6 +84,8 @@
 
 (newline) (display "ccc") (newline)
 
+(display tf2)
+
 (define (b2i b)
   (if b 1 0))
 
