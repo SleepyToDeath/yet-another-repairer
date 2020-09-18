@@ -132,7 +132,9 @@
 (define debug-sol (optimize #:maximize (list (foldl (lambda (b s) (+ s (b2i b))) 0 ids))
           #:guarantee (assert hard-constraint)))
 
+(display "\n Debug: \n")
 debug-sol
+
 
 (define SEARCH-DEPTH 5)
 
@@ -165,6 +167,8 @@ debug-sol
 (define labels (extract-labels test-ast))
 (define ctxt-enum (syntax-context vars consts ops labels))
 
+(display "\n Enumeration Context: \n")
+
 ctxt-enum
 
 ;ast X int -> ast
@@ -188,6 +192,7 @@ ctxt-enum
 	(cons 0 test-ast)
 	ids)))
 
+(display "\n Sketch: \n")
 (ast-print sketch)
 
 (define (sketch->spec skt input output)
@@ -198,14 +203,14 @@ ctxt-enum
 	(memory->list mem 0 5)
 )
 
-(sketch->spec test-ast input1 output1)
-(sketch->spec test-ast input2 output2)
-(sketch->spec test-ast input3 output3)
+;(sketch->spec test-ast input1 output1)
+;(sketch->spec test-ast input2 output2)
+;(sketch->spec test-ast input3 output3)
 
-(ast-check test-ast)
-(ast-check sketch)
+;(ast-check test-ast)
+;(ast-check sketch)
 
-(op-enum ctxt-enum 1)
+;(op-enum ctxt-enum 1)
 
 (define syn-sol 
 	(synthesize
@@ -221,6 +226,7 @@ ctxt-enum
 
 (define result (evaluate sketch syn-sol))
 
+(display "\n Synthesis Result: \n")
 (ast-print result)
 
 ;(define test2-ast (stats (stats-multi
