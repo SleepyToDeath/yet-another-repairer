@@ -46,34 +46,18 @@
 (define test-ast parsed-ast)
 
 ;f(0) = 2
-(define input1 (list (cons "v1" 0)))
-(define output1 (list (cons "v3" 2)))
+(define input1 (list (cons 1 0)))
+(define output1 (list (cons 3 2)))
 
 ;f(1) = 2
-(define input2 (list (cons "v1" 1)))
-(define output2 (list (cons "v3" 2)))
+(define input2 (list (cons 1 1)))
+(define output2 (list (cons 3 2)))
 
 ;f(2) = 3
-(define input3 (list (cons "v1" 2)))
-(define output3 (list (cons "v3" 3)))
-
-(newline) (display "1111111") (newline)
-
-(display test-ast)
-
-(newline) (display "1111111") (newline)
-
-(ast-print test-ast)
-
-(newline) (display "000") (newline)
-
-(ast-check test-ast)
-
-(newline) (display "aaa") (newline)
+(define input3 (list (cons 1 2)))
+(define output3 (list (cons 3 3)))
 
 (define lf (ast->relation test-ast))
-
-(newline) (display "bbb") (newline)
 
 (define ids (car lf))
 (define fml-gen (cdr lf))
@@ -81,8 +65,6 @@
 (define tf1 (fml-gen input1 output1))
 (define tf2 (fml-gen input2 output2))
 (define tf3 (fml-gen input3 output3))
-
-(newline) (display "ccc") (newline)
 
 (define (b2i b)
   (if b 1 0))
@@ -182,42 +164,4 @@ ctxt-enum
 (define result (evaluate sketch syn-sol))
 
 (ast-print result)
-
-;(define test2-ast (stats (stats-multi
-;	(stats (stats-single (stat (stat-ass 
-;		(variable 3) 
-;		(expr-enum ctxt-enum SEARCH-DEPTH)))))
-;	(stats (stats-single (stat (stat-ret (nop 0))))))))
-;
-;(display "\n Spec:\n")
-
-;(println
-;		(sketch->spec test2-ast input2 output2))
-;(println
-;		(sketch->spec test2-ast input3 output3))
-
-;(println
-;		(compute-output-list test2-ast input2))
-;(println
-;		(compute-output-list test2-ast input3))
-
-;(define syn-sol2
-;	(synthesize
-;		#:forall null
-;		#:guarantee (assert 
-;			(and 
-;				(ast-check test2-ast)
-;				(sketch->spec test2-ast input2 output2)
-;				(sketch->spec test2-ast input3 output3)
-;			)
-;		)))
-;
-;(display "\n Solution:\n")
-;
-;(evaluate test2-ast syn-sol2)
-;
-;(display "\n Assignment:\n")
-;
-;syn-sol2
-;
 
