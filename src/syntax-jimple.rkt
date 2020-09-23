@@ -7,9 +7,17 @@
 (provide (all-defined-out))
 
 ;============= Syntax Definition & Check =============
-(LHS-C stats (rhs ::= stats-multi stats-single))
-	(RHS-C stats-multi (l : stats) (r : stats))
-	(RHS-C stats-single (head : stat))
+(LHS-C program (rhs ::= program-def))
+	(RHS-C program-def (gv : globals) (fc : functions) (mm : members)
+
+(LHS-C globals
+
+(LHS-C functions
+
+(LHS-C members
+
+(LHS-C stats (rhs ::= stats-list))
+	(RHS-C-List stats-list (st : stat))
 
 (LHS-C stat (rhs ::= stat-ass stat-jmp stat-label stat-nop stat-ret))
 	(RHS-C stat-ass (lvalue : variable) (rvalue : expr))

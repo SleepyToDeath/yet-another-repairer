@@ -35,6 +35,20 @@
 	)
 )
 
+(define-syntax-rule (RHS-C-List name (lname : lhs))
+	(struct name (lname) #:transparent
+		#:methods gen:expanded
+		[
+			(define (expanded-check __et)
+				(and
+					(andmap (id2pred lhs) ((id2acc name lname) __et))
+					(andmap ast-check ((id2acc name lname) __et))))
+		]
+	)
+)
+
+	
+
 (define-syntax-rule (RHS-C name (lname : lhs) ...)
 	(struct name (lname ...) #:transparent
 		#:methods gen:expanded

@@ -21,8 +21,9 @@
 
 ;============= Default Values ===========
 (define nullptr -1)
+(define not-found -2)
 
-(define (default-func x) nullptr)
+(define (default-func x) not-found)
 
 (define imap-empty (imap default-func))
 ;========================================

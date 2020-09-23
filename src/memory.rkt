@@ -6,25 +6,46 @@
 (provide (all-defined-out))
 
 ;============= Definition & Operations ===========
-(struct memory (imap top) #:transparent )
+(struct memory (stack heap top) #:transparent)
 
-(define (memory-load mem index)
-	(imap-get (memory-imap mem) index))
+;read from stack
+(define (memory-sread mem name)
+	(stack-read (memory-stack mem) name))
 
-(define (memory-store mem index value)
+;write to stack
+(define (memory-swrite mem name value)
 	(std:struct-copy memory mem 
-		[imap (imap-set (memory-imap mem) index value)]))
+		[stack (stack-write (memory-stack mem) name value)]))
 
-;only used to update memory
-;will return new memory
-;use memory-top to get the allocated address
-(define (memory-alloc mem)
-	(std:struct-copy memory mem [top (+ (memory-top mem) 1)]))
+;declare variable on current stack-top scope
+(define (memory-decl mem name)
+	(std:struct-copy memory mem [stack (stack-decl (memory-stack mem) name)]))
+
+;push a scope to stack
+(define (memory-push mem)
+	(std:struct-copy memory mem [stack (stack-push (memory-stack mem))]))
+
+;pop a scope from stack
+(define (memory-pop mem)
+	(std:struct-copy memory mem [stack (stack-pop (memory-stack mem))]))
+	
+;read from heap
+(define (memory-hread mem addr)
+	(imap-get (memory-heap mem) addr))
+
+;write to heap
+(define (memory-hwrite mem addr value)
+	(std:struct-copy memory mem [heap (imap-set (memory-heap mem) addr value)]))
+
+;allocate memory on heap
+;memory X size -> memory(new) X addr(allocated)
+(define (memory-alloc mem size)
+	(cons (memory-top mem) (std:struct-copy memory mem [top (+ (memory-top mem) size)])))
 ;==================================================
 
 
 ;============= Default Values ===========
-(define memory-empty (memory imap-empty nullptr))
+(define memory-empty (memory stack-empty imap-empty 0))
 ;========================================
 
 

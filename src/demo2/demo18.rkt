@@ -114,7 +114,6 @@
 (define input3 (list (cons 1 2)))
 (define output3 (list (cons 3 3)))
 
-
 (define lf (ast->relation test-ast))
 
 (define ids (car lf))
