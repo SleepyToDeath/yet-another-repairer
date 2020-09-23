@@ -5,6 +5,8 @@
 
 (require (prefix-in std: racket/base))
 
+(require "../demo-parser.rkt")
+
 (require "syntax.rkt")
 (require "syntax-jimple.rkt")
 (require "memory.rkt")
@@ -41,66 +43,24 @@
 
 ;(current-bitwidth #f)
 
-(define test-ast
-	(letrec 
+(define program-text
+  (std:string-append
+    "jmp v1 < 1 l1; \n"
+    "v2 = v1 + 2; \n"
+    "jmp 1 < 2 l2; \n"
+    "label l1: \n"
+    "v2 = 2; \n"
+    "label l2: \n"
+    "v3 = v2; \n"
+    "return; \n"))
 
-	([line0
-		(stat (stat-jmp
-			(expr (expr-binary
-				(expr (expr-var (variable 1))) 
-				(op <)
-				(expr (expr-const (const 1)))))
-			(label 1)))]
+(define parsed-program
+  (parse (tokenize (std:open-input-string program-text))))
 
-	[line1
-		(stat (stat-ass 
-			(variable 2) 
-			(expr (expr-binary 
-				(expr (expr-var (variable 1))) 
-				(op +)
-				(expr (expr-const (const 2)))))))]
+(define parsed-ast
+  (interpret-program parsed-program))
 
-	[line2
-		(stat (stat-jmp
-			(expr (expr-const (const #t)))
-			(label 2)))]
-
-	[line3
-		(stat (stat-label
-			(label 1)))]
-
-	[line4
-		(stat (stat-ass 
-			(variable 2) 
-			(expr (expr-const (const 2)))))]
-
-	[line5
-		(stat (stat-label
-			(label 2)))]
-
-	[line6
-		(stat (stat-ass 
-			(variable 3) 
-			(expr (expr-var (variable 2)))))]
-
-	[test-program 
-		(stats (stats-multi
-			(stats (stats-multi
-			(stats (stats-multi
-			(stats (stats-multi
-			(stats (stats-multi
-			(stats (stats-multi
-			(stats (stats-multi
-				(stats (stats-single line0))
-				(stats (stats-single line1))))
-				(stats (stats-single line2))))
-				(stats (stats-single line3))))
-				(stats (stats-single line4))))
-				(stats (stats-single line5))))
-				(stats (stats-single line6))))
-			(stats (stats-single (stat (stat-ret (nop 0)))))))])
-	
-	test-program))
+(define test-ast parsed-ast)
 
 ;f(0) = 2
 (define input1 (list (cons 1 0)))
@@ -113,6 +73,7 @@
 ;f(2) = 3
 (define input3 (list (cons 1 2)))
 (define output3 (list (cons 3 3)))
+
 
 (define lf (ast->relation test-ast))
 
@@ -228,41 +189,4 @@ ctxt-enum
 (display "\n Synthesis Result: \n")
 (ast-print result)
 
-;(define test2-ast (stats (stats-multi
-;	(stats (stats-single (stat (stat-ass 
-;		(variable 3) 
-;		(expr-enum ctxt-enum SEARCH-DEPTH)))))
-;	(stats (stats-single (stat (stat-ret (nop 0))))))))
-;
-;(display "\n Spec:\n")
-
-;(println
-;		(sketch->spec test2-ast input2 output2))
-;(println
-;		(sketch->spec test2-ast input3 output3))
-
-;(println
-;		(compute-output-list test2-ast input2))
-;(println
-;		(compute-output-list test2-ast input3))
-
-;(define syn-sol2
-;	(synthesize
-;		#:forall null
-;		#:guarantee (assert 
-;			(and 
-;				(ast-check test2-ast)
-;				(sketch->spec test2-ast input2 output2)
-;				(sketch->spec test2-ast input3 output3)
-;			)
-;		)))
-;
-;(display "\n Solution:\n")
-;
-;(evaluate test2-ast syn-sol2)
-;
-;(display "\n Assignment:\n")
-;
-;syn-sol2
-;
 

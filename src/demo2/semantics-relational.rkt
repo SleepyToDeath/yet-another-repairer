@@ -72,7 +72,6 @@
 (define (inst->relation pc inst id mark mac)
 
 	(define-symbolic* vs integer?)
-	(define-symbolic* shadow-key integer?)
 
 	(define (next-mark) (cddr (list-ref (machine-prog mac) (+ 1 pc))))
 	(define (label-mark label) 
@@ -91,17 +90,16 @@
 		[(inst-ass vl vr) 
 			(letrec 
 				([mem (machine-mem mac)]
+				[shadow-key (if mark vl (if (std:string? vl) "nullptr" nullptr))]
 				[value (expr-eval vr mac)]
 				[mem-new (memory-store mem shadow-key vs)]
 				[mac-new (std:struct-copy machine mac [mem mem-new])]
 
-				[fml-key (= shadow-key (if mark vl nullptr))]
 				[fml-value (= value vs)]
 				[fml-new fml-value]
 				[fml-switch (implies id fml-new)]
-				[fml-path (and 
-					fml-key
-					(equal? mark (and fml-switch (next-mark))))])
+				[fml-path 
+					(equal? mark (and fml-switch (next-mark)))])
 
 				(cons fml-path mac-new))
 		]

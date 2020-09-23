@@ -13,9 +13,7 @@
       (lexer-src-pos
        [(:+ digit)
         (token 'INTEGER (string->number lexeme))]
-       [(:or "+" "-" "*" "/")
-        (token 'AOP lexeme)]
-       [(:or "<" "<=" ">" ">=" "==" "!=")
+       [(:or "+" "-" "*" "/" "<" "<=" ">" ">=" "==" "!=")
         (token 'BOP lexeme)]
        ["("
         (token "(" lexeme)]
