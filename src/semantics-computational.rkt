@@ -88,6 +88,9 @@
 		[(expr-binary expr1 o expr2) (iexpr-binary (op-v o) (ast->expression expr1) (ast->expression expr2))]))
 
 
+(struct inst-init-global (global-list) #:transparent
+	#:methods gen:instruction
+	[(define (inst-exec i m) 
 
 
 ;addr(int) X iexpr

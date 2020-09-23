@@ -44,7 +44,7 @@
 ;declare at the current top level scope
 ;default value is nullptr
 (define (stack-decl st name)
-	(stack (std:struct-copy scope (stack-top st) [imap (imap-set (stack-top st) name nullptr)])))
+	(stack (std:struct-copy scope (stack-top st) [imap (imap-set (scope-imap (stack-top st)) name nullptr)])))
 
 ;push a scope to the top
 (define (stack-push st)

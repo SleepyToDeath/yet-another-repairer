@@ -46,7 +46,7 @@
 (define program-text
   (std:string-append
     "jmp v1 < 1 l1; \n"
-    "v2 = v1 + 2; \n"
+    "v2 = v1 + 1; \n"
     "jmp 1 < 2 l2; \n"
     "label l1: \n"
     "v2 = 2; \n"
