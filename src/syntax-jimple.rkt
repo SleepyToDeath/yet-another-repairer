@@ -10,7 +10,7 @@
 ;main function should be named "main"
 (LHS-C program (rhs ::= class-list))
 	(RHS-C-List class-list (cl : class-def))
-
+;
 (LHS-C class-def (rhs ::= class-default))
 	(RHS-C class-default (globals : variable-declares) (fields : field-declares) 
 	(static-functions : function-declares) (member-functions : function-declares))
