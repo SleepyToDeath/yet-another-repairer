@@ -8,15 +8,18 @@
 
 ;============= Syntax Definition & Check =============
 ;main function should be named "main"
-(LHS-C program (rhs ::= program-def))
-	(RHS-C program-def (globals : variable-declares) (functions : function-declares) (members : member-declares))
+(LHS-C program (rhs ::= class-list))
+	(RHS-C-List class-list (cl : class-def))
+
+(RHS-C class-def (globals : variable-declares) (fields : field-declares) 
+	(static-functions : function-declares) (member-functions : function-declares))
 
 ;--------------------------------------------------------
 (LHS-C function-declares (rhs ::= function-list))
 	(RHS-C-List function-list (fl : function-declare))
 
-(LHS-C member-declares (rhs ::= member-list))
-	(RHS-C-List member-list (ml : field))
+(LHS-C field-declares (rhs ::= field-list))
+	(RHS-C-List field-list (ml : field))
 
 (LHS-C variable-declares (rhs ::= variable-list))
 	(RHS-C-List variable-list (vl : variable-init))

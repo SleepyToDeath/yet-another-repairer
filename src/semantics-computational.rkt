@@ -9,9 +9,10 @@
 
 (provide (all-defined-out))
 
+;======================== Definitions ===========================
 ;prog: list of instructions;
 ;lmap: imap: label(int) -> instruction index(int)
-(struct function (prog lmap args locals) #:transparent)
+(struct function (name prog lmap args locals) #:transparent)
 
 ;mem: memory
 ;pc: int
@@ -30,11 +31,14 @@
 
 (define pc-ret -1)
 (define pc-init 0)
-(define ret-name "__returns__")
+(define var-ret-name "__return__")
+(define var-this-name "this")
+(define func-name-main "main")
+(define func-name-boot "__boot__")
 (define machine-empty (machine null memory-empty pc-init))
 
 
-
+;======================== Execution Interface ===========================
 ;machine(init) X list of names -> machine(fin)
 (define (compute mac args)
 	(function-call mac (list-ref (machine-funcs mac) 0) args))
@@ -74,25 +78,13 @@
 
 
 
+;======================== AST Interpreter ===========================
 (define (ast->machine ast)
-	(__ast->machine ast machine-empty))
+	(
 
-(define (__ast->machine ast m)
-	(match ast
-		[(stats s) (__ast->machine s m)]
-		[(stats-multi l r)
-			(begin
-				(define m1 (__ast->machine l m))
-				(__ast->machine r m1))]
-		[(stats-single head)
-			(begin
-				(define ret-pair (ast->instruction head m))
-				(define i-new (car ret-pair))
-				(define m-new (cdr ret-pair))
-				(define prog-new (if i-new (append (machine-prog m) (list i-new)) (machine-prog m)))
-				(std:struct-copy machine m-new [prog prog-new]))]))
+(define (ast->function ast)
 
-;ast -> instruction X machine(lmap updated)
+;ast -> instruction X function(lmap updated)
 (define (ast->instruction ast m)
 	(match ast
 		[(stat s) (ast->instruction s m)]
@@ -113,6 +105,31 @@
 		[(expr-const c) (iexpr-const (const-v c))]
 		[(expr-var v) (iexpr-var (variable-v v))]
 		[(expr-binary expr1 o expr2) (iexpr-binary (op-v o) (ast->expression expr1) (ast->expression expr2))]))
+
+(define (build-boot-func funcs fields globals)
+	(define iboot (inst-boot funcs fields globals))
+	(define icall (inst-static-call var-ret-name func-name-main null))
+	(function func-name-boot (cons iboot icall) imap-empty null null))
+
+
+
+;======================== Instructions ===========================
+;funcs: list of functions
+;fields: list of field names
+;globals: list of ast(variable-init)
+(struct inst-boot (sfuncs mfuncs fields globals) #:transparent
+	#:methods gen:instruction
+	[(define (inst-exec i m f) 
+		(define sfuncs (inst-boot-sfuncs i))
+		(define mfuncs (inst-boot-mfuncs i))
+		(define fields (inst-boot-fields i))
+		(define globals (inst-boot-globals i))
+
+		(define mem0 (machine-mem m))
+		(define mem-push (memory-spush mem0))
+		(define mem-sfuncs (foldl (lambda (func mem) (memory-sforce-write mem (function-name func) func)) mem-push funcs))
+		(define mem-fields (foldl (lambda (field mem) (memory-fdecl mem field)) mem-funcs fields)))])
+
 
 
 
@@ -167,7 +184,7 @@
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define ret-value (memory-sread (machine-mem m) (inst-ret-v i)))
-		(define mem-ret (memory-sforce-write (machine-mem m) ret-name ret-value))
+		(define mem-ret (memory-sforce-write (machine-mem m) var-ret-name ret-value))
 		(std:struct-copy machine m [pc pc-ret][mem mem-ret]))])
 
 (struct inst-static-call (ret func-name args) #:transparent
@@ -175,10 +192,11 @@
 	[(define (inst-exec i m f)
 		(define func (memory-sread (machine-mem m) func-name))
 		(define args (inst-static-call-args i))
+		(define ret (inst-static-call-ret i))
 
 		(define mac-ret (function-call m func args))
 		(define mem-ret (machine-mem mac-ret))
-		(define ret-value (memory-sread mem-ret ret-name))
+		(define ret-value (memory-sread mem-ret var-ret-name))
 		
 		(define mem-pop (memory-spop mem-ret))
 		(define mem-ass (memory-swrite mem-pop ret))
@@ -194,12 +212,15 @@
 		(define obj-addr (memory-sread mem0 obj-name))
 		(define func (memory-fread mem0 obj-addr func-name))
 		(define args (inst-static-call-args i))
+		;push an extra scope to avoid overwriting "this" of the current scope
+		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
+		(define mac-this (std:struct-copy machine m [mem mem-this]))
 
-		(define mac-ret (function-call m func args))
+		(define mac-ret (function-call mac-this func args))
 		(define mem-ret (machine-mem mac-ret))
-		(define ret-value (memory-sread mem-ret ret-name))
-		
-		(define mem-pop (memory-spop mem-ret))
+		(define ret-value (memory-sread mem-ret var-ret-name))
+		;pop callee and callee's "this"
+		(define mem-pop (memory-spop (memory-spop mem-ret)))
 		(define mem-ass (memory-swrite mem-pop ret))
 		(define pc-next (+ 1 (machine-pc m)))
 
@@ -207,7 +228,7 @@
 		
 
 
-
+;======================== Expressions ===========================
 (struct iexpr-const (value) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
