@@ -11,7 +11,8 @@
 (LHS-C program (rhs ::= class-list))
 	(RHS-C-List class-list (cl : class-def))
 
-(RHS-C class-def (globals : variable-declares) (fields : field-declares) 
+(LHS-C class-def (rhs ::= class-default))
+	(RHS-C class-default (globals : variable-declares) (fields : field-declares) 
 	(static-functions : function-declares) (member-functions : function-declares))
 
 ;--------------------------------------------------------
@@ -55,7 +56,7 @@
 	(RHS-C variable-no-value (vn : variable))
 
 (LHS-C arguments (rhs ::= argument-list))
-	(RHS-C-List argument-list (al : variable))
+	(RHS-C-List argument-list (al : dexpr))
 
 ;--------------------------------------------------------
 (TERM function-name name)
