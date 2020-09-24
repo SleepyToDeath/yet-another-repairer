@@ -45,18 +45,20 @@ addr
 (define index1 5)
 (define mem13 (memory-awrite mem12 arr1 index1 4444))
 (newline)
+arr1
 (memory-aread mem13 arr1 index1)
 
 
 
 ;============= test field access =============
-(define ret-pair3 (memory-fdecl mem13))
-(define fid1 (car ret-pair3))
-(define mem14 (cdr ret-pair3))
+(define fname1 "field1")
+(define mem14 (memory-fdecl mem13 fname1))
 (define ret-pair4 (memory-alloc mem14 1))
 (define obj1 (car ret-pair4))
 (define mem15 (cdr ret-pair4))
-(define mem16 (memory-fwrite mem15 fid1 obj1 5555))
+(define mem16 (memory-fwrite mem15 fname1 obj1 5555))
 (newline)
-(memory-fread mem16 fid1 obj1)
+fname1
+obj1
+(memory-fread mem16 fname1 obj1)
 

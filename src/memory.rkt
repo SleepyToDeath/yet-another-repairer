@@ -7,8 +7,9 @@
 (provide (all-defined-out))
 
 ;============= Definition & Operations ===========
-(struct memory (stack heap top) #:transparent)
+(struct memory (stack heap names top) #:transparent)
 
+;-----------------Stack Operations---------------
 ;read from stack
 (define (memory-sread mem name)
 	(stack-read (memory-stack mem) name))
@@ -30,6 +31,8 @@
 (define (memory-spop mem)
 	(std:struct-copy memory mem [stack (stack-pop (memory-stack mem))]))
 	
+
+;-----------------Heap Operations---------------
 ;read from heap
 (define (memory-hread mem addr)
 	(imap-get (memory-heap mem) addr))
@@ -38,23 +41,33 @@
 (define (memory-hwrite mem addr value)
 	(std:struct-copy memory mem [heap (imap-set (memory-heap mem) addr value)]))
 
+;allocate memory on heap
+;memory X size -> memory(new) X addr(allocated)
+(define (memory-alloc mem size)
+	(cons (memory-top mem) (std:struct-copy memory mem [top (+ (memory-top mem) size)])))
+
+
+;-----------------Field Access---------------
 ;declare a new field (a field map is a map from obj-addr to field-addr)
 ;return (fid X new memory)
-(define (memory-fdecl mem) 
+(define (memory-fdecl mem name) 
 	(define ret-pair (memory-alloc mem 1))
 	(define addr (car ret-pair))
 	(define mem-tmp (cdr ret-pair))
-	(cons addr (memory-hwrite mem-tmp addr imap-empty)))
+	(define mem-tmp2 (std:struct-copy memory mem-tmp [names (imap-set (memory-names mem-tmp) name addr)]))
+	(memory-hwrite mem-tmp2 addr imap-empty))
 
 ;read a field value of an object
-(define (memory-fread mem fid obj-addr)
+(define (memory-fread mem fname obj-addr)
+	(define fid (imap-get (memory-names mem) fname))
 	(define fmap (memory-hread mem fid))
 	(define faddr (imap-get fmap obj-addr))
 	(memory-hread mem faddr))
 
 ;write to a field of an object
 ;automatically allocate memory for the field if it's a new object
-(define (memory-fwrite mem fid obj-addr value) 
+(define (memory-fwrite mem fname obj-addr value) 
+	(define fid (imap-get (memory-names mem) fname))
 	(define fmap (memory-hread mem fid))
 	(define faddr (imap-get fmap obj-addr))
 	(define ret-pair 
@@ -67,6 +80,10 @@
 			mem))
 	(memory-hwrite mem-before-write (car ret-pair) value))
 
+
+;-----------------Array Access----------------
+;array =  a memory range of any size on heap
+
 ;read value under an index from an array
 (define (memory-aread mem arr-addr index) 
 	(memory-hread mem (+ arr-addr index)))
@@ -75,15 +92,11 @@
 (define (memory-awrite mem arr-addr index value)
 	(memory-hwrite mem (+ arr-addr index) value))
 
-;allocate memory on heap
-;memory X size -> memory(new) X addr(allocated)
-(define (memory-alloc mem size)
-	(cons (memory-top mem) (std:struct-copy memory mem [top (+ (memory-top mem) size)])))
 ;==================================================
 
 
 ;============= Default Values ===========
-(define memory-empty (memory stack-empty imap-empty 0))
+(define memory-empty (memory stack-empty imap-empty imap-empty 0))
 ;========================================
 
 

@@ -9,15 +9,17 @@
 
 (provide (all-defined-out))
 
-;prog: list of instruction;
+;prog: list of instructions;
+;lmap: imap: label(int) -> instruction index(int)
+(struct function (prog lmap args locals) #:transparent)
+
 ;mem: memory
 ;pc: int
-;lmap: imap: label(int) -> instruction index(int)
-(struct machine (prog lmap mem pc) #:transparent)
+(struct machine (funcs mem pc) #:transparent)
 
 ;inst-exec: machine(before exec) -> machine(after exec)
 (define-generics instruction
-	[inst-exec instruction machine])
+	[inst-exec instruction machine function])
 
 ;expr-eval: expr -> ret(int/bool) X machine(after side effect))
 (define-generics expression
@@ -28,27 +30,50 @@
 
 (define pc-ret -1)
 (define pc-init 0)
-(define machine-empty (machine null imap-empty memory-empty pc-init))
+(define ret-name "__returns__")
+(define machine-empty (machine null memory-empty pc-init))
 
-;machine(init) -> machine(fin)
-(define (compute m)
-	(if (= (machine-pc m) pc-ret) 
-		m	
+
+
+;machine(init) X list of names -> machine(fin)
+(define (compute mac args)
+	(function-call mac (list-ref (machine-funcs mac) 0) args))
+
+(define (function-call mac func args)
+	(define mac-reset (std:struct-copy machine mac [pc pc-init][mem (memory-spush (machine-mem mac))]))
+	(define mac-decl (std:struct-copy machine mac-reset [mem 
+		(foldl 
+			(lambda (name mem) (memory-sdecl mem name)) 
+			(machine-mem mac-reset) 
+			(append (function-args func) (function-locals func)))]))
+	(define mac-input (std:struct-copy machine mac-decl [mem
+		(foldl 
+			(lambda (name0 name1 mem) (memory-swrite mem name1 (memory-sread (machine-mem mac) name0)))
+			(machine-mem mac-decl)
+			args 
+			(function-args func))]))
+	(function-exec mac-input func))
+
+(define (function-exec mac func)
+	(if (= (machine-pc mac) pc-ret) 
+		mac
 		(let ([inst-cur (list-ref (machine-prog m) (machine-pc m))])
-			(compute (inst-exec inst-cur m)))))
+			(function-exec (inst-exec inst-cur m) func))))
 
 ;machine X list of (key, value) -> machine(with input inserted into memory)
 (define (assign-input mac input)
-	(define mem0 (machine-mem mac))
-	(define mem-ass (foldl (lambda (kv mem-cur) (memory-store mem-cur (car kv) (cdr kv))) mem0 input))
+	(define mem0 (memory-spush (machine-mem mac)))
+	(define mem-ass 
+		(foldl (lambda (kv mem-cur) (memory-swrite (memory-sdecl mem-cur (car kv)) (car kv) (cdr kv))) mem0 input))
 	(std:struct-copy machine mac [mem mem-ass]))
 
 ;machine X list of (key, value) -> boolean
 (define (compare-output mac output)
 	(define mem0 (machine-mem mac))
-	(foldl (lambda (kv fml-cur) (= (cdr kv) (memory-load mem0 (car kv)))) #t output))
+	(foldl (lambda (kv fml-cur) (= (cdr kv) (memory-sread mem0 (car kv)))) #t output))
 
-;[TODO?] memory allocation
+
+
 (define (ast->machine ast)
 	(__ast->machine ast machine-empty))
 
@@ -83,24 +108,36 @@
 (define (ast->expression ast)
 	(match ast
 		[(expr e) (ast->expression e)]
+		[(lexpr e) (ast->expression e)]
+		[(dexpr e) (ast->expression e)]
 		[(expr-const c) (iexpr-const (const-v c))]
 		[(expr-var v) (iexpr-var (variable-v v))]
 		[(expr-binary expr1 o expr2) (iexpr-binary (op-v o) (ast->expression expr1) (ast->expression expr2))]))
 
 
-(struct inst-init-global (global-list) #:transparent
-	#:methods gen:instruction
-	[(define (inst-exec i m) 
-
 
 ;addr(int) X iexpr
 (struct inst-ass (vl vr) #:transparent
 	#:methods gen:instruction
-	[(define (inst-exec i m) 
+	[(define (inst-exec i m f) 
 
+		(define mem0 (machine-mem m))
 		(define v-new (expr-eval (inst-ass-vr i) m))
 
-		(define mem-new (memory-store (machine-mem m) (inst-ass-vl i) v-new))
+		(define mem-new 
+			(match (inst-ass-vl i)
+				[(expr-var v) (memory-swrite mem0 (variable-name v) v-new)]
+				[(expr-array arr idx)
+					(letrec
+						([addr (memory-sread mem0 (variable-name arr))]
+						[idx-e (ast->expression idx)]
+						[idx-v (expr-eval idx-e m)])
+						(memory-awrite mem0 addr idx-v v-new))]
+				[(expr-field obj fname)
+					(letrec
+						([addr (memory-sread mem0 (variable-name obj))])
+						(memory-fwrite mem0 addr (field-name fname) v-new))]
+
 		(define pc-next (+ 1 (machine-pc m)))
 
 		(std:struct-copy machine m [mem mem-new] [pc pc-next]))])
@@ -108,9 +145,9 @@
 ;expr X label(int)
 (struct inst-jmp (condition label) #:transparent
 	#:methods gen:instruction
-	[(define (inst-exec i m)
+	[(define (inst-exec i m f)
 
-		(define lmap (machine-lmap m))
+		(define lmap (function-lmap f))
 		(define iaddr (inst-jmp-label i))
 		(define pc-jmp (imap-get lmap iaddr))
 		(define pc-next (+ 1 (machine-pc m)))
@@ -122,15 +159,18 @@
 
 (struct inst-nop (any) #:transparent
 	#:methods gen:instruction
-	[(define (inst-exec i m)
+	[(define (inst-exec i m f)
 		(define pc-next (+ 1 (machine-pc m)))
 		(std:struct-copy machine m [pc pc-next]))])
 
 (struct inst-ret (any) #:transparent
 	#:methods gen:instruction
-	[(define (inst-exec i m)
+	[(define (inst-exec i m f)
 		(std:struct-copy machine m [pc pc-ret]))])
 
+(struct inst-static-call (ret func-name args) #:transparent)
+
+(struct inst-virtual-call (ret obj-name func-name args) #:transparent)
 
 
 
@@ -145,12 +185,19 @@
 		(define value (memory-load (machine-mem m) (iexpr-var-addr e) ))
 		value)])
 
-
 (struct iexpr-binary (op expr1 expr2) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
 		(define v1 (expr-eval-dispatch (iexpr-binary-expr1 e) m))
 		(define v2 (expr-eval-dispatch (iexpr-binary-expr2 e) m))
 		((iexpr-binary-op e) v1 v2))])
+
+(struct iexpr-array (arr-name index) #:transparent
+	#:methods gen:expression
+	[(define (expr-eval e m) #f)])
+
+(struct iexpr-field (obj-name fname) #:transparent
+	#:methods gen:expression
+	[(define (expr-eval e m) #f)])
 
 
