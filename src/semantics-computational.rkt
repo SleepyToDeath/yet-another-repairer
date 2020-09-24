@@ -163,14 +163,48 @@
 		(define pc-next (+ 1 (machine-pc m)))
 		(std:struct-copy machine m [pc pc-next]))])
 
-(struct inst-ret (any) #:transparent
+(struct inst-ret (v) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
-		(std:struct-copy machine m [pc pc-ret]))])
+		(define ret-value (memory-sread (machine-mem m) (inst-ret-v i)))
+		(define mem-ret (memory-sforce-write (machine-mem m) ret-name ret-value))
+		(std:struct-copy machine m [pc pc-ret][mem mem-ret]))])
 
-(struct inst-static-call (ret func-name args) #:transparent)
+(struct inst-static-call (ret func-name args) #:transparent
+	#:methods gen:instruction
+	[(define (inst-exec i m f)
+		(define func (memory-sread (machine-mem m) func-name))
+		(define args (inst-static-call-args i))
 
-(struct inst-virtual-call (ret obj-name func-name args) #:transparent)
+		(define mac-ret (function-call m func args))
+		(define mem-ret (machine-mem mac-ret))
+		(define ret-value (memory-sread mem-ret ret-name))
+		
+		(define mem-pop (memory-spop mem-ret))
+		(define mem-ass (memory-swrite mem-pop ret))
+		(define pc-next (+ 1 (machine-pc m)))
+
+		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
+		
+
+(struct inst-virtual-call (ret obj-name func-name args) #:transparent
+	#:methods gen:instruction
+	[(define (inst-exec i m f)
+		(define mem0 (machine-mem m))
+		(define obj-addr (memory-sread mem0 obj-name))
+		(define func (memory-fread mem0 obj-addr func-name))
+		(define args (inst-static-call-args i))
+
+		(define mac-ret (function-call m func args))
+		(define mem-ret (machine-mem mac-ret))
+		(define ret-value (memory-sread mem-ret ret-name))
+		
+		(define mem-pop (memory-spop mem-ret))
+		(define mem-ass (memory-swrite mem-pop ret))
+		(define pc-next (+ 1 (machine-pc m)))
+
+		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
+		
 
 
 
@@ -194,10 +228,17 @@
 
 (struct iexpr-array (arr-name index) #:transparent
 	#:methods gen:expression
-	[(define (expr-eval e m) #f)])
+	[(define (expr-eval e m) 
+		(define mem0 (machine-mem m))
+		(define arr-addr (memory-sread mem0 (iexpr-array-arr-name e)))
+		(define idx (expr-eval-dispatch (iexpr-array-index e) m))
+		(memory-aread mem0 arr-addr idx))])
 
 (struct iexpr-field (obj-name fname) #:transparent
 	#:methods gen:expression
-	[(define (expr-eval e m) #f)])
-
+	[(define (expr-eval e m)
+		(define mem0 (machine-mem m))
+		(define obj-addr (memory-sread mem0 (iexpr-field-obj-name e)))
+		(define fname (iexpr-field-fname e))
+		(memory-fread mem0 fname obj-addr))])
 

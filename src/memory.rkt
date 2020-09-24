@@ -23,6 +23,10 @@
 (define (memory-sdecl mem name)
 	(std:struct-copy memory mem [stack (stack-decl (memory-stack mem) name)]))
 
+;decl & write
+(define (memory-sforce-write mem name value)
+	(memory-swrite (memory-sdecl mem name) name value))
+
 ;push a scope to stack
 (define (memory-spush mem)
 	(std:struct-copy memory mem [stack (stack-push (memory-stack mem))]))
