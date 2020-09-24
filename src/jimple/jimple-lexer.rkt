@@ -7,6 +7,14 @@
 (provide tokenize)
 
 
+(define (string->bool str)
+  (if (equal? str "true")
+      #t
+      (if (equal? str "false")
+          #f
+          (error "Unknown boolean constant: " str))))
+
+
 (define-lex-abbrevs
   [all any-char]
   [dec_digit (char-range #\0 #\9)]
@@ -27,10 +35,33 @@
   [simple_id_char (sre:or alpha_char dec_digit "_" "$" "-")]
   [first_id_char (sre:or alpha_char "_" "$")]
   [quotable_char (sre:- not_cr_lf quote_sign)]
-  [string_char (sre:or escape_char (char-range 0 33) (char-range 35 91) (char-range 93 127))]
+  [string_char (sre:or escape_char (char-range #\u0000 #\u0033) (char-range #\u0035 #\u0091) (char-range #\u0093 #\u0127))]
   [line_comment (sre:: "//" (sre:* not_cr_lf))]
   [long_comment (sre:: "/*" (sre:* not_star) (sre:+ "*") (sre:* (sre:: not_star_slash (sre:* not_star) (sre:+ "*"))) "/")]
-  [ignored (sre:or blank line_comment long_comment)])
+  [ignored (sre:or blank line_comment long_comment)]
+  [quoted_name (sre:: quote_sign (sre:+ quotable_char) quote_sign)]
+  [full_identifier (sre:: (sre:+ (sre:: (sre:or first_id_char escape_char quote_sign)
+                                        (sre:* (sre:or simple_id_char escape_char))
+                                        (sre:? quote_sign)
+                                        "."))
+                          (sre:: (sre:or first_id_char escape_char quote_sign)
+                                 (sre:* (sre:or simple_id_char escape_char))
+                                 (sre:? quote_sign)))]
+  [identifier (sre:or (sre:: (sre:or first_id_char escape_char) (sre:* (sre:or simple_id_char escape_char)))
+                      "<clinit>"
+                      "<init>")]
+  [at_identifier (sre:: "@" (sre:or (sre:: "parameter" (sre:+ dec_digit) ":")
+                                    "this:"
+                                    "caughtexception"))]
+  [bool_constant (sre:or "true" "false")]
+  [integer_constant (sre:: (sre:or dec_constant hex_constant oct_constant) (sre:? "L"))]
+  [float_constant (sre:or (sre:: (sre:: dec_constant "." dec_constant)
+                                 (sre:? (sre:: (sre:or "e" "E") (sre:? "+" "-") dec_constant))
+                                 (sre:? (sre:or "f" "F")))
+                          (sre:: "#"
+                                 (sre:or (sre:: (sre:? "-") "Infinity") "NaN")
+                                 (sre:? (sre:or "f" "F"))))]
+  [string_constant (sre:: "\"" (sre:* string_char) "\"")])
 
 
 (define (tokenize ip)
@@ -221,6 +252,22 @@
         (token 'MULT lexeme)]
        ["/"
         (token 'DIV lexeme)]
+       [quoted_name
+        (token 'QUOTED_NAME lexeme)]
+       [full_identifier
+        (token 'FULL_IDENTIFIER lexeme)]
+       [identifier
+        (token 'IDENTIFIER lexeme)]
+       [at_identifier
+        (token 'AT_IDENTIFIER lexeme)]
+       [bool_constant
+        (token 'BOOL_CONSTANT (string->bool lexeme))]
+       [integer_constant
+        (token 'INTEGER_CONSTANT (string->number lexeme))]
+       [float_constant
+        (token 'FLOAT_CONSTANT (string->number lexeme))]
+       [string_constant
+        (token 'STRING_CONSTANT (substring lexeme 1 (string-length lexeme)))]
        [ignored
         (token 'WHITESPACE lexeme #:skip? #t)]
        [(eof)

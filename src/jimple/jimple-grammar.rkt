@@ -186,7 +186,7 @@ case_stmt
   ::= case_label COLON goto_stmt
 
 case_label
-  ::= CASE MINUS? integer_constant
+  ::= CASE MINUS? INTEGER_CONSTANT
   ::= DEFAULT
 
 catch_clause
@@ -268,7 +268,7 @@ immediate
     | constant
 
 constant
-  ::= MINUS? integer_constant
+  ::= MINUS? INTEGER_CONSTANT
     | MINUS? FLOAT_CONSTANT
     | STRING_CONSTANT
     | CLASS STRING_CONSTANT
