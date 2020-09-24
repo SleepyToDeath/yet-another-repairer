@@ -72,7 +72,7 @@ base_type_no_name
     | LONG
     | FLOAT
     | DOUBLE
-    | NULLTYPE
+    | NULL_TYPE
 
 base_type
   ::= BOOLEAN
@@ -83,7 +83,7 @@ base_type
     | LONG
     | FLOAT
     | DOUBLE
-    | NULLTYPE 
+    | NULL_TYPE
     | class_name
 
 nonvoid_type
@@ -150,10 +150,10 @@ lookupswitch_stmt
   ::= LOOKUPSWITCH LPAREN immediate RPAREN LBRACE case_stmt+ RBRACE SEMICOLON
 
 identity_stmt
-  ::= local_name COLONEQUALS AT_IDENTIFIER type SEMICOLON
+  ::= local_name COLON_EUQALS AT_IDENTIFIER type SEMICOLON
 
 identity_no_type_stmt
-  ::= local_name COLONEQUALS AT_IDENTIFIER SEMICOLON
+  ::= local_name COLON_EUQALS AT_IDENTIFIER SEMICOLON
 
 assign_stmt
   ::= variable EQUALS expression SEMICOLON
@@ -186,7 +186,7 @@ case_stmt
   ::= case_label COLON goto_stmt
 
 case_label
-  ::= CASE MINUS? integer_constant
+  ::= CASE MINUS? INTEGER_CONSTANT
   ::= DEFAULT
 
 catch_clause
@@ -268,7 +268,7 @@ immediate
     | constant
 
 constant
-  ::= MINUS? integer_constant
+  ::= MINUS? INTEGER_CONSTANT
     | MINUS? FLOAT_CONSTANT
     | STRING_CONSTANT
     | CLASS STRING_CONSTANT
