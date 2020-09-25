@@ -1,10 +1,10 @@
 #lang racket/base
 
+(provide tokenize)
+
 (require brag/support)
 (require br-parser-tools/lex)
 (require (prefix-in sre: br-parser-tools/lex-sre))
-
-(provide tokenize)
 
 
 (define (string->bool str)
