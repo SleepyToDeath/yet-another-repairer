@@ -39,6 +39,7 @@
 	(RHS-C stat-label (name : label))
 	(RHS-C stat-static-call (ret : variable) (func : function-name) (args : arguments))
 	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (func : function-name) (args : arguments))
+	(RHS-C stat-special-call (obj : variable) (func : function-name) (args : arguments))
 	(RHS-C stat-nop (any : nop))
 	(RHS-C stat-ret (v : variable))
 

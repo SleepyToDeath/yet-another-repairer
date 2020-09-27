@@ -10,13 +10,20 @@
 (provide (all-defined-out))
 
 ;======================== Definitions ===========================
-;prog: list of instructions;
-;lmap: imap: label(int) -> instruction index(int)
-(struct function (name prog lmap args locals) #:transparent)
-
 ;mem: memory
 ;pc: int
+;funcs: list of functions
 (struct machine (funcs mem pc) #:transparent)
+
+;funcs: list of functions
+(struct class (funcs) #:transparent)
+
+;name: string
+;prog: list of instructions;
+;lmap: imap: label(int) -> instruction index(int)
+;args: list of strings
+;locals: list of strings
+(struct function (name prog lmap args locals) #:transparent)
 
 ;inst-exec: machine(before exec) -> machine(after exec)
 (define-generics instruction
@@ -80,7 +87,9 @@
 
 ;======================== AST Interpreter ===========================
 (define (ast->machine ast)
-	(
+
+;returns a list of functions in a class
+(define (ast->class ast)
 
 (define (ast->function ast)
 
@@ -117,6 +126,7 @@
 ;funcs: list of functions
 ;fields: list of field names
 ;globals: list of ast(variable-init)
+;[TODO] rewrite, take care of classes? where?
 (struct inst-boot (sfuncs mfuncs fields globals) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f) 
@@ -130,8 +140,25 @@
 		(define mem-sfuncs (foldl (lambda (func mem) (memory-sforce-write mem (function-name func) func)) mem-push funcs))
 		(define mem-fields (foldl (lambda (field mem) (memory-fdecl mem field)) mem-funcs fields)))])
 
+;assign virtual function to "this" from class information
+;"this" should be give by caller of special call
+(struct inst-init (class) #:transparent
+	#:methods gen:instruction
+	[(define (inst-exec i m f) 
+		(define mem-0 (machine-mem m))
+		(define addr (memory-sread mem-0 var-this-name))
 
+		(define mem-bind-func (foldl
+			(lambda (func mem) 
+				(if (= (memory-fread (function-name func) addr) not-found) 
+					(memory-fwrite (function-name func) addr func) 
+					mem))
+			mem-0
+			(class-funcs (inst-init-class i))))
 
+		(define pc-next (+ 1 (machine-pc m)))
+
+		(std:struct-copy machine m [mem mem-bind-func] [pc pc-next]))]))])
 
 ;addr(int) X iexpr
 (struct inst-ass (vl vr) #:transparent

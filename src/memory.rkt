@@ -45,6 +45,10 @@
 (define (memory-hwrite mem addr value)
 	(std:struct-copy memory mem [heap (imap-set (memory-heap mem) addr value)]))
 
+;(define (memory-hupdate mem addr update)
+;	(define iheap (memory-heap mem))
+;	(std:struct-copy memory mem [heap (imap-set iheap (update (imap-get iheap addr)))]))
+
 ;allocate memory on heap
 ;memory X size -> memory(new) X addr(allocated)
 (define (memory-alloc mem size)
@@ -53,13 +57,17 @@
 
 ;-----------------Field Access---------------
 ;declare a new field (a field map is a map from obj-addr to field-addr)
-;return (fid X new memory)
+;return (new memory)
 (define (memory-fdecl mem name) 
-	(define ret-pair (memory-alloc mem 1))
-	(define addr (car ret-pair))
-	(define mem-tmp (cdr ret-pair))
-	(define mem-tmp2 (std:struct-copy memory mem-tmp [names (imap-set (memory-names mem-tmp) name addr)]))
-	(memory-hwrite mem-tmp2 addr imap-empty))
+	(if (= (imap-get (memory-names mem) name) not-found)
+		(begin
+			(define ret-pair (memory-alloc mem 1))
+			(define addr (car ret-pair))
+			(define mem-tmp (cdr ret-pair))
+			(define mem-tmp2 (std:struct-copy memory mem-tmp [names (imap-set (memory-names mem-tmp) name addr)]))
+			(memory-hwrite mem-tmp2 addr imap-empty))
+		mem))
+
 
 ;read a field value of an object
 (define (memory-fread mem fname obj-addr)
