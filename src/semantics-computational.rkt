@@ -45,7 +45,7 @@
 (define var-this-name "this")
 (define func-name-main "main")
 (define func-name-boot "__boot__")
-(define machine-empty (machine null memory-empty pc-init))
+(define machine-empty (machine #f null memory-empty pc-init))
 
 
 ;======================== Execution Interface ===========================
@@ -62,7 +62,7 @@
 			(append (function-args func) (function-locals func)))]))
 	(define mac-input (std:struct-copy machine mac-decl [mem
 		(foldl 
-			(lambda (name0 name1 mem) (memory-swrite mem name1 (memory-sread (machine-mem mac) name0)))
+			(lambda (name0 name1 mem) (memory-swrite mem (expr-eval name1 mac) (memory-sread (machine-mem mac) name0)))
 			(machine-mem mac-decl)
 			args 
 			(function-args func))]))
@@ -71,8 +71,8 @@
 (define (function-exec mac func)
 	(if (= (machine-pc mac) pc-ret) 
 		mac
-		(let ([inst-cur (list-ref (machine-prog m) (machine-pc m))])
-			(function-exec (inst-exec inst-cur m) func))))
+		(let ([inst-cur (list-ref (function-prog func) (machine-pc mac))])
+			(function-exec (inst-exec inst-cur mac) func))))
 
 ;machine X list of (key, value) -> machine(with input inserted into memory)
 (define (assign-input mac input)
@@ -111,9 +111,9 @@
 		[(class-default globals-ast fields-ast sfuncs-ast vfuncs-ast)
 			(letrec 
 				([sfuncs 
-					(map (lambda (ast) (ast->function ast)) (funciton-list-fl (function-declares-rhs sfuncs-ast)))]
+					(map (lambda (ast) (ast->function ast)) (function-list-fl (function-declares-rhs sfuncs-ast)))]
 				[vfuncs
-					(map (lambda (ast) (ast->function ast)) (funciton-list-fl (function-declares-rhs vfuncs-ast)))]
+					(map (lambda (ast) (ast->function ast)) (function-list-fl (function-declares-rhs vfuncs-ast)))]
 				[fields 
 					(map (lambda (ast) (field-name ast)) (field-list-fl (field-declares-rhs fields-ast)))]
 				[globals
@@ -144,27 +144,39 @@
 					(variable-list-vl (variable-declares-rhs local-vars-ast)))]
 				[func-sig (function name null imap-empty args local-vars)])
 				(foldl (lambda (st func)
-					(letrec ([ret-pair (ast->instruction st (function-lmap func))]
+					(letrec ([ret-pair (ast->instruction st (function-lmap func) (length (function-prog func)))]
 						[inst (car ret-pair)]
 						[lmap-new (cdr ret-pair)])
 						(std:struct-copy function func 
-							[prog (append (function-prog func) (list inst))]
+							[prog (if inst (append (function-prog func) (list inst)) (function-prog func))]
 							[lmap lmap-new])))
 					func-sig
 					(stat-list-sl (stats-rhs statements-ast))))]))
 
-;ast -> instruction X lmap(updated)
-(define (ast->instruction ast lmap)
+;ast X lmap X line-number -> instruction X lmap(updated)
+(define (ast->instruction ast lmap line-num)
 	(match ast
-		[(stat s) (ast->instruction s m)]
-		[(stat-ass addr rvalue) (cons (inst-ass (variable-v addr) (ast->expression rvalue)) m)]
-		[(stat-jmp condition target) (cons (inst-jmp (ast->expression condition) (label-v target)) m)]
-		[(stat-label here)
-			(begin
-				(define lmap-new (imap-set (machine-lmap m) (label-v here) (length (machine-prog m))))
-				(cons #f (std:struct-copy machine m [lmap lmap-new])))]
-		[(stat-nop any) (cons (inst-nop nullptr) m)]
-		[(stat-ret any) (cons (inst-ret nullptr) m)]))
+		[(stat s) (ast->instruction s lmap line-num)]
+		[(stat-ass name rvalue) (cons (inst-ass (variable-name name) (ast->expression rvalue)) lmap)]
+		[(stat-jmp condition target) (cons (inst-jmp (ast->expression condition) (label-v target)) lmap)]
+		[(stat-label here) (cons #f (imap-set lmap (label-v here) line-num))]
+		[(stat-nop any) (cons (inst-nop nullptr) lmap)]
+		[(stat-ret any) (cons (inst-ret nullptr) lmap)]
+		[(stat-static-call ret func args) 
+			(cons 
+				(inst-static-call (variable-name ret) (function-name func) 
+					(map ast->expression (argument-caller-list-al (arguments-caller-rhs args))))
+				lmap)]
+		[(stat-virtual-call ret obj func args)
+			(cons 
+				(inst-virtual-call (variable-name ret) (variable-name obj) (function-name func) 
+					(map ast->expression (argument-caller-list-al (arguments-caller-rhs args))))
+				lmap)]
+		[(stat-special-call ret obj func args)
+			(cons 
+				(inst-static-call (variable-name ret) (variable-name obj) (function-name func) 
+					(map ast->expression (argument-caller-list-al (arguments-caller-rhs args))))
+				lmap)]))
 
 (define (ast->expression ast)
 	(match ast
@@ -172,18 +184,20 @@
 		[(lexpr e) (ast->expression e)]
 		[(dexpr e) (ast->expression e)]
 		[(expr-const c) (iexpr-const (const-v c))]
-		[(expr-var v) (iexpr-var (variable-v v))]
-		[(expr-binary expr1 o expr2) (iexpr-binary (op-v o) (ast->expression expr1) (ast->expression expr2))]))
+		[(expr-var v) (iexpr-var (variable-name v))]
+		[(expr-binary expr1 o expr2) (iexpr-binary (op-v o) (ast->expression expr1) (ast->expression expr2))]
+		[(expr-array array index) (iexpr-array (variable-name array) (ast->expression index))]
+		[(expr-field obj fname) (iexpr-field (variable-name obj) (field-name fname))]))
 
 (define (build-boot-func globals)
 	(define iboot (inst-boot globals))
 	(define icall (inst-static-call var-ret-name func-name-main null))
 	(function func-name-boot (cons iboot icall) imap-empty null null))
 
-(define (build-virtaul-table classes mem) 
+(define (build-virtual-table classes mem) 
 	(define (process-class cls mem)
 		(define sfuncs (class-sfuncs cls))
-		(define vfuncs (class-mfuncs cls))
+		(define vfuncs (class-vfuncs cls))
 		(define sfields (class-sfields cls))
 		(define vfields (class-vfields cls))
 		(define mem-sfuncs (foldl (lambda (sf mem) (memory-sforce-write mem (function-name sf) sf)) mem sfuncs))
@@ -191,9 +205,8 @@
 		(define mem-vfuncs (foldl (lambda (vf mem) (memory-fdecl mem vf)) mem-sfields vfuncs))
 		(define mem-vfields (foldl (lambda (vf mem) (memory-fdecl mem vf)) mem-vfuncs vfields))
 		mem-vfields)
-	(define mem-0 (machine-mem m))
-	(define mem-push (memory-spush mem0))
-	(foldl process-class mem-push classses))
+	(define mem-push (memory-spush mem))
+	(foldl process-class mem-push classes))
 
 
 ;======================== Instructions ===========================
@@ -223,11 +236,11 @@
 					(memory-fwrite (function-name func) addr func) 
 					mem))
 			mem-0
-			(class-funcs (inst-init-class i))))
+			(class-vfuncs (inst-init-class i))))
 
 		(define pc-next (+ 1 (machine-pc m)))
 
-		(std:struct-copy machine m [mem mem-bind-func] [pc pc-next]))]))])
+		(std:struct-copy machine m [mem mem-bind-func] [pc pc-next]))])
 
 ;addr(int) X iexpr
 (struct inst-ass (vl vr) #:transparent
@@ -249,7 +262,7 @@
 				[(expr-field obj fname)
 					(letrec
 						([addr (memory-sread mem0 (variable-name obj))])
-						(memory-fwrite mem0 addr (field-name fname) v-new))]
+						(memory-fwrite mem0 addr (field-name fname) v-new))]))
 
 		(define pc-next (+ 1 (machine-pc m)))
 
@@ -286,7 +299,7 @@
 (struct inst-static-call (ret func-name args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
-		(define func (memory-sread (machine-mem m) func-name))
+		(define func (memory-sread (machine-mem m) (inst-static-call-func-name i)))
 		(define args (inst-static-call-args i))
 		(define ret (inst-static-call-ret i))
 
@@ -304,9 +317,9 @@
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define mem0 (machine-mem m))
-		(define obj-addr (memory-sread mem0 obj-name))
+		(define obj-addr (memory-sread mem0 (inst-virtual-call-obj-name i)))
 		;virtual
-		(define func (memory-fread mem0 obj-addr func-name))
+		(define func (memory-fread mem0 obj-addr (inst-virtual-call-func-name i)))
 		(define args (inst-static-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
@@ -317,7 +330,7 @@
 		(define ret-value (memory-sread mem-ret var-ret-name))
 		;pop callee and callee's "this"
 		(define mem-pop (memory-spop (memory-spop mem-ret)))
-		(define mem-ass (memory-swrite mem-pop ret))
+		(define mem-ass (memory-swrite mem-pop (inst-virtual-call-ret i)))
 		(define pc-next (+ 1 (machine-pc m)))
 
 		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
@@ -327,9 +340,9 @@
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define mem0 (machine-mem m))
-		(define obj-addr (memory-sread mem0 obj-name))
+		(define obj-addr (memory-sread mem0 (inst-special-call-obj-name i)))
 		;never virtual
-		(define func (memory-sread (machine-mem m) func-name))
+		(define func (memory-sread (machine-mem m) (inst-special-call-func-name i)))
 		(define args (inst-static-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
@@ -340,7 +353,7 @@
 		(define ret-value (memory-sread mem-ret var-ret-name))
 		;pop callee and callee's "this"
 		(define mem-pop (memory-spop (memory-spop mem-ret)))
-		(define mem-ass (memory-swrite mem-pop ret))
+		(define mem-ass (memory-swrite mem-pop (inst-special-call-ret i)))
 		(define pc-next (+ 1 (machine-pc m)))
 
 		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
@@ -353,11 +366,10 @@
 	[(define (expr-eval e m)
 		(iexpr-const-value e))])
 
-(struct iexpr-var (addr) #:transparent
+(struct iexpr-var (name) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
-		(define value (memory-load (machine-mem m) (iexpr-var-addr e) ))
-		value)])
+		(memory-sread (machine-mem m) (iexpr-var-name e)))])
 
 (struct iexpr-binary (op expr1 expr2) #:transparent
 	#:methods gen:expression
