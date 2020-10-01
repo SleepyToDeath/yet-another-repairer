@@ -20,6 +20,7 @@
 		[stack (stack-write (memory-stack mem) name value)]))
 
 ;declare variable on current stack-top scope
+;overwrites existing value
 (define (memory-sdecl mem name)
 	(std:struct-copy memory mem [stack (stack-decl (memory-stack mem) name)]))
 
@@ -58,6 +59,7 @@
 ;-----------------Field Access---------------
 ;declare a new field (a field map is a map from obj-addr to field-addr)
 ;return (new memory)
+;does not overwrite if exists
 (define (memory-fdecl mem name) 
 	(if (= (imap-get (memory-names mem) name) not-found)
 		(begin

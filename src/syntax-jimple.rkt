@@ -20,14 +20,14 @@
 	(RHS-C-List function-list (fl : function-declare))
 
 (LHS-C field-declares (rhs ::= field-list))
-	(RHS-C-List field-list (ml : field))
+	(RHS-C-List field-list (fl : field))
 
 (LHS-C variable-declares (rhs ::= variable-list))
 	(RHS-C-List variable-list (vl : variable-init))
 
 ;--------------------------------------------------------
 (LHS-C function-declare (rhs ::= function-content))
-	(RHS-C function-content (name : function-name) (args : arguments) (local-variables : variable-declares) (statements : stats))
+	(RHS-C function-content (name : function-name) (args : arguments-callee) (local-variables : variable-declares) (statements : stats))
 
 ;--------------------------------------------------------
 (LHS-C stats (rhs ::= stat-list))
@@ -37,9 +37,9 @@
 	(RHS-C stat-ass (lvalue : lexpr) (rvalue : expr))
 	(RHS-C stat-jmp (condition : expr) (target : label))
 	(RHS-C stat-label (name : label))
-	(RHS-C stat-static-call (ret : variable) (func : function-name) (args : arguments))
-	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (func : function-name) (args : arguments))
-	(RHS-C stat-special-call (obj : variable) (func : function-name) (args : arguments))
+	(RHS-C stat-static-call (ret : variable) (func : function-name) (args : arguments-caller))
+	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (func : function-name) (args : arguments-caller))
+	(RHS-C stat-special-call (obj : variable) (func : function-name) (args : arguments-caller))
 	(RHS-C stat-nop (any : nop))
 	(RHS-C stat-ret (v : variable))
 
@@ -56,8 +56,11 @@
 	(RHS-C variable-with-value (vn : variable) (vv : expr))
 	(RHS-C variable-no-value (vn : variable))
 
-(LHS-C arguments (rhs ::= argument-list))
-	(RHS-C-List argument-list (al : dexpr))
+(LHS-C arguments-caller (rhs ::= argument-caller-list))
+	(RHS-C-List argument-caller-list (al : dexpr))
+
+(LHS-C arguments-callee (rhs ::= argument-callee-list))
+	(RHS-C-List argument-callee-list (al : variable))
 
 ;--------------------------------------------------------
 (TERM function-name name)

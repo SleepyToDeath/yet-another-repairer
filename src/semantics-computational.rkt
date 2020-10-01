@@ -12,11 +12,14 @@
 ;======================== Definitions ===========================
 ;mem: memory
 ;pc: int
-;funcs: list of functions
-(struct machine (funcs mem pc) #:transparent)
+;boot: boot function
+;classes: list of classes
+(struct machine (boot classes mem pc) #:transparent)
 
-;funcs: list of functions
-(struct class (funcs) #:transparent)
+;fields: list of var names
+;functs: list of functions
+;field-val-ast: init value of fields in ast, #f if no init value
+(struct class (sfuncs vfuncs sfields sfield-val-asts vfields) #:transparent)
 
 ;name: string
 ;prog: list of instructions;
@@ -48,7 +51,7 @@
 ;======================== Execution Interface ===========================
 ;machine(init) X list of names -> machine(fin)
 (define (compute mac args)
-	(function-call mac (list-ref (machine-funcs mac) 0) args))
+	(function-call mac (machine-boot mac) args))
 
 (define (function-call mac func args)
 	(define mac-reset (std:struct-copy machine mac [pc pc-init][mem (memory-spush (machine-mem mac))]))
@@ -83,18 +86,75 @@
 	(define mem0 (machine-mem mac))
 	(foldl (lambda (kv fml-cur) (= (cdr kv) (memory-sread mem0 (car kv)))) #t output))
 
+;======================== Execution Interface ===========================
 
 
 ;======================== AST Interpreter ===========================
 (define (ast->machine ast)
+	(define classes (foldl 
+		(lambda (class-ast cl) (cons (ast->class class-ast) cl))
+		null
+		(class-list-cl (program-rhs ast))))
+	(define globals (foldl
+		(lambda (cls gl) (foldl
+			(lambda (sfield sfield-val-ast gl) (if sfield-val-ast (cons (cons sfield sfield-val-ast) gl) gl))
+			null
+			(class-sfields cls) (class-sfield-val-asts cls)))
+		null
+		classes))
+	(define boot (build-boot-func globals))
+	(define mem (build-virtual-table memory-empty))
+	(machine boot classes mem pc-init))
 
-;returns a list of functions in a class
 (define (ast->class ast)
+	(match (class-def-rhs ast)
+		[(class-default globals-ast fields-ast sfuncs-ast vfuncs-ast)
+			(letrec 
+				([sfuncs 
+					(map (lambda (ast) (ast->function ast)) (funciton-list-fl (function-declares-rhs sfuncs-ast)))]
+				[vfuncs
+					(map (lambda (ast) (ast->function ast)) (funciton-list-fl (function-declares-rhs vfuncs-ast)))]
+				[fields 
+					(map (lambda (ast) (field-name ast)) (field-list-fl (field-declares-rhs fields-ast)))]
+				[globals
+					(map (lambda (ast) 
+						(match (variable-init-rhs ast)
+							[(variable-with-value vn vv) (variable-name vn)]
+							[(variable-no-value vn) (variable-name vn)]))
+						globals-ast)]
+				[global-values
+					(map (lambda (ast) 
+						(match (variable-init-rhs ast)
+							[(variable-with-value vn vv) vv]
+							[(variable-no-value vn) #f]))
+						globals-ast)])
+				(class sfuncs vfuncs globals global-values fields))]))
 
+;(struct function (name prog lmap args locals) #:transparent)
+;(LHS-C function-declare (rhs ::= function-content))
+;	(RHS-C function-content (name : function-name) (args : arguments) (local-variables : variable-declares) (statements : stats))
 (define (ast->function ast)
+	(match (function-declare-rhs ast)
+		[(function-content name-ast args-ast local-vars-ast statements-ast)
+			(letrec 
+				([name (function-name-name name-ast)]
+				[args (map (lambda (ast) (variable-name ast)) args-ast)]
+				[local-vars (map 
+					(lambda (ast) (variable-no-value-vn (variable-init-rhs ast))) 
+					(variable-list-vl (variable-declares-rhs local-vars-ast)))]
+				[func-sig (function name null imap-empty args local-vars)])
+				(foldl (lambda (st func)
+					(letrec ([ret-pair (ast->instruction st (function-lmap func))]
+						[inst (car ret-pair)]
+						[lmap-new (cdr ret-pair)])
+						(std:struct-copy function func 
+							[prog (append (function-prog func) (list inst))]
+							[lmap lmap-new])))
+					func-sig
+					(stat-list-sl (stats-rhs statements-ast))))]))
 
-;ast -> instruction X function(lmap updated)
-(define (ast->instruction ast m)
+;ast -> instruction X lmap(updated)
+(define (ast->instruction ast lmap)
 	(match ast
 		[(stat s) (ast->instruction s m)]
 		[(stat-ass addr rvalue) (cons (inst-ass (variable-v addr) (ast->expression rvalue)) m)]
@@ -115,30 +175,39 @@
 		[(expr-var v) (iexpr-var (variable-v v))]
 		[(expr-binary expr1 o expr2) (iexpr-binary (op-v o) (ast->expression expr1) (ast->expression expr2))]))
 
-(define (build-boot-func funcs fields globals)
-	(define iboot (inst-boot funcs fields globals))
+(define (build-boot-func globals)
+	(define iboot (inst-boot globals))
 	(define icall (inst-static-call var-ret-name func-name-main null))
 	(function func-name-boot (cons iboot icall) imap-empty null null))
 
+(define (build-virtaul-table classes mem) 
+	(define (process-class cls mem)
+		(define sfuncs (class-sfuncs cls))
+		(define vfuncs (class-mfuncs cls))
+		(define sfields (class-sfields cls))
+		(define vfields (class-vfields cls))
+		(define mem-sfuncs (foldl (lambda (sf mem) (memory-sforce-write mem (function-name sf) sf)) mem sfuncs))
+		(define mem-sfields (foldl (lambda (sf mem) (memory-sdecl mem sf)) mem-sfuncs sfields))
+		(define mem-vfuncs (foldl (lambda (vf mem) (memory-fdecl mem vf)) mem-sfields vfuncs))
+		(define mem-vfields (foldl (lambda (vf mem) (memory-fdecl mem vf)) mem-vfuncs vfields))
+		mem-vfields)
+	(define mem-0 (machine-mem m))
+	(define mem-push (memory-spush mem0))
+	(foldl process-class mem-push classses))
 
 
 ;======================== Instructions ===========================
-;funcs: list of functions
-;fields: list of field names
-;globals: list of ast(variable-init)
-;[TODO] rewrite, take care of classes? where?
-(struct inst-boot (sfuncs mfuncs fields globals) #:transparent
+;globals: list of (cons var-name(string) value(ast))
+(struct inst-boot (globals) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f) 
-		(define sfuncs (inst-boot-sfuncs i))
-		(define mfuncs (inst-boot-mfuncs i))
-		(define fields (inst-boot-fields i))
-		(define globals (inst-boot-globals i))
-
-		(define mem0 (machine-mem m))
-		(define mem-push (memory-spush mem0))
-		(define mem-sfuncs (foldl (lambda (func mem) (memory-sforce-write mem (function-name func) func)) mem-push funcs))
-		(define mem-fields (foldl (lambda (field mem) (memory-fdecl mem field)) mem-funcs fields)))])
+		(define (init-var vi mem)
+			(define name (car vi))
+			(define value-ast (cdr vi))
+			(define value (expr-eval (ast->expression value-ast)))
+			(memory-swrite mem name value))
+		(foldl init-var (machine-mem m) (inst-boot-globals i))
+	)])
 
 ;assign virtual function to "this" from class information
 ;"this" should be give by caller of special call
@@ -231,13 +300,36 @@
 
 		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
 		
-
 (struct inst-virtual-call (ret obj-name func-name args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define mem0 (machine-mem m))
 		(define obj-addr (memory-sread mem0 obj-name))
+		;virtual
 		(define func (memory-fread mem0 obj-addr func-name))
+		(define args (inst-static-call-args i))
+		;push an extra scope to avoid overwriting "this" of the current scope
+		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
+		(define mac-this (std:struct-copy machine m [mem mem-this]))
+
+		(define mac-ret (function-call mac-this func args))
+		(define mem-ret (machine-mem mac-ret))
+		(define ret-value (memory-sread mem-ret var-ret-name))
+		;pop callee and callee's "this"
+		(define mem-pop (memory-spop (memory-spop mem-ret)))
+		(define mem-ass (memory-swrite mem-pop ret))
+		(define pc-next (+ 1 (machine-pc m)))
+
+		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
+
+;in my understanding, special call = virtual call - virtual, at least for init
+(struct inst-special-call (ret obj-name func-name args) #:transparent
+	#:methods gen:instruction
+	[(define (inst-exec i m f)
+		(define mem0 (machine-mem m))
+		(define obj-addr (memory-sread mem0 obj-name))
+		;never virtual
+		(define func (memory-sread (machine-mem m) func-name))
 		(define args (inst-static-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
