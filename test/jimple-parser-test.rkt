@@ -6,16 +6,10 @@
 
 (test-case "file"
   (check-equal? (syntax->datum (text-to-ast "public class A {}"))
-                '(file (modifier "public") (file_type "class") (class_name "A") (file_body))
+                "A"
                 "file test 1")
   (check-equal? (syntax->datum (text-to-ast "public class A extends B implements C {}"))
-                '(file
-                   (modifier "public")
-                   (file_type "class")
-                   (class_name "A")
-                   (extends_clause (class_name "B"))
-                   (implements_clause (class_name_list (class_name "C")))
-                   (file_body))
+                "A"
                 "file test 2")
 )
 
