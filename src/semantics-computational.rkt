@@ -19,7 +19,7 @@
 ;fields: list of var names
 ;functs: list of functions
 ;field-val-ast: init value of fields in ast, #f if no init value
-(struct class (sfuncs vfuncs sfields sfield-val-asts vfields) #:transparent)
+(struct class (sfuncs vfuncs sfields vfields) #:transparent)
 
 ;name: string
 ;prog: list of instructions;
@@ -95,14 +95,14 @@
 		(lambda (class-ast cl) (cons (ast->class class-ast) cl))
 		null
 		(class-list-cl (program-rhs ast))))
-	(define globals (foldl
-		(lambda (cls gl) (foldl
-			(lambda (sfield sfield-val-ast gl) (if sfield-val-ast (cons (cons sfield sfield-val-ast) gl) gl))
-			null
-			(class-sfields cls) (class-sfield-val-asts cls)))
-		null
-		classes))
-	(define boot (build-boot-func globals))
+;	(define globals (foldl
+;		(lambda (cls gl) (foldl
+;			(lambda (sfield sfield-val-ast gl) (if sfield-val-ast (cons (cons sfield sfield-val-ast) gl) gl))
+;			null
+;			(class-sfields cls) (class-sfield-val-asts cls)))
+;		null
+;		classes))
+	(define boot (build-boot-func))
 	(define mem (build-virtual-table memory-empty))
 	(machine boot classes mem pc-init))
 
@@ -117,18 +117,8 @@
 				[fields 
 					(map (lambda (ast) (field-name ast)) (field-list-fl (field-declares-rhs fields-ast)))]
 				[globals
-					(map (lambda (ast) 
-						(match (variable-init-rhs ast)
-							[(variable-with-value vn vv) (variable-name vn)]
-							[(variable-no-value vn) (variable-name vn)]))
-						globals-ast)]
-				[global-values
-					(map (lambda (ast) 
-						(match (variable-init-rhs ast)
-							[(variable-with-value vn vv) vv]
-							[(variable-no-value vn) #f]))
-						globals-ast)])
-				(class sfuncs vfuncs globals global-values fields))]))
+					(map (lambda (ast) (field-name ast)) (field-list-fl (field-declares-rhs globals-ast)))])
+				(class sfuncs vfuncs globals fields))]))
 
 ;(struct function (name prog lmap args locals) #:transparent)
 ;(LHS-C function-declare (rhs ::= function-content))
@@ -137,10 +127,10 @@
 	(match (function-declare-rhs ast)
 		[(function-content name-ast args-ast local-vars-ast statements-ast)
 			(letrec 
-				([name (function-name-name name-ast)]
+				([name (func-name-name name-ast)]
 				[args (map (lambda (ast) (variable-name ast)) args-ast)]
 				[local-vars (map 
-					(lambda (ast) (variable-no-value-vn (variable-init-rhs ast))) 
+					(lambda (ast) (variable-name ast))
 					(variable-list-vl (variable-declares-rhs local-vars-ast)))]
 				[func-sig (function name null imap-empty args local-vars)])
 				(foldl (lambda (st func)
@@ -189,10 +179,10 @@
 		[(expr-array array index) (iexpr-array (variable-name array) (ast->expression index))]
 		[(expr-field obj fname) (iexpr-field (variable-name obj) (field-name fname))]))
 
-(define (build-boot-func globals)
-	(define iboot (inst-boot globals))
+(define (build-boot-func)
+	;(define iboot (inst-boot globals))
 	(define icall (inst-static-call var-ret-name func-name-main null))
-	(function func-name-boot (cons iboot icall) imap-empty null null))
+	(function func-name-boot (list icall) imap-empty null null))
 
 (define (build-virtual-table classes mem) 
 	(define (process-class cls mem)

@@ -12,7 +12,7 @@
 	(RHS-C-List class-list (cl : class-def))
 ;
 (LHS-C class-def (rhs ::= class-default))
-	(RHS-C class-default (globals : variable-declares) (fields : field-declares) 
+	(RHS-C class-default (globals : field-declares) (fields : field-declares) 
 	(static-functions : function-declares) (member-functions : function-declares))
 
 ;--------------------------------------------------------
@@ -23,11 +23,24 @@
 	(RHS-C-List field-list (fl : field))
 
 (LHS-C variable-declares (rhs ::= variable-list))
-	(RHS-C-List variable-list (vl : variable-init))
+	(RHS-C-List variable-list (vl : variable))
+
+;(LHS-C variable-declares (rhs ::= variable-list))
+;	(RHS-C-List variable-list (vl : variable-init))
+
+;(LHS-C variable-init (rhs ::= variable-no-value variable-with-value))
+;	(RHS-C variable-with-value (vn : variable) (vv : expr))
+;	(RHS-C variable-no-value (vn : variable))
+
+(LHS-C arguments-caller (rhs ::= argument-caller-list))
+	(RHS-C-List argument-caller-list (al : dexpr))
+
+(LHS-C arguments-callee (rhs ::= argument-callee-list))
+	(RHS-C-List argument-callee-list (al : variable))
 
 ;--------------------------------------------------------
 (LHS-C function-declare (rhs ::= function-content))
-	(RHS-C function-content (name : function-name) (args : arguments-callee) (local-variables : variable-declares) (statements : stats))
+	(RHS-C function-content (name : func-name) (args : arguments-callee) (local-variables : field-declares) (statements : stats))
 
 ;--------------------------------------------------------
 (LHS-C stats (rhs ::= stat-list))
@@ -37,33 +50,23 @@
 	(RHS-C stat-ass (lvalue : lexpr) (rvalue : expr))
 	(RHS-C stat-jmp (condition : expr) (target : label))
 	(RHS-C stat-label (name : label))
-	(RHS-C stat-static-call (ret : variable) (func : function-name) (args : arguments-caller))
-	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (func : function-name) (args : arguments-caller))
-	(RHS-C stat-special-call (ret : variable) (obj : variable) (func : function-name) (args : arguments-caller))
+	(RHS-C stat-static-call (ret : variable) (func : func-name) (args : arguments-caller))
+	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (func : func-name) (args : arguments-caller))
+	(RHS-C stat-special-call (ret : variable) (obj : variable) (func : func-name) (args : arguments-caller))
 	(RHS-C stat-nop (any : nop))
 	(RHS-C stat-ret (v : variable))
 
 (LHS-C lexpr (rhs ::= expr-var expr-array expr-field))
 (LHS-C dexpr (rhs ::= expr-var expr-const))
-(LHS-C expr (rhs ::= expr-const expr-var expr-binary))
+(LHS-C expr (rhs ::= expr-const expr-var expr-binary expr-array expr-field))
 	(RHS-C expr-const (value : const))
 	(RHS-C expr-var (name : variable))
 	(RHS-C expr-binary (operand1 : expr) (operator : op) (operand2 : expr))
 	(RHS-C expr-array (array : variable) (index : expr))
 	(RHS-C expr-field (obj : variable) (fname : field))
 
-(LHS-C variable-init (rhs ::= variable-no-value variable-with-value))
-	(RHS-C variable-with-value (vn : variable) (vv : expr))
-	(RHS-C variable-no-value (vn : variable))
-
-(LHS-C arguments-caller (rhs ::= argument-caller-list))
-	(RHS-C-List argument-caller-list (al : dexpr))
-
-(LHS-C arguments-callee (rhs ::= argument-callee-list))
-	(RHS-C-List argument-callee-list (al : variable))
-
 ;--------------------------------------------------------
-(TERM function-name name)
+(TERM func-name name)
 (TERM field name)
 (TERM variable name)
 (TERM const v)
