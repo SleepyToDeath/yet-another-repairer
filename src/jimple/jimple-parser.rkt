@@ -10,6 +10,10 @@
 (require (prefix-in ast: "../syntax-jimple.rkt"))
 
 
+; assuming there is only one class in the program
+(define (build-program file-text)
+  (ast:program (ast:class-list (list (text-to-ast file-text)))))
+
 (define (text-to-ast file-text)
   (build-ast-file (parse (tokenize (std:open-input-string file-text)))))
 
@@ -22,5 +26,23 @@
         (p:~optional ({p:~literal extends_clause} ext))
         (p:~optional ({p:~literal implements_clause} impl))
         ({p:~literal file_body} (p:~optional body)))
-     #'name]))
+     (if (p:attribute body)
+         (let ([ret-list (build-ast-file-body #'body)])
+           (ast:class-def
+             (ast:class-default
+               (ast:cls-name (std:syntax-e #'name))
+               (ast:field-declares (first ret-list))
+               (ast:field-declares (second ret-list))
+               (ast:function-declares (third ret-list))
+               (ast:function-declares (fourth ret-list)))))
+         (ast:class-def
+           (ast:class-default
+             (ast:cls-name (std:syntax-e #'name))
+             (ast:field-declares null)
+             (ast:field-declares null)
+             (ast:function-declares null)
+             (ast:function-declares null))))]))
+
+(define (build-ast-file-body file-body-stx)
+  (list null null null null))
 
