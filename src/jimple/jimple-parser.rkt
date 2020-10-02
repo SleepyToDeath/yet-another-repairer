@@ -13,7 +13,14 @@
 (define (text-to-ast file-text)
   (build-ast-file (parse (tokenize (std:open-input-string file-text)))))
 
-; file ::= modifier* file_type class_name extends_clause? implements_clause? file_body 
 (define (build-ast-file file-stx)
-  file-stx)
+  (p:syntax-parse file-stx
+    [({p:~literal j_file}
+        ({p:~literal modifier} modifiers ...)
+        ({p:~literal file_type} type)
+        ({p:~literal class_name} name)
+        (p:~optional ({p:~literal extends_clause} ext))
+        (p:~optional ({p:~literal implements_clause} impl))
+        ({p:~literal file_body} (p:~optional body)))
+     #'name]))
 

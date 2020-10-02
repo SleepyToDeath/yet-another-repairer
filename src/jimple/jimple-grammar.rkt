@@ -1,6 +1,6 @@
 #lang brag
 
-file
+j_file
   ::= modifier* file_type class_name extends_clause? implements_clause? file_body 
 
 modifier
