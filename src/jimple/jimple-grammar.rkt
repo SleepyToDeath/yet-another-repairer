@@ -23,31 +23,31 @@ file_type
     | INTERFACE
 
 extends_clause
-  ::= EXTENDS class_name
+  ::= /EXTENDS class_name
 
 implements_clause
-  ::= IMPLEMENTS class_name_list
+  ::= /IMPLEMENTS class_name_list
 
 file_body
-  ::= LBRACE member* RBRACE
+  ::= /LBRACE member* /RBRACE
 
 name_list
   ::= name
-    | name COMMA name_list
+    | name /COMMA name_list
  
 class_name_list
   ::= class_name
-    | class_name COMMA class_name_list
+    | class_name /COMMA class_name_list
 
 member
   ::= field
     | method
 
 field
-  ::= modifier* type name SEMICOLON
+  ::= modifier* type name /SEMICOLON
 
 method
-  ::= modifier* type name LPAREN parameter_list? RPAREN throws_clause? method_body
+  ::= modifier* type name /LPAREN parameter_list? /RPAREN throws_clause? method_body
 
 type
   ::= VOID
@@ -55,13 +55,13 @@ type
 
 parameter_list
   ::= parameter
-    | parameter COMMA parameter_list
+    | parameter /COMMA parameter_list
 
 parameter
   ::= nonvoid_type
 
 throws_clause
-  ::= THROWS class_name_list
+  ::= /THROWS class_name_list
 
 base_type_no_name
   ::= BOOLEAN
@@ -96,11 +96,11 @@ array_brackets
   ::= LBRACKET RBRACKET
 
 method_body
-  ::= SEMICOLON
+  ::= /SEMICOLON
     | LBRACE declaration* statement* catch_clause* RBRACE
 
 declaration
-  ::= jimple_type local_name_list SEMICOLON
+  ::= jimple_type local_name_list /SEMICOLON
 
 jimple_type
   ::= UNKNOWN
@@ -135,49 +135,49 @@ label_stmt
   ::= label_name COLON
 
 breakpoint_stmt
-  ::= BREAKPOINT SEMICOLON
+  ::= BREAKPOINT /SEMICOLON
 
 entermonitor_stmt
-  ::= ENTERMONITOR immediate SEMICOLON
+  ::= ENTERMONITOR immediate /SEMICOLON
 
 exitmonitor_stmt
-  ::= EXITMONITOR immediate SEMICOLON
+  ::= EXITMONITOR immediate /SEMICOLON
 
 tableswitch_stmt
-  ::= TABLESWITCH LPAREN immediate RPAREN LBRACE case_stmt+ RBRACE SEMICOLON
+  ::= TABLESWITCH LPAREN immediate RPAREN LBRACE case_stmt+ RBRACE /SEMICOLON
 
 lookupswitch_stmt
-  ::= LOOKUPSWITCH LPAREN immediate RPAREN LBRACE case_stmt+ RBRACE SEMICOLON
+  ::= LOOKUPSWITCH LPAREN immediate RPAREN LBRACE case_stmt+ RBRACE /SEMICOLON
 
 identity_stmt
-  ::= local_name COLON_EUQALS AT_IDENTIFIER type SEMICOLON
+  ::= local_name COLON_EUQALS AT_IDENTIFIER type /SEMICOLON
 
 identity_no_type_stmt
-  ::= local_name COLON_EUQALS AT_IDENTIFIER SEMICOLON
+  ::= local_name COLON_EUQALS AT_IDENTIFIER /SEMICOLON
 
 assign_stmt
-  ::= variable EQUALS expression SEMICOLON
+  ::= variable EQUALS expression /SEMICOLON
 
 goto_stmt
-  ::= GOTO label_name SEMICOLON
+  ::= GOTO label_name /SEMICOLON
 
 if_stmt
   ::= IF bool_expr goto_stmt
 
 nop_stmt
-  ::= NOP SEMICOLON
+  ::= NOP /SEMICOLON
 
 ret_stmt
-  ::= RET immediate? SEMICOLON
+  ::= RET immediate? /SEMICOLON
 
 return_stmt
-  ::= RETURN immediate? SEMICOLON
+  ::= RETURN immediate? /SEMICOLON
 
 throw_stmt
-  ::= THROW immediate SEMICOLON
+  ::= THROW immediate /SEMICOLON
 
 invoke_stmt
-  ::= invoke_expr SEMICOLON
+  ::= invoke_expr /SEMICOLON
 
 label_name
   ::= IDENTIFIER
@@ -190,7 +190,7 @@ case_label
   ::= DEFAULT
 
 catch_clause
-  ::= CATCH class_name FROM label_name TO label_name WITH label_name SEMICOLON
+  ::= CATCH class_name FROM label_name TO label_name WITH label_name /SEMICOLON
 
 expression
   ::= new_expr
