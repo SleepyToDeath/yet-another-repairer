@@ -12,7 +12,7 @@
 	(RHS-C-List class-list (cl : class-def))
 ;
 (LHS-C class-def (rhs ::= class-default))
-	(RHS-C class-default (globals : field-declares) (fields : field-declares) 
+	(RHS-C class-default (name : cls-name) (globals : field-declares) (fields : field-declares) 
 	(static-functions : function-declares) (member-functions : function-declares))
 
 ;--------------------------------------------------------
@@ -66,6 +66,7 @@
 	(RHS-C expr-field (obj : variable) (fname : field))
 
 ;--------------------------------------------------------
+(TERM cls-name name)
 (TERM func-name name)
 (TERM field name)
 (TERM variable name)
