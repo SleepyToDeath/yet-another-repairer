@@ -40,7 +40,7 @@
 
 ;--------------------------------------------------------
 (LHS-C function-declare (rhs ::= function-content))
-	(RHS-C function-content (name : func-name) (args : arguments-callee) (local-variables : field-declares) (statements : stats))
+	(RHS-C function-content (name : func-name) (args : arguments-callee) (local-variables : variable-declares) (statements : stats))
 
 ;--------------------------------------------------------
 (LHS-C stats (rhs ::= stat-list))

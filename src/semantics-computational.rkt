@@ -86,8 +86,6 @@
 	(define mem0 (machine-mem mac))
 	(foldl (lambda (kv fml-cur) (= (cdr kv) (memory-sread mem0 (car kv)))) #t output))
 
-;======================== Execution Interface ===========================
-
 
 ;======================== AST Interpreter ===========================
 (define (ast->machine ast)
@@ -103,7 +101,7 @@
 ;		null
 ;		classes))
 	(define boot (build-boot-func))
-	(define mem (build-virtual-table memory-empty))
+	(define mem (build-virtual-table classes memory-empty))
 	(machine boot classes mem pc-init))
 
 (define (ast->class ast)
@@ -128,7 +126,7 @@
 		[(function-content name-ast args-ast local-vars-ast statements-ast)
 			(letrec 
 				([name (func-name-name name-ast)]
-				[args (map (lambda (ast) (variable-name ast)) args-ast)]
+				[args (map (lambda (ast) (variable-name ast)) (argument-callee-list-al (arguments-callee-rhs args-ast)))]
 				[local-vars (map 
 					(lambda (ast) (variable-name ast))
 					(variable-list-vl (variable-declares-rhs local-vars-ast)))]
