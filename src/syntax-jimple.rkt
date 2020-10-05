@@ -14,9 +14,9 @@
 ;if no extend, put an #f in name string
 ;if no interface, put a null list
 (LHS-C class-def (rhs ::= class-default))
-	(RHS-C class-default (name : type-name) (extend : type-name) (implements : interface-modifier) 
-	(globals : field-declares) (fields : field-declares) 
-	(static-functions : function-declares) (member-functions : function-declares))
+	(RHS-C class-default (name : type-name) (extend : type-name) (implements : interface-implements) 
+		(globals : field-declares) (fields : field-declares) 
+		(static-functions : function-declares) (member-functions : function-declares))
 
 ;--------------------------------------------------------
 (LHS-C function-declares (rhs ::= function-list))
@@ -28,7 +28,7 @@
 (LHS-C variable-declares (rhs ::= variable-list))
 	(RHS-C-List variable-list (vl : variable))
 
-(LHS-C interface-modifier (rhs ::= interface-name-list))
+(LHS-C interface-implements (rhs ::= interface-name-list))
 	(RHS-C-List interface-name-list (il : type-name))
 
 ;(LHS-C variable-declares (rhs ::= variable-list))
