@@ -14,7 +14,7 @@
 ;if no extend, put an #f in name string
 ;if no interface, put a null list
 (LHS-C class-def (rhs ::= class-default))
-	(RHS-C class-default (name : cls-name) (extend : cls-name) (implements : interface-modifier) 
+	(RHS-C class-default (name : type-name) (extend : type-name) (implements : interface-modifier) 
 	(globals : field-declares) (fields : field-declares) 
 	(static-functions : function-declares) (member-functions : function-declares))
 
@@ -29,7 +29,7 @@
 	(RHS-C-List variable-list (vl : variable))
 
 (LHS-C interface-modifier (rhs ::= interface-name-list))
-	(RHS-C-List interface-name-list (il : cls-name))
+	(RHS-C-List interface-name-list (il : type-name))
 
 ;(LHS-C variable-declares (rhs ::= variable-list))
 ;	(RHS-C-List variable-list (vl : variable-init))
@@ -56,9 +56,9 @@
 	(RHS-C stat-ass (lvalue : lexpr) (rvalue : expr))
 	(RHS-C stat-jmp (condition : expr) (target : label))
 	(RHS-C stat-label (name : label))
-	(RHS-C stat-static-call (ret : variable) (class : cls-name) (func : func-name) (args : arguments-caller))
-	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (class : cls-name) (func : func-name) (args : arguments-caller))
-	(RHS-C stat-special-call (ret : variable) (obj : variable) (class : cls-name) (func : func-name) (args : arguments-caller))
+	(RHS-C stat-static-call (ret : variable) (class : type-name) (func : func-name) (args : arguments-caller))
+	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (args : arguments-caller))
+	(RHS-C stat-special-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (args : arguments-caller))
 	(RHS-C stat-nop (any : nop))
 	(RHS-C stat-ret (v : variable))
 
@@ -73,9 +73,9 @@
 
 ;"int" "string" "real" "bool" for primitive type names
 (LHS-C variable-definition (rhs ::= variable-n-type))
-	(RHS-C variable-n-type (name : variable) (type : cls-name))
+	(RHS-C variable-n-type (name : variable) (type : type-name))
 ;--------------------------------------------------------
-(TERM cls-name name)
+(TERM type-name name)
 (TERM func-name name)
 (TERM field name)
 (TERM variable name)

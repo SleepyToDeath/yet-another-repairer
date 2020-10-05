@@ -161,7 +161,7 @@
 	(match (class-def-rhs ast)
 		[(class-default name-ast extend-ast interfaces-ast globals-ast fields-ast sfuncs-ast vfuncs-ast)
 			(letrec 
-				([name (cls-name-name name-ast)]
+				([name (type-name-name name-ast)]
 				[sfuncs 
 					(map (lambda (ast) (ast->function name ast)) (function-list-fl (function-declares-rhs sfuncs-ast)))]
 				[vfuncs
