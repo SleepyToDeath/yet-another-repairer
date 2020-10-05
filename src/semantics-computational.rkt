@@ -14,12 +14,12 @@
 ;pc: int
 ;boot: boot function
 ;classes: list of classes
-(struct machine (boot classes mem pc) #:transparent)
+(struct machine (boot classes cmap mem pc) #:transparent)
 
 ;fields: list of var names
 ;functs: list of functions
 ;field-val-ast: init value of fields in ast, #f if no init value
-(struct class (sfuncs vfuncs sfields vfields) #:transparent)
+(struct class (name sfuncs vfuncs sfields vfields) #:transparent)
 
 ;name: string
 ;prog: list of instructions;
@@ -45,7 +45,7 @@
 (define var-this-name "this")
 (define func-name-main "main")
 (define func-name-boot "__boot__")
-(define machine-empty (machine #f null memory-empty pc-init))
+(define machine-empty (machine #f null imap-empty memory-empty pc-init))
 
 
 ;======================== Execution Interface ===========================
@@ -100,32 +100,34 @@
 ;			(class-sfields cls) (class-sfield-val-asts cls)))
 ;		null
 ;		classes))
+	(define cmap (foldl (lambda (cls cm) (imap-set cm (class-name cls) cls)) classes))
 	(define boot (build-boot-func))
 	(define mem (build-virtual-table classes memory-empty))
-	(machine boot classes mem pc-init))
+	(machine boot classes cmap mem pc-init))
 
 (define (ast->class ast)
 	(match (class-def-rhs ast)
-		[(class-default globals-ast fields-ast sfuncs-ast vfuncs-ast)
+		[(class-default name-ast extend-ast interfaces-ast globals-ast fields-ast sfuncs-ast vfuncs-ast)
 			(letrec 
-				([sfuncs 
-					(map (lambda (ast) (ast->function ast)) (function-list-fl (function-declares-rhs sfuncs-ast)))]
+				([name (cls-name-name name-ast)]
+				[sfuncs 
+					(map (lambda (ast) (ast->function name ast)) (function-list-fl (function-declares-rhs sfuncs-ast)))]
 				[vfuncs
-					(map (lambda (ast) (ast->function ast)) (function-list-fl (function-declares-rhs vfuncs-ast)))]
+					(map (lambda (ast) (ast->function name ast)) (function-list-fl (function-declares-rhs vfuncs-ast)))]
 				[fields 
-					(map (lambda (ast) (field-name ast)) (field-list-fl (field-declares-rhs fields-ast)))]
+					(map (lambda (ast) (std:string-append name (field-name ast))) (field-list-fl (field-declares-rhs fields-ast)))]
 				[globals
-					(map (lambda (ast) (field-name ast)) (field-list-fl (field-declares-rhs globals-ast)))])
-				(class sfuncs vfuncs globals fields))]))
+					(map (lambda (ast) (std:string-append name (field-name ast))) (field-list-fl (field-declares-rhs globals-ast)))])
+				(class name sfuncs vfuncs globals fields))]))
 
 ;(struct function (name prog lmap args locals) #:transparent)
 ;(LHS-C function-declare (rhs ::= function-content))
 ;	(RHS-C function-content (name : function-name) (args : arguments) (local-variables : variable-declares) (statements : stats))
-(define (ast->function ast)
+(define (ast->function classname ast)
 	(match (function-declare-rhs ast)
 		[(function-content name-ast args-ast local-vars-ast statements-ast)
 			(letrec 
-				([name (func-name-name name-ast)]
+				([name (std:string-append classname (func-name-name name-ast))]
 				[args (map (lambda (ast) (variable-name ast)) (argument-callee-list-al (arguments-callee-rhs args-ast)))]
 				[local-vars (map 
 					(lambda (ast) (variable-name ast))
@@ -196,6 +198,16 @@
 	(define mem-push (memory-spush mem))
 	(foldl process-class mem-push classes))
 
+;[TODO]return name of the highest base class with the function defined + function name
+(define (lookup-virtual-function cls func) (std:string-append cls field))
+
+;[TODO]return name of the highest base class with the field defined + function name
+(define (lookup-virtual-field cls field) (std:string-append cls field))
+
+;[TODO]
+(define (function-same-sig? func-1 func-2) #t)
+
+;signature of a field is its name
 
 ;======================== Instructions ===========================
 ;globals: list of (cons var-name(string) value(ast))

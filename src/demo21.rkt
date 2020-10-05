@@ -6,11 +6,14 @@
 
 (define main-func (function-declare (function-content 
 	(func-name "main")
-	(arguments-callee (argument-callee-list null))
+	(arguments-callee (argument-callee-list (list (variable-definition (variable-n-type (variable "param0") (cls-name "int"))))))
 	(variable-declares (variable-list (list (variable "var-1") (variable "var-2") (variable "var-3"))))
 	(stats (stat-list (list (stat (stat-ret (variable "var-3")))))))))
 
 (define class-1 (class-def (class-default
+	(cls-name "helloworld")
+	(cls-name #f)
+	(interface-modifier (interface-name-list null))
 	(field-declares (field-list (list (field "global-1"))))
 	(field-declares (field-list (list (field "field-1"))))
 	(function-declares (function-list (list main-func)))
