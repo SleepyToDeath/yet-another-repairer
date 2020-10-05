@@ -29,7 +29,7 @@ implements_clause
   ::= /IMPLEMENTS class_name_list
 
 file_body
-  ::= /LBRACE member* /RBRACE
+  ::= /LBRACE j_member* /RBRACE
 
 name_list
   ::= name
@@ -39,17 +39,17 @@ class_name_list
   ::= class_name
     | class_name /COMMA class_name_list
 
-member
+@j_member
   ::= field
     | method
 
 field
-  ::= modifier* type name /SEMICOLON
+  ::= modifier* j_type name /SEMICOLON
 
 method
-  ::= modifier* type name /LPAREN parameter_list? /RPAREN throws_clause? method_body
+  ::= modifier* j_type name /LPAREN parameter_list? /RPAREN throws_clause? method_body
 
-type
+j_type
   ::= VOID
     | nonvoid_type
 
@@ -111,7 +111,7 @@ local_name
 
 local_name_list
   ::= local_name
-    | local_name COMMA local_name_list
+    | local_name /COMMA local_name_list
 
 statement
   ::= label_stmt
@@ -150,7 +150,7 @@ lookupswitch_stmt
   ::= LOOKUPSWITCH LPAREN immediate RPAREN LBRACE case_stmt+ RBRACE /SEMICOLON
 
 identity_stmt
-  ::= local_name COLON_EUQALS AT_IDENTIFIER type /SEMICOLON
+  ::= local_name COLON_EUQALS AT_IDENTIFIER j_type /SEMICOLON
 
 identity_no_type_stmt
   ::= local_name COLON_EUQALS AT_IDENTIFIER /SEMICOLON
@@ -236,10 +236,10 @@ nonstatic_invoke
     | INTERFACEINVOKE
 
 unnamed_method_signature
-  ::= CMPLT type LPAREN parameter_list? RPAREN CMPGT
+  ::= CMPLT j_type LPAREN parameter_list? RPAREN CMPGT
 
 method_signature
-  ::= CMPLT class_name COLON type name LPAREN parameter_list? RPAREN CMPGT
+  ::= CMPLT class_name COLON j_type name LPAREN parameter_list? RPAREN CMPGT
 
 reference
   ::= array_ref
@@ -254,14 +254,14 @@ field_ref
     | field_signature
 
 field_signature
-  ::= CMPLT class_name COLON type name CMPGT
+  ::= CMPLT class_name COLON j_type name CMPGT
 
 fixed_array_descriptor
   ::= LBRACKET immediate RBRACKET
 
 arg_list
   ::= immediate
-    | immediate COMMA arg_list
+    | immediate /COMMA arg_list
 
 immediate
   ::= local_name
