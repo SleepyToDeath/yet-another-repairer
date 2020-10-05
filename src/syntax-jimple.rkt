@@ -14,7 +14,7 @@
 ;if no extend, put an #f in name string
 ;if no interface, put a null list
 (LHS-C class-def (rhs ::= class-default))
-	(RHS-C class-default (name : cls-name) (extend : cls-name) (implements : cls-name) 
+	(RHS-C class-default (name : cls-name) (extend : cls-name) (implements : interface-modifier) 
 	(globals : field-declares) (fields : field-declares) 
 	(static-functions : function-declares) (member-functions : function-declares))
 
