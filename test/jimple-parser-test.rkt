@@ -9,16 +9,20 @@
   (check-equal? (build-ast-file (parse-to-stx "public class A {}"))
                 (ast:class-def
                   (ast:class-default
-                    (ast:cls-name "A")
+                    (ast:type-name "A")
+                    (ast:type-name #f)
+                    (ast:interface-implements null)
                     (ast:field-declares null)
                     (ast:field-declares null)
                     (ast:function-declares null)
                     (ast:function-declares null)))
                 "file test 1")
-  (check-equal? (build-ast-file (parse-to-stx "public class A extends B implements C {}"))
+  (check-equal? (build-ast-file (parse-to-stx "public class A extends B implements C, D {}"))
                 (ast:class-def
                   (ast:class-default
-                    (ast:cls-name "A")
+                    (ast:type-name "A")
+                    (ast:type-name "B")
+                    (ast:interface-implements (list (ast:type-name "C") (ast:type-name "D")))
                     (ast:field-declares null)
                     (ast:field-declares null)
                     (ast:function-declares null)
@@ -35,7 +39,9 @@
                     "}")))
                 (ast:class-def
                   (ast:class-default
-                    (ast:cls-name "A")
+                    (ast:type-name "A")
+                    (ast:type-name #f)
+                    (ast:interface-implements null)
                     (ast:field-declares (list (ast:field "a")))
                     (ast:field-declares (list (ast:field "b") (ast:field "c")))
                     (ast:function-declares null)

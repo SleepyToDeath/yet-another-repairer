@@ -29,36 +29,52 @@
   (ast:program (ast:class-list (list (build-ast-file file-text)))))
 
 (define (build-ast-file file-stx)
-  (begin
-    (define clazz-name null)
-    (define global-list null)
-    (define field-list null)
-    (define static-func-list null)
-    (define virtual-func-list null)
-    (p:syntax-parse file-stx
-      [({p:~literal j_file}
-          modifiers ...
-          ({p:~literal file_type} file_type)
-          ({p:~literal class_name} name)
-          (p:~optional ({p:~literal extends_clause} ext))
-          (p:~optional ({p:~literal implements_clause} impl))
-          ({p:~literal file_body} members ...))
-       (begin
-         (set! clazz-name (std:syntax-e #'name))
-         (std:for ([member-stx (std:syntax->list #'(members ...))])
-                  (let ([ret-list (build-ast-member member-stx)])
-                    (begin
-                      (set! global-list (append global-list (first ret-list)))
-                      (set! field-list (append field-list (second ret-list)))
-                      (set! static-func-list (append static-func-list (third ret-list)))
-                      (set! virtual-func-list (append virtual-func-list (fourth ret-list)))))))])
-    (ast:class-def
-      (ast:class-default
-        (ast:cls-name clazz-name)
-        (ast:field-declares global-list)
-        (ast:field-declares field-list)
-        (ast:function-declares static-func-list)
-        (ast:function-declares virtual-func-list)))))
+  (p:syntax-parse file-stx
+    [({p:~literal j_file}
+        modifiers ...
+        ({p:~literal file_type} file_type)
+        class-name
+        (p:~optional ({p:~literal extends_clause} ext))
+        (p:~optional ({p:~literal implements_clause} impls))
+        ({p:~literal file_body} members ...))
+     (begin
+       (define global-list null)
+       (define field-list null)
+       (define static-func-list null)
+       (define virtual-func-list null)
+       (std:for ([member-stx (std:syntax->list #'(members ...))])
+                (let ([ret-list (build-ast-member member-stx)])
+                  (begin
+                    (set! global-list (append global-list (first ret-list)))
+                    (set! field-list (append field-list (second ret-list)))
+                    (set! static-func-list (append static-func-list (third ret-list)))
+                    (set! virtual-func-list (append virtual-func-list (fourth ret-list))))))
+       (ast:class-def
+         (ast:class-default
+           (build-ast-type-name #'class-name)
+           (if (p:attribute ext)
+               (build-ast-type-name #'ext)
+               (ast:type-name #f))
+           (if (p:attribute impls)
+               (build-ast-implements #'impls)
+               (ast:interface-implements null))
+           (ast:field-declares global-list)
+           (ast:field-declares field-list)
+           (ast:function-declares static-func-list)
+           (ast:function-declares virtual-func-list))))]))
+
+
+(define (build-ast-type-name class-name-stx)
+  (p:syntax-parse class-name-stx
+    [({p:~literal class_name} name)
+     (ast:type-name (std:syntax-e #'name))]))
+
+
+(define (build-ast-implements implements-stx)
+  (p:syntax-parse implements-stx
+    [({p:~literal class_name_list} names ...)
+     (ast:interface-implements
+       (map build-ast-type-name (std:syntax->list #'(names ...))))]))
 
 
 (define (build-ast-member member-stx)

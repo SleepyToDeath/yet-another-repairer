@@ -36,8 +36,7 @@ name_list
     | name /COMMA name_list
  
 class_name_list
-  ::= class_name
-    | class_name /COMMA class_name_list
+  ::= class_name (/COMMA class_name)*
 
 @j_member
   ::= field
