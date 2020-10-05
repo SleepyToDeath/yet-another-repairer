@@ -4,6 +4,7 @@
 (require "syntax-jimple.rkt")
 (require "memory.rkt")
 (require "map.rkt")
+(require "string-id.rkt")
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
 
@@ -19,12 +20,12 @@
 ;fields: list of var names
 ;functs: list of functions
 ;field-val-ast: init value of fields in ast, #f if no init value
-(struct class (name sfuncs vfuncs sfields vfields) #:transparent)
+(struct class (name extend implements sfuncs vfuncs sfields vfields) #:transparent)
 
 ;name: string
 ;prog: list of instructions;
 ;lmap: imap: label(int) -> instruction index(int)
-;args: list of strings
+;args: list of (string(name) X string(type))
 ;locals: list of strings
 (struct function (name prog lmap args locals) #:transparent)
 
@@ -46,6 +47,57 @@
 (define func-name-main "main")
 (define func-name-boot "__boot__")
 (define machine-empty (machine #f null imap-empty memory-empty pc-init))
+
+
+;============================= Utils ===================================
+;[TODO]return name of the highest base class with the function defined + function name
+(define (lookup-virtual-function mac cls func) 
+	(if cls
+		(begin
+			(define cls-0 (imap-get (machine-cmap mac) cls))
+
+			(define base-name (ormap 
+				(lambda (cls-cur) (lookup-virtual-function cls-cur func)) 
+				(cons (class-extend cls-0) (class-implements cls-0))))
+
+			(if base-name base-name
+				(if 
+					(ormap (lambda (func-cur) (equal? (function-name func-cur) func)) (class-vfuncs cls-0)) 
+					(std:string-append cls func)
+					#f)))
+		#f))
+
+;[TODO]return name of the highest base class with the field defined + field name
+(define (lookup-virtual-field mac cls field)
+	(if cls
+		(begin
+			(define cls-0 (imap-get (machine-cmap mac) cls))
+
+			(define base-name (ormap 
+				(lambda (cls-cur) (lookup-virtual-field cls-cur field)) 
+				(cons (class-extend cls-0) (class-implements cls-0))))
+
+			(if base-name base-name
+				(if 
+					(ormap equal? (class-vfields cls-0)) 
+					(std:string-append cls field)
+					#f)))
+		#f))
+
+(define (vfunc-id mac cls func) (string-id (lookup-virtual-function cls func)))
+
+(define (vfield-id mac cls field) (string-id (lookup-virtual-field cls field)))
+
+(define (sfunc-id cls func) (string-id (std:string-append cls func)))
+
+(define (sfield-id cls field) (string-id (std:string-append cls field)))
+
+;signature of a field is its name
+;signature of a function is its name and arg types
+(define (function-same-sig? func-1 func-2) 
+	(and
+		(equal? (function-name func-1) (function-name func-2))
+		(andmap (lambda (arg-1 arg-2) (equal? (cdr arg-1) (cdr arg-2))) (function-args func-1) (function-args func-2))))
 
 
 ;======================== Execution Interface ===========================
@@ -197,17 +249,6 @@
 		mem-vfields)
 	(define mem-push (memory-spush mem))
 	(foldl process-class mem-push classes))
-
-;[TODO]return name of the highest base class with the function defined + function name
-(define (lookup-virtual-function cls func) (std:string-append cls field))
-
-;[TODO]return name of the highest base class with the field defined + function name
-(define (lookup-virtual-field cls field) (std:string-append cls field))
-
-;[TODO]
-(define (function-same-sig? func-1 func-2) #t)
-
-;signature of a field is its name
 
 ;======================== Instructions ===========================
 ;globals: list of (cons var-name(string) value(ast))
