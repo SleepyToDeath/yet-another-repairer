@@ -2,10 +2,7 @@
 
 (provide parse-to-stx)
 (provide build-ast-program)
-
-(provide build-ast-field)
 (provide build-ast-file)
-(provide build-ast-modifiers)
 
 (require (prefix-in std: racket/base))
 (require (prefix-in p: syntax/parse))
@@ -13,6 +10,10 @@
 (require "jimple-lexer.rkt")
 (require "../syntax.rkt")
 (require (prefix-in ast: "../syntax-jimple.rkt"))
+
+
+;============ Constants ============
+(define param-prefix "@parameter")
 
 
 ;============ Helper functions ============
@@ -113,5 +114,77 @@
 
 
 (define (build-ast-method method-stx)
-  (std:error "not implemented yet"))
+  (p:syntax-parse method-stx
+    [({p:~literal method}
+        modifiers ...
+        ({p:~literal j_type} ret-type)
+        method-name
+        (p:~optional param-list)
+        (p:~optional ({p:~literal throws_clause} throws))
+        method-body)
+     (let* ([body-contents (build-ast-method-body #'method-body)]
+            [local-vars (first body-contents)]
+            [stmts (second body-contents)]
+            [ms (build-ast-modifiers #'(modifiers ...))]
+            [method (ast:function-declare
+                      (ast:function-content
+                        (build-ast-method-name #'method-name)
+                        (if (p:attribute param-list)
+                          (build-ast-method-params #'param-list)
+                          (ast:arguments-callee (ast:argument-callee-list null)))
+                        (ast:variable-declares (ast:variable-list local-vars))
+                        (ast:stats (ast:stat-list stmts))))])
+       (list ms method))]))
+
+
+(define (build-ast-method-name method-name-stx)
+  (p:syntax-parse method-name-stx
+    [({p:~literal name} name)
+     (ast:func-name (std:syntax-e #'name))]))
+
+
+(define (build-ast-method-params params-stx)
+  (p:syntax-parse params-stx
+    [({p:~literal parameter_list} params ...)
+     (begin
+       (define index 0)
+       (define param-list null)
+       (std:for ([param-stx (std:reverse (std:syntax->list #'(params ...)))])
+                (begin
+                  (set! param-list (cons (build-ast-method-param param-stx index) param-list))
+                  (set! index (+ index 1))))
+       (ast:arguments-callee (ast:argument-callee-list param-list)))]))
+
+
+(define (build-ast-method-param param-stx param-index)
+  (p:syntax-parse param-stx
+    [({p:~literal parameter}
+        ({p:~literal nonvoid_type} nonvoid-type))
+     (ast:variable-definition
+        (ast:variable-n-type
+          (ast:variable (std:string-append param-prefix (std:number->string param-index)))
+          (ast:type-name (build-ast-nonvoid-type #'nonvoid-type))))]))
+
+
+(define (build-ast-type type-stx)
+  (p:syntax-parse type-stx
+    ["void"
+     "void"]
+    [({p:~literal nonvoid_type} nonvoid-type)
+     (build-ast-nonvoid-type #'nonvoid-type)]))
+
+
+(define (build-ast-nonvoid-type nonvoid-type-stx)
+  (p:syntax-parse nonvoid-type-stx
+    [({p:~literal base_type_no_name} base-type-no-name array-brackets ...)
+     ;TODO: fix this
+     (build-ast-base-type-no-name #'base-type-no-name)]))
+
+
+(define (build-ast-base-type-no-name base-type-no-name-stx)
+  (std:syntax-e #'base-type-no-name))
+
+
+(define (build-ast-method-body method-body-stx)
+  (list null null))
 

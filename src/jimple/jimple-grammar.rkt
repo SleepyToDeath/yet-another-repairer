@@ -53,8 +53,7 @@ j_type
     | nonvoid_type
 
 parameter_list
-  ::= parameter
-    | parameter /COMMA parameter_list
+  ::= parameter (/COMMA parameter)*
 
 parameter
   ::= nonvoid_type

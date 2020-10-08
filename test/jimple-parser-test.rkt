@@ -49,3 +49,41 @@
                 "field test 1")
 )
 
+(test-case "method"
+  (check-equal? (build-ast-file (parse-to-stx (string-append
+                    "public class A {"
+                    "  public void foo();"
+                    "}")))
+                (ast:class-def
+                  (ast:class-default
+                    (ast:type-name "A")
+                    (ast:type-name #f)
+                    (ast:interface-implements null)
+                    (ast:field-declares null)
+                    (ast:field-declares null)
+                    (ast:function-declares null)
+                    (ast:function-declares (list
+                      (ast:function-declare
+                        (ast:function-content
+                          (ast:func-name "foo")
+                          (ast:arguments-callee (ast:argument-callee-list null))
+                          (ast:variable-declares (ast:variable-list null))
+                          (ast:stats (ast:stat-list null))))))))
+                "method test 1")
+;  (check-equal? (build-ast-file (parse-to-stx (string-append
+;                    "public class A {"
+;                    "  public int foo(int a, double b) {}"
+;                    "  private static void bar(List c, Set d) {}"
+;                    "}")))
+;                (ast:class-def
+;                  (ast:class-default
+;                    (ast:type-name "A")
+;                    (ast:type-name #f)
+;                    (ast:interface-implements null)
+;                    (ast:field-declares null)
+;                    (ast:field-declares null)
+;                    (ast:function-declares null)
+;                    (ast:function-declares null)))
+;                "method test 2")
+)
+
