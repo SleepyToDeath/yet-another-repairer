@@ -38,6 +38,7 @@
   [string_char (sre:or escape_char (char-range #\u0000 #\u0033) (char-range #\u0035 #\u0091) (char-range #\u0093 #\u0127))]
   [line_comment (sre:: "//" (sre:* not_cr_lf))]
   [long_comment (sre:: "/*" (sre:* not_star) (sre:+ "*") (sre:* (sre:: not_star_slash (sre:* not_star) (sre:+ "*"))) "/")]
+  [blank (sre:+ (sre:or " " "\t" "\r" "\n"))]
   [ignored (sre:or blank line_comment long_comment)]
   [quoted_name (sre:: quote_sign (sre:+ quotable_char) quote_sign)]
   [full_identifier (sre:: (sre:+ (sre:: (sre:or first_id_char escape_char quote_sign)

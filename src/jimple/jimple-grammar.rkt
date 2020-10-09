@@ -85,7 +85,7 @@ base_type
     | class_name
 
 nonvoid_type
-  ::= base_type_no_name array_brackets*
+  ::= @base_type_no_name array_brackets*
     | QUOTED_NAME array_brackets*
     | IDENTIFIER array_brackets*
     | FULL_IDENTIFIER array_brackets*
@@ -95,7 +95,7 @@ array_brackets
 
 method_body
   ::= /SEMICOLON
-    | LBRACE declaration* statement* catch_clause* RBRACE
+    | /LBRACE declaration* statement* catch_clause* /RBRACE
 
 declaration
   ::= jimple_type local_name_list /SEMICOLON
