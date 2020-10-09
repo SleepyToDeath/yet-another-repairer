@@ -32,8 +32,7 @@ file_body
   ::= /LBRACE j_member* /RBRACE
 
 name_list
-  ::= name
-    | name /COMMA name_list
+  ::= name (/COMMA name)*
  
 class_name_list
   ::= class_name (/COMMA class_name)*
@@ -104,12 +103,11 @@ jimple_type
   ::= UNKNOWN
     | nonvoid_type
 
-local_name
+@local_name
   ::= name
 
 local_name_list
-  ::= local_name
-    | local_name /COMMA local_name_list
+  ::= local_name (/COMMA local_name)*
 
 statement
   ::= label_stmt

@@ -178,28 +178,44 @@
        (string-repeat (length (std:syntax->list #'(array-brackets ...))) "[]"))]))
 
 
-(p:define-splicing-syntax-class decl-syntax-class
-  (p:pattern ({p:~literal declaration} _)))
-
-(p:define-splicing-syntax-class stmt-syntax-class
-  (p:pattern ({p:~literal statement} _)))
-
-(p:define-splicing-syntax-class catch-syntax-class
-  (p:pattern ({p:~literal catch_clause} _)))
-
 (define (build-ast-method-body method-body-stx)
   (p:syntax-parse method-body-stx
-    [({p:~literal method_body}
-        decls:decl-syntax-class ...
-        stmts:stmt-syntax-class ...
-        _:catch-syntax-class ...)
-     (let ([decl-list (map build-ast-declaration (std:syntax->list #'(decls ...)))]
-           [stmt-list (map build-ast-statement (std:syntax->list #'(stmts ...)))])
+    [({p:~literal method_body} elements ...)
+     (begin
+       (define decl-list null)
+       (define stmt-list null)
+       (std:for ([element-stx (std:syntax->list #'(elements ...))])
+                (let ([decl-stmt (build-ast-func-element element-stx)])
+                  (begin
+                    (set! decl-list (append decl-list (first decl-stmt)))
+                    (set! stmt-list (append stmt-list (second decl-stmt))))))
+       (list decl-list stmt-list))]))
+
+
+(define (build-ast-func-element element-stx)
+  (p:syntax-parse element-stx
+    [({p:~literal declaration} p:~rest d)
+     (let ([decl-list (build-ast-declaration element-stx)]
+           [stmt-list null])
+       (list decl-list stmt-list))]
+    [({p:~literal statement} p:~rest s)
+     (let ([decl-list null]
+           [stmt-list (build-ast-statement element-stx)])
        (list decl-list stmt-list))]))
 
 
 (define (build-ast-declaration decl-stx)
-  #f)
+  (p:syntax-parse decl-stx
+    [({p:~literal declaration}
+        jimple-type
+        ({p:~literal local_name_list} names ...))
+     (map build-ast-variable (std:syntax->list #'(names ...)))]))
+
+
+(define (build-ast-variable name-stx)
+  (p:syntax-parse name-stx
+    [({p:~literal name} name)
+     (ast:variable (std:syntax-e #'name))]))
 
 
 (define (build-ast-statement stmt-stx)

@@ -117,3 +117,60 @@
                 "method test 2")
 )
 
+(define (single-func-in-class class-name func-decl)
+  (ast:class-def
+    (ast:class-default
+      (ast:type-name class-name)
+      (ast:type-name #f)
+      (ast:interface-implements null)
+      (ast:field-declares null)
+      (ast:field-declares null)
+      (ast:function-declares null)
+      (ast:function-declares (list func-decl)))))
+
+
+(test-case "declaration"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append
+      "public class A {"
+      "  public void foo() {"
+      "    int a, b;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:arguments-callee (ast:argument-callee-list null))
+          (ast:variable-declares
+            (ast:variable-list (list
+              (ast:variable "a")
+              (ast:variable "b"))))
+          (ast:stats (ast:stat-list null)))))
+    "declaration 1")
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append
+      "public class A {"
+      "  public void foo() {"
+      "    int a, b;"
+      "    doulbe c;"
+      "    java.util.List d;"
+      "    java.lang.String[] e;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:arguments-callee (ast:argument-callee-list null))
+          (ast:variable-declares
+            (ast:variable-list (list
+              (ast:variable "a")
+              (ast:variable "b")
+              (ast:variable "c")
+              (ast:variable "d")
+              (ast:variable "e"))))
+          (ast:stats (ast:stat-list null)))))
+    "declaration 2")
+)
+
