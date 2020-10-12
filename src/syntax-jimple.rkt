@@ -41,12 +41,12 @@
 (LHS-C arguments-caller (rhs ::= argument-caller-list))
 	(RHS-C-List argument-caller-list (al : dexpr))
 
-(LHS-C arguments-callee (rhs ::= argument-callee-list))
-	(RHS-C-List argument-callee-list (al : variable-definition))
+(LHS-C variable-definitions (rhs ::= variable-definition-list))
+	(RHS-C-List variable-definition-list (vl : variable-definition))
 
 ;--------------------------------------------------------
 (LHS-C function-declare (rhs ::= function-content))
-	(RHS-C function-content (name : func-name) (args : arguments-callee) (local-variables : variable-declares) (statements : stats))
+	(RHS-C function-content (name : func-name) (args : variable-definitions) (local-variables : variable-definitions) (statements : stats))
 
 ;--------------------------------------------------------
 (LHS-C stats (rhs ::= stat-list))
@@ -69,7 +69,7 @@
 	(RHS-C expr-var (name : variable))
 	(RHS-C expr-binary (operand1 : expr) (operator : op) (operand2 : expr))
 	(RHS-C expr-array (array : variable) (index : expr))
-	(RHS-C expr-field (obj : variable) (fname : field))
+	(RHS-C expr-field (obj : variable) (class : type-name) (fname : field))
 
 ;"int" "string" "real" "bool" for primitive type names
 (LHS-C variable-definition (rhs ::= variable-n-type))

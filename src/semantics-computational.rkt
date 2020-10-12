@@ -63,7 +63,7 @@
 			(if base-name base-name
 				(if 
 					(ormap (lambda (func-cur) (equal? (function-name func-cur) func)) (class-vfuncs cls-0)) 
-					(std:string-append cls func)
+					(std:string-append cls "::::" func)
 					#f)))
 		#f))
 
@@ -80,7 +80,7 @@
 			(if base-name base-name
 				(if 
 					(ormap equal? (class-vfields cls-0)) 
-					(std:string-append cls field)
+					(std:string-append cls "::::" field)
 					#f)))
 		#f))
 
@@ -88,9 +88,9 @@
 
 (define (vfield-id mac cls field) (string-id (lookup-virtual-field cls field)))
 
-(define (sfunc-id cls func) (string-id (std:string-append cls func)))
+(define (sfunc-id cls func) (string-id (std:string-append cls "::" func)))
 
-(define (sfield-id cls field) (string-id (std:string-append cls field)))
+(define (sfield-id cls field) (string-id (std:string-append cls "::" field)))
 
 ;signature of a field is its name
 ;signature of a function is its name and arg types
@@ -337,10 +337,10 @@
 		(define mem-ret (memory-sforce-write (machine-mem m) var-ret-name ret-value))
 		(std:struct-copy machine m [pc pc-ret][mem mem-ret]))])
 
-(struct inst-static-call (ret func-name args) #:transparent
+(struct inst-static-call (ret cls-name func-name args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
-		(define func (memory-sread (machine-mem m) (inst-static-call-func-name i)))
+		(define func (memory-sread (machine-mem m) (sfunc-id (inst-static-call-cls-name i) (inst-static-call-func-name i))))
 		(define args (inst-static-call-args i))
 		(define ret (inst-static-call-ret i))
 
@@ -354,13 +354,13 @@
 
 		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
 		
-(struct inst-virtual-call (ret obj-name func-name args) #:transparent
+(struct inst-virtual-call (ret obj-name cls-name func-name args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define mem0 (machine-mem m))
 		(define obj-addr (memory-sread mem0 (inst-virtual-call-obj-name i)))
 		;virtual
-		(define func (memory-fread mem0 obj-addr (inst-virtual-call-func-name i)))
+		(define func (memory-fread mem0 obj-addr (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i))))
 		(define args (inst-static-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
@@ -377,13 +377,13 @@
 		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
 
 ;in my understanding, special call = virtual call - virtual, at least for init
-(struct inst-special-call (ret obj-name func-name args) #:transparent
+(struct inst-special-call (ret obj-name cls-name func-name args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define mem0 (machine-mem m))
 		(define obj-addr (memory-sread mem0 (inst-special-call-obj-name i)))
 		;never virtual
-		(define func (memory-sread (machine-mem m) (inst-special-call-func-name i)))
+		(define func (memory-sread (machine-mem m) (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i))))
 		(define args (inst-static-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
@@ -427,11 +427,13 @@
 		(define idx (expr-eval-dispatch (iexpr-array-index e) m))
 		(memory-aread mem0 arr-addr idx))])
 
-(struct iexpr-field (obj-name fname) #:transparent
+(struct iexpr-field (obj-name cls-name fname) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
 		(define mem0 (machine-mem m))
-		(define obj-addr (memory-sread mem0 (iexpr-field-obj-name e)))
 		(define fname (iexpr-field-fname e))
-		(memory-fread mem0 fname obj-addr))])
+		(define cls-name (iexpr-field-cls-name e))
+		(define obj-name (iexpr-field-obj-name e))
+		(define obj-addr (memory-sread mem0 obj-name))
+		(memory-fread mem0 (vfield-id m cls-name fname) obj-addr))])
 

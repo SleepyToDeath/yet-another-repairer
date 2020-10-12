@@ -3,6 +3,7 @@
 (require (prefix-in std: racket/base))
 (require "map.rkt")
 (require "stack.rkt")
+(require "string-id.rkt")
 
 (provide (all-defined-out))
 
@@ -11,21 +12,25 @@
 
 ;-----------------Stack Operations---------------
 ;read from stack
-(define (memory-sread mem name)
+(define (memory-sread mem _name)
+	(define name (maybe-string-id _name))
 	(stack-read (memory-stack mem) name))
 
 ;write to stack
-(define (memory-swrite mem name value)
+(define (memory-swrite mem _name value)
+	(define name (maybe-string-id _name))
 	(std:struct-copy memory mem 
 		[stack (stack-write (memory-stack mem) name value)]))
 
 ;declare variable on current stack-top scope
 ;overwrites existing value
-(define (memory-sdecl mem name)
+(define (memory-sdecl mem _name)
+	(define name (maybe-string-id _name))
 	(std:struct-copy memory mem [stack (stack-decl (memory-stack mem) name)]))
 
 ;decl & write
-(define (memory-sforce-write mem name value)
+(define (memory-sforce-write mem _name value)
+	(define name (maybe-string-id _name))
 	(memory-swrite (memory-sdecl mem name) name value))
 
 ;push a scope to stack
@@ -60,7 +65,8 @@
 ;declare a new field (a field map is a map from obj-addr to field-addr)
 ;return (new memory)
 ;does not overwrite if exists
-(define (memory-fdecl mem name) 
+(define (memory-fdecl mem _name) 
+	(define name (maybe-string-id _name))
 	(if (= (imap-get (memory-names mem) name) not-found)
 		(begin
 			(define ret-pair (memory-alloc mem 1))
@@ -72,7 +78,8 @@
 
 
 ;read a field value of an object
-(define (memory-fread mem fname obj-addr)
+(define (memory-fread mem _fname obj-addr)
+	(define fname (maybe-string-id _fname))
 	(define fid (imap-get (memory-names mem) fname))
 	(define fmap (memory-hread mem fid))
 	(define faddr (imap-get fmap obj-addr))
@@ -80,7 +87,8 @@
 
 ;write to a field of an object
 ;automatically allocate memory for the field if it's a new object
-(define (memory-fwrite mem fname obj-addr value) 
+(define (memory-fwrite mem _fname obj-addr value) 
+	(define fname (maybe-string-id _fname))
 	(define fid (imap-get (memory-names mem) fname))
 	(define fmap (memory-hread mem fid))
 	(define faddr (imap-get fmap obj-addr))
