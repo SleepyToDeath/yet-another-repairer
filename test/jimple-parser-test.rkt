@@ -66,8 +66,8 @@
                       (ast:function-declare
                         (ast:function-content
                           (ast:func-name "foo")
-                          (ast:arguments-callee (ast:argument-callee-list null))
-                          (ast:variable-declares (ast:variable-list null))
+                          (ast:variable-definitions (ast:variable-definition-list null))
+                          (ast:variable-definitions (ast:variable-definition-list null))
                           (ast:stats (ast:stat-list null))))))))
                 "method test 1")
   (check-equal? (build-ast-file (parse-to-stx (string-append
@@ -86,8 +86,8 @@
                       (ast:function-declare
                         (ast:function-content
                           (ast:func-name "bar")
-                          (ast:arguments-callee
-                            (ast:argument-callee-list (list
+                          (ast:variable-definitions
+                            (ast:variable-definition-list (list
                               (ast:variable-definition
                                 (ast:variable-n-type
                                   (ast:variable "@parameter0")
@@ -96,14 +96,14 @@
                                 (ast:variable-n-type
                                   (ast:variable "@parameter1")
                                   (ast:type-name "java.util.List"))))))
-                          (ast:variable-declares (ast:variable-list null))
+                          (ast:variable-definitions (ast:variable-definition-list null))
                           (ast:stats (ast:stat-list null))))))
                     (ast:function-declares (list
                       (ast:function-declare
                         (ast:function-content
                           (ast:func-name "foo")
-                          (ast:arguments-callee
-                            (ast:argument-callee-list (list
+                          (ast:variable-definitions
+                            (ast:variable-definition-list (list
                               (ast:variable-definition
                                 (ast:variable-n-type
                                   (ast:variable "@parameter0")
@@ -112,7 +112,7 @@
                                 (ast:variable-n-type
                                   (ast:variable "@parameter1")
                                   (ast:type-name "double"))))))
-                          (ast:variable-declares (ast:variable-list null))
+                          (ast:variable-definitions (ast:variable-definition-list null))
                           (ast:stats (ast:stat-list null))))))))
                 "method test 2")
 )
@@ -141,11 +141,13 @@
       (ast:function-declare
         (ast:function-content
           (ast:func-name "foo")
-          (ast:arguments-callee (ast:argument-callee-list null))
-          (ast:variable-declares
-            (ast:variable-list (list
-              (ast:variable "a")
-              (ast:variable "b"))))
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "a") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b") (ast:type-name "int"))))))
           (ast:stats (ast:stat-list null)))))
     "declaration 1")
   (check-equal?
@@ -153,7 +155,7 @@
       "public class A {"
       "  public void foo() {"
       "    int a, b;"
-      "    doulbe c;"
+      "    double c;"
       "    java.util.List d;"
       "    java.lang.String[] e;"
       "  }"
@@ -162,14 +164,19 @@
       (ast:function-declare
         (ast:function-content
           (ast:func-name "foo")
-          (ast:arguments-callee (ast:argument-callee-list null))
-          (ast:variable-declares
-            (ast:variable-list (list
-              (ast:variable "a")
-              (ast:variable "b")
-              (ast:variable "c")
-              (ast:variable "d")
-              (ast:variable "e"))))
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "a") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "c") (ast:type-name "double")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "d") (ast:type-name "java.util.List")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "e") (ast:type-name "java.lang.String[]"))))))
           (ast:stats (ast:stat-list null)))))
     "declaration 2")
 )

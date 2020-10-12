@@ -136,8 +136,8 @@
                         (build-ast-method-name #'method-name)
                         (if (p:attribute param-list)
                           (build-ast-method-params #'param-list)
-                          (ast:arguments-callee (ast:argument-callee-list null)))
-                        (ast:variable-declares (ast:variable-list decls))
+                          (ast:variable-definitions (ast:variable-definition-list null)))
+                        (ast:variable-definitions (ast:variable-definition-list decls))
                         (ast:stats (ast:stat-list stmts))))])
        (list ms method))]))
 
@@ -158,7 +158,7 @@
                 (begin
                   (set! param-list (cons (build-ast-method-param param-stx index) param-list))
                   (set! index (+ index 1))))
-       (ast:arguments-callee (ast:argument-callee-list (std:reverse param-list))))]))
+       (ast:variable-definitions (ast:variable-definition-list (std:reverse param-list))))]))
 
 
 (define (build-ast-method-param param-stx param-index)
@@ -204,12 +204,26 @@
        (list decl-list stmt-list))]))
 
 
+(define (build-ast-jimple-type jimple-type-stx)
+  (p:syntax-parse jimple-type-stx
+    [({p:~literal jimple_type} "unknown")
+     "unknown"]
+    [({p:~literal jimple_type} nonvoid-type)
+     (build-ast-nonvoid-type #'nonvoid-type)]))
+
+
 (define (build-ast-declaration decl-stx)
   (p:syntax-parse decl-stx
     [({p:~literal declaration}
         jimple-type
         ({p:~literal local_name_list} names ...))
-     (map build-ast-variable (std:syntax->list #'(names ...)))]))
+     (let ([type (build-ast-jimple-type #'jimple-type)])
+       (map (lambda (name-stx)
+                    (ast:variable-definition
+                      (ast:variable-n-type
+                        (build-ast-variable name-stx)
+                        (ast:type-name type))))
+            (std:syntax->list #'(names ...))))]))
 
 
 (define (build-ast-variable name-stx)
