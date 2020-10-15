@@ -152,7 +152,7 @@ identity_no_type_stmt
   ::= local_name COLON_EUQALS AT_IDENTIFIER /SEMICOLON
 
 assign_stmt
-  ::= variable EQUALS expression /SEMICOLON
+  ::= variable /EQUALS j_expression /SEMICOLON
 
 goto_stmt
   ::= GOTO label_name /SEMICOLON
@@ -188,10 +188,10 @@ case_label
 catch_clause
   ::= CATCH class_name FROM label_name TO label_name WITH label_name /SEMICOLON
 
-expression
+j_expression
   ::= new_expr
-    | LPAREN nonvoid_type RPAREN immediate
-    | immediate INSTANCEOF nonvoid_type
+    | cast_expr
+    | instanceof_expr
     | invoke_expr
     | reference
     | binop_expr
@@ -202,6 +202,12 @@ new_expr
   ::= NEW base_type
     | NEWARRAY LPAREN nonvoid_type RPAREN fixed_array_descriptor
     | NEWMULTIARRAY LPAREN base_type RPAREN array_descriptor+
+
+cast_expr
+  ::= /LPAREN nonvoid_type /RPAREN immediate
+
+instanceof_expr
+  ::= immediate /INSTANCEOF nonvoid_type
 
 array_descriptor
   ::= LBRACKET immediate? RBRACKET

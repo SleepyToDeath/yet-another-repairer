@@ -5,6 +5,14 @@
 (require "../src/jimple/jimple-parser.rkt")
 (require (prefix-in ast: "../src/syntax-jimple.rkt"))
 
+
+(define (string-append-newline . strs)
+  (apply string-append
+    (map (lambda (line)
+                 (string-append line "\n"))
+         strs)))
+
+
 (test-case "file"
   (check-equal? (build-ast-file (parse-to-stx "public class A {}"))
                 (ast:class-def
@@ -31,7 +39,7 @@
 )
 
 (test-case "field"
-  (check-equal? (build-ast-file (parse-to-stx (string-append
+  (check-equal? (build-ast-file (parse-to-stx (string-append-newline
                     "public class A {"
                     "  public static int a;"
                     "  private double b;"
@@ -50,7 +58,7 @@
 )
 
 (test-case "method"
-  (check-equal? (build-ast-file (parse-to-stx (string-append
+  (check-equal? (build-ast-file (parse-to-stx (string-append-newline
                     "public class A {"
                     "  public void foo();"
                     "}")))
@@ -70,7 +78,7 @@
                           (ast:variable-definitions (ast:variable-definition-list null))
                           (ast:stats (ast:stat-list null))))))))
                 "method test 1")
-  (check-equal? (build-ast-file (parse-to-stx (string-append
+  (check-equal? (build-ast-file (parse-to-stx (string-append-newline
                     "public class A {"
                     "  public int foo(int, double) {}"
                     "  private static void bar(java.lang.String[], java.util.List) {}"
@@ -131,7 +139,7 @@
 
 (test-case "declaration"
   (check-equal?
-    (build-ast-file (parse-to-stx (string-append
+    (build-ast-file (parse-to-stx (string-append-newline
       "public class A {"
       "  public void foo() {"
       "    int a, b;"
@@ -151,7 +159,7 @@
           (ast:stats (ast:stat-list null)))))
     "declaration 1")
   (check-equal?
-    (build-ast-file (parse-to-stx (string-append
+    (build-ast-file (parse-to-stx (string-append-newline
       "public class A {"
       "  public void foo() {"
       "    int a, b;"
@@ -179,5 +187,34 @@
                 (ast:variable-n-type (ast:variable "e") (ast:type-name "java.lang.String[]"))))))
           (ast:stats (ast:stat-list null)))))
     "declaration 2")
+)
+
+(test-case "stmt-assignment"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    int a, b;"
+      "    a = b;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "a") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b") (ast:type-name "int"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "a")))
+                (ast:expr (ast:expr-var (ast:variable "b"))))))))))
+               ; (ast:expr (ast:expr-const (ast:const 1))))))))))
+    "stmt assigment 1")
 )
 

@@ -194,13 +194,13 @@
 
 (define (build-ast-func-element element-stx)
   (p:syntax-parse element-stx
-    [({p:~literal declaration} p:~rest d)
+    [({p:~literal declaration} p:~rest _)
      (let ([decl-list (build-ast-declaration element-stx)]
            [stmt-list null])
        (list decl-list stmt-list))]
-    [({p:~literal statement} p:~rest s)
+    [({p:~literal statement} stmt)
      (let ([decl-list null]
-           [stmt-list (build-ast-statement element-stx)])
+           [stmt-list (list (build-ast-statement #'stmt))])
        (list decl-list stmt-list))]))
 
 
@@ -221,17 +221,56 @@
        (map (lambda (name-stx)
                     (ast:variable-definition
                       (ast:variable-n-type
-                        (build-ast-variable name-stx)
+                        (build-ast-name name-stx)
                         (ast:type-name type))))
             (std:syntax->list #'(names ...))))]))
 
 
-(define (build-ast-variable name-stx)
+(define (build-ast-name name-stx)
   (p:syntax-parse name-stx
     [({p:~literal name} name)
      (ast:variable (std:syntax-e #'name))]))
 
 
 (define (build-ast-statement stmt-stx)
-  #f)
+  (p:syntax-parse stmt-stx
+    [({p:~literal assign_stmt} _ _)
+     (build-ast-stmt-ass stmt-stx)]))
+
+
+(define (build-ast-stmt-ass stmt-ass-stx)
+  (p:syntax-parse stmt-ass-stx
+    [({p:~literal assign_stmt}
+        ({p:~literal variable} lhs-var)
+        ({p:~literal j_expression} rhs-expr))
+     (ast:stat-ass
+       (ast:lexpr (build-ast-variable #'lhs-var))
+       (ast:expr (build-ast-expression #'rhs-expr)))]))
+
+
+(define (build-ast-expression expr-stx)
+  (p:syntax-parse expr-stx
+    [({p:~literal immediate} imm)
+     (build-ast-expr-immediate #'imm)]
+  ))
+
+
+(define (build-ast-expr-immediate expr-imm-stx)
+  (p:syntax-parse expr-imm-stx
+    [({p:~literal name} name)
+     (build-ast-variable expr-imm-stx)]
+    [({p:~literal constant} const)
+     (build-ast-constant expr-imm-stx)]))
+
+
+(define (build-ast-variable var-stx)
+  (p:syntax-parse var-stx
+    [({p:~literal reference} p:~rest _)
+     (std:error "not implemented yet")]
+    [({p:~literal name} p:~rest _)
+     (ast:expr-var (build-ast-name var-stx))]))
+
+
+(define (build-ast-constant const-stx)
+  (ast:const (std:syntax-e #'const-stx)))
 
