@@ -235,7 +235,10 @@
 (define (build-ast-statement stmt-stx)
   (p:syntax-parse stmt-stx
     [({p:~literal assign_stmt} _ _)
-     (build-ast-stmt-ass stmt-stx)]))
+     (build-ast-stmt-ass stmt-stx)]
+    [({p:~literal label_stmt} _)
+     (build-ast-stmt-label stmt-stx)]
+  ))
 
 
 (define (build-ast-stmt-ass stmt-ass-stx)
@@ -246,6 +249,13 @@
      (ast:stat-ass
        (ast:lexpr (build-ast-variable #'lhs-var))
        (ast:expr (build-ast-expression #'rhs-expr)))]))
+
+
+(define (build-ast-stmt-label stmt-label-stx)
+  (p:syntax-parse stmt-label-stx
+    [({p:~literal label_stmt}
+        ({p:~literal label_name} name))
+     (ast:stat-label (ast:label (std:syntax-e #'name)))]))
 
 
 (define (build-ast-expression expr-stx)
@@ -292,14 +302,17 @@
 ;  (std:for ([i (std:build-list 80 std:values)])
 ;           (print (next-token))(newline)))
 ;
+;(display "TOKENS:")(newline)
 ;(tokens)
 ;
 ;(define parsed-program
 ;  (parse-to-stx program-text))
 ;
+;(display "DATUM:")(newline)
 ;(std:syntax->datum parsed-program)
 ;
 ;(define tree
 ;  (build-ast-file parsed-program))
 ;
+;(display "AST:")(newline)
 ;tree

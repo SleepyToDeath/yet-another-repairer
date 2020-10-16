@@ -240,3 +240,23 @@
     "stmt assigment 2")
 )
 
+(test-case "stmt-label"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    l1:"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-label (ast:label "l1"))))))))
+    "stmt label 1")
+)
+

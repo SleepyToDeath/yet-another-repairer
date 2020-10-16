@@ -128,7 +128,7 @@ statement
     | invoke_stmt
 
 label_stmt
-  ::= label_name COLON
+  ::= label_name /COLON
 
 breakpoint_stmt
   ::= BREAKPOINT /SEMICOLON
