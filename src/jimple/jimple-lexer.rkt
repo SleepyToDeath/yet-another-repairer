@@ -268,7 +268,7 @@
        [float_constant
         (token 'FLOAT_CONSTANT (string->number lexeme))]
        [string_constant
-        (token 'STRING_CONSTANT (substring lexeme 1 (string-length lexeme)))]
+        (token 'STRING_CONSTANT (substring lexeme 1 (- (string-length lexeme) 1)))]
        [ignored
         (token 'WHITESPACE lexeme #:skip? #t)]
        [(eof)
