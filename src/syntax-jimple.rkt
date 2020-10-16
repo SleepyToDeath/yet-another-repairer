@@ -6,6 +6,10 @@
 
 (provide (all-defined-out))
 
+(define bool-type-name "bool")
+(define int-type-name "int")
+(define string-type-name "string")
+
 ;============= Syntax Definition & Check =============
 ;main function should be named "main"
 (LHS-C program (rhs ::= class-list))
@@ -44,6 +48,9 @@
 (LHS-C variable-definitions (rhs ::= variable-definition-list))
 	(RHS-C-List variable-definition-list (vl : variable-definition))
 
+(LHS-C types (rhs ::= type-list))
+	(RHS-C-List type-list (tl : type-name))
+
 ;--------------------------------------------------------
 (LHS-C function-declare (rhs ::= function-content))
 	(RHS-C function-content (name : func-name) (args : variable-definitions) (local-variables : variable-definitions) (statements : stats))
@@ -56,9 +63,9 @@
 	(RHS-C stat-ass (lvalue : lexpr) (rvalue : expr))
 	(RHS-C stat-jmp (condition : expr) (target : label))
 	(RHS-C stat-label (name : label))
-	(RHS-C stat-static-call (ret : variable) (class : type-name) (func : func-name) (args : arguments-caller))
-	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (args : arguments-caller))
-	(RHS-C stat-special-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (args : arguments-caller))
+	(RHS-C stat-static-call (ret : variable) (class : type-name) (func : func-name) (arg-types : type-list) (args : arguments-caller))
+	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
+	(RHS-C stat-special-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 	(RHS-C stat-nop (any : nop))
 	(RHS-C stat-ret (v : variable))
 

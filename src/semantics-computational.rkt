@@ -51,19 +51,19 @@
 
 ;============================= Utils ===================================
 ;[TODO]return name of the highest base class with the function defined + function name
-(define (lookup-virtual-function mac cls func) 
+(define (lookup-virtual-function mac cls func arg-types) 
 	(if cls
 		(begin
 			(define cls-0 (imap-get (machine-cmap mac) cls))
 
 			(define base-name (ormap 
-				(lambda (cls-cur) (lookup-virtual-function cls-cur func)) 
+				(lambda (cls-cur) (lookup-virtual-function cls-cur func arg-types)) 
 				(cons (class-extend cls-0) (class-implements cls-0))))
 
 			(if base-name base-name
 				(if 
-					(ormap (lambda (func-cur) (equal? (function-name func-cur) func)) (class-vfuncs cls-0)) 
-					(std:string-append cls "::::" func)
+					(ormap (lambda (func-cur) (invoke-same-sig? func-cur func arg-types)) (class-vfuncs cls-0)) 
+					(vfunc-sig->string cls func arg-types)
 					#f)))
 		#f))
 
@@ -84,13 +84,13 @@
 					#f)))
 		#f))
 
-(define (vfunc-id mac cls func) (string-id (lookup-virtual-function cls func)))
+(define (vfunc-id mac cls func arg-types) (string-id (lookup-virtual-function cls func arg-types)))
 
 (define (vfield-id mac cls field) (string-id (lookup-virtual-field cls field)))
 
-(define (sfunc-id cls func) (string-id (std:string-append cls "::" func)))
+(define (sfunc-id cls func arg-types) (string-id (sfunc-sig->string cls func arg-types)))
 
-(define (sfield-id cls field) (string-id (std:string-append cls "::" field)))
+;(define (sfield-id cls field) (string-id (std:string-append cls "::" field)))
 
 ;signature of a field is its name
 ;signature of a function is its name and arg types
@@ -98,6 +98,23 @@
 	(and
 		(equal? (function-name func-1) (function-name func-2))
 		(andmap (lambda (arg-1 arg-2) (equal? (cdr arg-1) (cdr arg-2))) (function-args func-1) (function-args func-2))))
+
+(define (invoke-same-sig? func invoked-name invoked-arg-types)
+	(and
+		(equal? (function-name func) invoked-name)
+		(andmap (lambda (arg-1 arg-2) (equal? (cdr arg-1) arg-2)) (function-args func) invoked-arg-types)))
+
+(define (vfunc-sig->string cls func arg-types)
+	(apply std:string-append 
+		(append 
+			(list cls "::::" func)
+			(foldl (lambda (s l) (cons "," (cons s l))) null arg-types))))
+
+(define (sfunc-sig->string cls func arg-types)
+	(apply std:string-append 
+		(append 
+			(list cls "::" func)
+			(foldl (lambda (s l) (cons "," (cons s l))) null arg-types))))
 
 
 ;======================== Execution Interface ===========================
@@ -154,8 +171,8 @@
 ;		classes))
 	(define cmap (foldl (lambda (cls cm) (imap-set cm (class-name cls) cls)) classes))
 	(define boot (build-boot-func))
-	(define mem (build-virtual-table classes memory-empty))
-	(machine boot classes cmap mem pc-init))
+	(define mac-init (machine boot classes cmap memory-empty pc-init))
+	(build-virtual-table classes mac-init))
 
 (define (ast->class ast)
 	(match (class-def-rhs ast)
@@ -179,11 +196,9 @@
 	(match (function-declare-rhs ast)
 		[(function-content name-ast args-ast local-vars-ast statements-ast)
 			(letrec 
-				([name (std:string-append classname (func-name-name name-ast))]
-				[args (map (lambda (ast) (variable-name ast)) (argument-callee-list-al (arguments-callee-rhs args-ast)))]
-				[local-vars (map 
-					(lambda (ast) (variable-name ast))
-					(variable-list-vl (variable-declares-rhs local-vars-ast)))]
+				([name (func-name-name name-ast)]
+				[args (variable-definitions->list args-ast)]
+				[local-vars (variable-definitions->list local-vars-ast)]
 				[func-sig (function name null imap-empty args local-vars)])
 				(foldl (lambda (st func)
 					(letrec ([ret-pair (ast->instruction st (function-lmap func) (length (function-prog func)))]
@@ -204,19 +219,22 @@
 		[(stat-label here) (cons #f (imap-set lmap (label-v here) line-num))]
 		[(stat-nop any) (cons (inst-nop nullptr) lmap)]
 		[(stat-ret any) (cons (inst-ret nullptr) lmap)]
-		[(stat-static-call ret func args) 
+		[(stat-static-call ret cls-name func arg-types args) 
 			(cons 
-				(inst-static-call (variable-name ret) (function-name func) 
+				(inst-static-call (variable-name ret) (type-name-name cls-name) (function-name func) 
+					(map (lambda (ast) (type-name-name ast)) (type-list-tl (types-rhs arg-types)))
 					(map ast->expression (argument-caller-list-al (arguments-caller-rhs args))))
 				lmap)]
-		[(stat-virtual-call ret obj func args)
+		[(stat-virtual-call ret obj cls-name func arg-types args)
 			(cons 
-				(inst-virtual-call (variable-name ret) (variable-name obj) (function-name func) 
+				(inst-virtual-call (variable-name ret) (variable-name obj) (type-name-name cls-name) (function-name func) 
+					(map (lambda (ast) (type-name-name ast)) (type-list-tl (types-rhs arg-types)))
 					(map ast->expression (argument-caller-list-al (arguments-caller-rhs args))))
 				lmap)]
-		[(stat-special-call ret obj func args)
+		[(stat-special-call ret obj cls-name func arg-types args)
 			(cons 
-				(inst-static-call (variable-name ret) (variable-name obj) (function-name func) 
+				(inst-special-call (variable-name ret) (variable-name obj) (type-name-name cls-name) (function-name func) 
+					(map (lambda (ast) (type-name-name ast)) (type-list-tl (types-rhs arg-types)))
 					(map ast->expression (argument-caller-list-al (arguments-caller-rhs args))))
 				lmap)]))
 
@@ -229,14 +247,14 @@
 		[(expr-var v) (iexpr-var (variable-name v))]
 		[(expr-binary expr1 o expr2) (iexpr-binary (op-v o) (ast->expression expr1) (ast->expression expr2))]
 		[(expr-array array index) (iexpr-array (variable-name array) (ast->expression index))]
-		[(expr-field obj fname) (iexpr-field (variable-name obj) (field-name fname))]))
+		[(expr-field obj class fname) (iexpr-field (variable-name obj) (type-name-name class) (field-name fname))]))
 
 (define (build-boot-func)
 	;(define iboot (inst-boot globals))
 	(define icall (inst-static-call var-ret-name func-name-main null))
 	(function func-name-boot (list icall) imap-empty null null))
 
-(define (build-virtual-table classes mem) 
+(define (build-virtual-table classes mac) 
 	(define (process-class cls mem)
 		(define sfuncs (class-sfuncs cls))
 		(define vfuncs (class-vfuncs cls))
@@ -247,8 +265,19 @@
 		(define mem-vfuncs (foldl (lambda (vf mem) (memory-fdecl mem vf)) mem-sfields vfuncs))
 		(define mem-vfields (foldl (lambda (vf mem) (memory-fdecl mem vf)) mem-vfuncs vfields))
 		mem-vfields)
-	(define mem-push (memory-spush mem))
-	(foldl process-class mem-push classes))
+	(define mem-push (memory-spush (machine-mem mac)))
+	(std:struct-copy machine mac [mem (foldl process-class mem-push classes)]))
+
+(define (variable-definitions->list ast)
+	(map 
+		(lambda (ast) (variable-definition->pair ast))
+		(variable-definition-list-vl (variable-definitions-rhs ast))))
+
+(define (variable-definition->pair ast)
+	(cons 
+		(variable-name (variable-n-type-name (variable-definition ast))) 
+		(type-name (variable-n-type-type (variable-definition ast)))))
+
 
 ;======================== Instructions ===========================
 ;globals: list of (cons var-name(string) value(ast))
@@ -300,10 +329,10 @@
 						[idx-e (ast->expression idx)]
 						[idx-v (expr-eval idx-e m)])
 						(memory-awrite mem0 addr idx-v v-new))]
-				[(expr-field obj fname)
+				[(expr-field obj cls fname)
 					(letrec
 						([addr (memory-sread mem0 (variable-name obj))])
-						(memory-fwrite mem0 addr (field-name fname) v-new))]))
+						(memory-fwrite mem0 addr (vfield-id (type-name-name cls) (field-name fname)) v-new))]))
 
 		(define pc-next (+ 1 (machine-pc m)))
 
@@ -337,11 +366,11 @@
 		(define mem-ret (memory-sforce-write (machine-mem m) var-ret-name ret-value))
 		(std:struct-copy machine m [pc pc-ret][mem mem-ret]))])
 
-(struct inst-static-call (ret cls-name func-name args) #:transparent
+(struct inst-static-call (ret cls-name func-name arg-types args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
-		(define func (memory-sread (machine-mem m) (sfunc-id (inst-static-call-cls-name i) (inst-static-call-func-name i))))
-		(define args (inst-static-call-args i))
+		(define func (memory-sread (machine-mem m) (sfunc-id (inst-static-call-cls-name i) (inst-static-call-func-name i) (inst-static-call-args i))))
+		(define args (map car (inst-static-call-args i)))
 		(define ret (inst-static-call-ret i))
 
 		(define mac-ret (function-call m func args))
@@ -354,14 +383,14 @@
 
 		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
 		
-(struct inst-virtual-call (ret obj-name cls-name func-name args) #:transparent
+(struct inst-virtual-call (ret obj-name cls-name func-name arg-types args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define mem0 (machine-mem m))
 		(define obj-addr (memory-sread mem0 (inst-virtual-call-obj-name i)))
 		;virtual
-		(define func (memory-fread mem0 obj-addr (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i))))
-		(define args (inst-static-call-args i))
+		(define func (memory-fread mem0 obj-addr (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i) (inst-virtual-call-args i))))
+		(define args (map car (inst-static-call-args i)))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
 		(define mac-this (std:struct-copy machine m [mem mem-this]))
@@ -377,14 +406,14 @@
 		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
 
 ;in my understanding, special call = virtual call - virtual, at least for init
-(struct inst-special-call (ret obj-name cls-name func-name args) #:transparent
+(struct inst-special-call (ret obj-name cls-name func-name arg-types args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define mem0 (machine-mem m))
 		(define obj-addr (memory-sread mem0 (inst-special-call-obj-name i)))
 		;never virtual
-		(define func (memory-sread (machine-mem m) (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i))))
-		(define args (inst-static-call-args i))
+		(define func (memory-sread (machine-mem m) (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-args i))))
+		(define args (map car inst-special-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
 		(define mac-this (std:struct-copy machine m [mem mem-this]))
