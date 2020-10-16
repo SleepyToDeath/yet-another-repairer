@@ -214,7 +214,29 @@
               (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "a")))
                 (ast:expr (ast:expr-var (ast:variable "b"))))))))))
-               ; (ast:expr (ast:expr-const (ast:const 1))))))))))
     "stmt assigment 1")
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    java.lang.String a;"
+      "    a = \"bbb\";"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "a") (ast:type-name "java.lang.String"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "a")))
+                (ast:expr (ast:expr-const (ast:const "bbb"))))))))))
+    "stmt assigment 2")
 )
 

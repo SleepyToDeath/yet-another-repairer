@@ -259,7 +259,7 @@
   (p:syntax-parse expr-imm-stx
     [({p:~literal name} name)
      (build-ast-variable expr-imm-stx)]
-    [({p:~literal constant} const)
+    [({p:~literal j_constant} const)
      (build-ast-constant expr-imm-stx)]))
 
 
@@ -272,5 +272,34 @@
 
 
 (define (build-ast-constant const-stx)
-  (ast:const (std:syntax-e #'const-stx)))
+  (p:syntax-parse const-stx
+    [({p:~literal j_constant} c)
+     (ast:expr-const (ast:const (std:syntax-e #'c)))]))
 
+
+;(define program-text
+;  (std:string-append
+;      "public class A {\n"
+;      "  public void foo() {\n"
+;      "    java.lang.String a;\n"
+;      "    a = \"bbb\";\n"
+;      "  }\n"
+;      "}\n"))
+;
+;(define (tokens)
+;  (define next-token
+;    (tokenize (std:open-input-string program-text)))
+;  (std:for ([i (std:build-list 80 std:values)])
+;           (print (next-token))(newline)))
+;
+;(tokens)
+;
+;(define parsed-program
+;  (parse-to-stx program-text))
+;
+;(std:syntax->datum parsed-program)
+;
+;(define tree
+;  (build-ast-file parsed-program))
+;
+;tree
