@@ -5,7 +5,7 @@
 (provide (all-defined-out))
 
 ;============= Definition & Operations ===========
-(struct imap (func) #:transparent)
+(struct imap (func ilog) #:transparent)
 
 (define (imap-get m index)
 	(define f (imap-func m))
@@ -18,7 +18,15 @@
                          (std:equal? args index)
                          (= args index))
                      value (oldf args))))
-	(std:struct-copy imap m [func newf]))
+	(define oldlog (imap-ilog m))
+	(define newlog (cons index oldlog))
+	(std:struct-copy imap m [func newf][ilog newlog]))
+
+(define (imap-contains? m index)
+	(not (is-not-found? (imap-get m index))))
+
+(define (is-not-found? v)
+	(and (number? v) (= v not-found)))
 ;==================================================
 
 
@@ -28,6 +36,6 @@
 
 (define (default-func x) not-found)
 
-(define imap-empty (imap default-func))
+(define imap-empty (imap default-func null))
 ;========================================
 

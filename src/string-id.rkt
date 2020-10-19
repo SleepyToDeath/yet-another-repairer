@@ -16,6 +16,9 @@
 			(set! string-id-map (imap-set string-id-map s string-id-counter))
 			(set! string-id-counter (+ 1 string-id-counter))
 			(- string-id-counter 1))))
+	;(print s)
+	;(display ": ")
+	;(println id-true)
 	id-true)
 
 (define (maybe-string-id s)

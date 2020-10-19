@@ -21,7 +21,7 @@
 	;use the first definition in the highest possible scope
 	(define (rec-read sc)
 		(define cur (imap-get (scope-imap sc) name))
-		(if (not (= cur not-found)) cur
+		(if (not (is-not-found? cur)) cur
 			(if (not (scope-next sc)) nullptr
 				(rec-read (scope-next sc)))))
 	;return not-found if empty
@@ -33,7 +33,7 @@
 	;use the first definition in the highest possible scope, return the updated scope
 	(define (rec-write sc)
 		(define cur (imap-get (scope-imap sc) name))
-		(if (not (= cur not-found)) 
+		(if (not (is-not-found? cur)) 
 			(std:struct-copy scope sc [imap (imap-set (scope-imap sc) name value)])
 			(if (not (scope-next sc)) sc
 				(std:struct-copy scope sc [next (rec-write (scope-next sc))]))))
