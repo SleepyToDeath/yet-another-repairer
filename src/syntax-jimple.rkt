@@ -35,13 +35,6 @@
 (LHS-C interface-implements (rhs ::= interface-name-list))
 	(RHS-C-List interface-name-list (il : type-name))
 
-;(LHS-C variable-declares (rhs ::= variable-list))
-;	(RHS-C-List variable-list (vl : variable-init))
-
-;(LHS-C variable-init (rhs ::= variable-no-value variable-with-value))
-;	(RHS-C variable-with-value (vn : variable) (vv : expr))
-;	(RHS-C variable-no-value (vn : variable))
-
 (LHS-C arguments-caller (rhs ::= argument-caller-list))
 	(RHS-C-List argument-caller-list (al : dexpr))
 

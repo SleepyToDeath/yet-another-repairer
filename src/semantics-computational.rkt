@@ -52,7 +52,6 @@
 
 
 ;============================= Utils ===================================
-;[TODO]return name of the highest base class with the function defined + function name
 (define (lookup-virtual-function mac cls func arg-types) 
 	(if cls
 		(begin
@@ -69,7 +68,6 @@
 					#f)))
 		#f))
 
-;[TODO]return name of the highest base class with the field defined + field name
 (define (lookup-virtual-field mac cls field)
 	(if cls
 		(begin
@@ -215,13 +213,6 @@
 		(lambda (class-ast cl) (cons (ast->class class-ast) cl))
 		null
 		(class-list-cl (program-rhs ast))))
-;	(define globals (foldl
-;		(lambda (cls gl) (foldl
-;			(lambda (sfield sfield-val-ast gl) (if sfield-val-ast (cons (cons sfield sfield-val-ast) gl) gl))
-;			null
-;			(class-sfields cls) (class-sfield-val-asts cls)))
-;		null
-;		classes))
 	(define cmap (foldl (lambda (cls cm) (imap-set cm (class-name cls) cls)) imap-empty classes))
 	(define boot (build-boot-func))
 	(define mac-init (machine boot classes cmap memory-empty pc-init))
