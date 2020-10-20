@@ -137,6 +137,11 @@
 
 
 ;====================== Helpers ======================
+(define (println++ title any)
+	(begin
+		(display title)
+		(println any)))
+
 (define (println any)
 	(begin
 		(print any)

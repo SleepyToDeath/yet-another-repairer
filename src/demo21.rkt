@@ -1,5 +1,6 @@
 #lang rosette/safe
 
+(require "string-id.rkt")
 (require "syntax.rkt")
 (require "syntax-jimple.rkt")
 (require "semantics-computational.rkt")
@@ -9,10 +10,16 @@
 	(variable-definitions (variable-definition-list null))
 ;		(variable-definition (variable-n-type (variable "param0") (type-name "int"))))))
 	(variable-definitions (variable-definition-list (list 
-		(variable-definition (variable-n-type (variable "var-1") (type-name "int"))) 
-		(variable-definition (variable-n-type (variable "var-2") (type-name "int"))) 
+;		(variable-definition (variable-n-type (variable "var-1") (type-name "int"))) 
+;		(variable-definition (variable-n-type (variable "var-2") (type-name "int"))) 
 		(variable-definition (variable-n-type (variable "var-3") (type-name "int"))))))
 	(stats (stat-list (list
+		(stat (stat-ass 
+			(lexpr (expr-var (variable "var-3"))) 
+			(expr (expr-binary 
+				(expr (expr-var (variable "var-1")))
+				(op +)
+				(expr (expr-var (variable "var-2")))))))
 		(stat (stat-ret (variable "var-3")))))))))
 
 (define class-1 (class-def (class-default
@@ -31,17 +38,10 @@
 
 (define mac (ast->machine prog-1))
 
-(print-machine mac)
-
-(define mac-in (assign-input mac (list (cons "var-3" 233))))
-
-(print-machine mac-in)
+(define mac-in (assign-input mac (list (cons "var-1" 1) (cons "var-2" 2))))
 
 (define mac-comp (compute mac-in))
 
-(print-machine mac-comp)
+(compare-output mac-comp (list (cons var-ret-name 3)))
 
-(compare-output mac-comp (list (cons "var-3" 233)))
-
-(get-output mac-comp (list "var-3"))
-
+(println string-id-map)

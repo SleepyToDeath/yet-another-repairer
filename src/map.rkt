@@ -19,7 +19,7 @@
                          (= args index))
                      value (oldf args))))
 	(define oldlog (imap-ilog m))
-	(define newlog (cons index oldlog))
+	(define newlog (cons (cons index (if (number? value) value #f)) oldlog))
 	(std:struct-copy imap m [func newf][ilog newlog]))
 
 (define (imap-contains? m index)
