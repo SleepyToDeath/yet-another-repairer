@@ -260,3 +260,45 @@
     "stmt label 1")
 )
 
+(test-case "stmt-goto"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    goto l1;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-jmp
+                (ast:expr (ast:expr-const (ast:const #t)))
+                (ast:label "l1"))))))))
+    "goto label 1")
+)
+
+(test-case "stmt-nop"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    nop;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-nop (ast:nop #f))))))))
+    "goto label 1")
+)
+

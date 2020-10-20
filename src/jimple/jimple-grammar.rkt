@@ -155,13 +155,13 @@ assign_stmt
   ::= variable /EQUALS j_expression /SEMICOLON
 
 goto_stmt
-  ::= GOTO label_name /SEMICOLON
+  ::= /GOTO label_name /SEMICOLON
 
 if_stmt
-  ::= IF bool_expr goto_stmt
+  ::= /IF bool_expr @goto_stmt
 
 nop_stmt
-  ::= NOP /SEMICOLON
+  ::= /NOP /SEMICOLON
 
 ret_stmt
   ::= RET immediate? /SEMICOLON

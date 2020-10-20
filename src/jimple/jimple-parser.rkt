@@ -238,6 +238,12 @@
      (build-ast-stmt-ass stmt-stx)]
     [({p:~literal label_stmt} _)
      (build-ast-stmt-label stmt-stx)]
+    [({p:~literal goto_stmt} _)
+     (build-ast-stmt-goto stmt-stx)]
+    [({p:~literal if_stmt} _ _)
+     (build-ast-stmt-if stmt-stx)]
+    [({p:~literal nop_stmt})
+     (build-ast-stmt-nop stmt-stx)]
   ))
 
 
@@ -249,6 +255,31 @@
      (ast:stat-ass
        (ast:lexpr (build-ast-variable #'lhs-var))
        (ast:expr (build-ast-expression #'rhs-expr)))]))
+
+
+(define (build-ast-stmt-goto stmt-goto-stx)
+  (p:syntax-parse stmt-goto-stx
+    [({p:~literal goto_stmt}
+        ({p:~literal label_name} name))
+     (ast:stat-jmp
+       (ast:expr (ast:expr-const (ast:const #t)))
+       (ast:label (std:syntax-e #'name)))]))
+
+
+(define (build-ast-stmt-if stmt-if-stx)
+  (p:syntax-parse stmt-if-stx
+    [({p:~literal if_stmt}
+        ({p:~literal bool_expr} expr)
+        ({p:~literal label_name} name))
+     (ast:stat-jmp
+       (build-ast-bool-expr #'expr)
+       (ast:label (std:syntax-e #'name)))]))
+
+
+(define (build-ast-stmt-nop stmt-nop-stx)
+  (p:syntax-parse stmt-nop-stx
+    [({p:~literal nop_stmt})
+     (ast:stat-nop (ast:nop #f))]))
 
 
 (define (build-ast-stmt-label stmt-label-stx)
@@ -263,6 +294,10 @@
     [({p:~literal immediate} imm)
      (build-ast-expr-immediate #'imm)]
   ))
+
+
+(define (build-ast-bool-expr bool-expr-stx)
+  (std:error "Not impelemented yet"))
 
 
 (define (build-ast-expr-immediate expr-imm-stx)
