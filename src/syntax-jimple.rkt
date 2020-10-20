@@ -60,7 +60,7 @@
 	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 	(RHS-C stat-special-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 	(RHS-C stat-nop (any : nop))
-	(RHS-C stat-ret (v : variable))
+	(RHS-C stat-ret (v : dexpr))
 
 (LHS-C lexpr (rhs ::= expr-var expr-array expr-field))
 (LHS-C dexpr (rhs ::= expr-var expr-const))

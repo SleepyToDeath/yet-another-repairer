@@ -279,7 +279,7 @@
               (ast:stat-jmp
                 (ast:expr (ast:expr-const (ast:const #t)))
                 (ast:label "l1"))))))))
-    "goto label 1")
+    "stmt goto 1")
 )
 
 (test-case "stmt-nop"
@@ -299,6 +299,6 @@
           (ast:stats
             (ast:stat-list (list
               (ast:stat-nop (ast:nop #f))))))))
-    "goto label 1")
+    "stmt nop 1")
 )
 
