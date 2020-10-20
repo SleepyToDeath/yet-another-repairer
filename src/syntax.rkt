@@ -26,11 +26,14 @@
 		[ 
 			(define (ast-check __t)
 				(define __et ((id2acc name rname) __t))
+				(define flag
 				(and
 					(or
 						((id2pred rhs) __et) ...
 					)
 					(expanded-check __et)))
+				(if flag flag (begin (print name) (display "\n")))
+				flag)
 		]
 	)
 )

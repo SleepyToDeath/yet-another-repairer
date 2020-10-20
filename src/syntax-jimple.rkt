@@ -52,11 +52,11 @@
 (LHS-C stats (rhs ::= stat-list))
 	(RHS-C-List stat-list (sl : stat))
 
-(LHS-C stat (rhs ::= stat-ass stat-jmp stat-label stat-static-call stat-virtual-call stat-nop stat-ret))
+(LHS-C stat (rhs ::= stat-ass stat-jmp stat-label stat-static-call stat-virtual-call stat-special-call stat-nop stat-ret))
 	(RHS-C stat-ass (lvalue : lexpr) (rvalue : expr))
 	(RHS-C stat-jmp (condition : expr) (target : label))
 	(RHS-C stat-label (name : label))
-	(RHS-C stat-static-call (ret : variable) (class : type-name) (func : func-name) (arg-types : type-list) (args : arguments-caller))
+	(RHS-C stat-static-call (ret : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 	(RHS-C stat-special-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 	(RHS-C stat-nop (any : nop))
