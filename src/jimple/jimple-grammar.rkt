@@ -164,10 +164,10 @@ nop_stmt
   ::= /NOP /SEMICOLON
 
 ret_stmt
-  ::= RET immediate? /SEMICOLON
+  ::= /RET immediate? /SEMICOLON
 
 return_stmt
-  ::= RETURN immediate? /SEMICOLON
+  ::= /RETURN immediate? /SEMICOLON
 
 throw_stmt
   ::= THROW immediate /SEMICOLON

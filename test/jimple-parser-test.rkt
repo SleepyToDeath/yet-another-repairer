@@ -302,3 +302,44 @@
     "stmt nop 1")
 )
 
+(test-case "stmt-return"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    return;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ret (ast:dexpr (ast:expr-const void-return-value)))))))))
+    "stmt return 1")
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public int foo() {"
+      "    int a;"
+      "    return a;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "a") (ast:type-name "int"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ret (ast:dexpr (ast:expr-var (ast:variable "a"))))))))))
+    "stmt return 2")
+)
+

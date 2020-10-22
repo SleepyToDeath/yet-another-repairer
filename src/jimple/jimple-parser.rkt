@@ -3,6 +3,7 @@
 (provide parse-to-stx)
 (provide build-ast-program)
 (provide build-ast-file)
+(provide void-return-value)
 
 (require (prefix-in std: racket/base))
 (require (prefix-in l: racket/list))
@@ -16,6 +17,7 @@
 
 ;============ Constants ============
 (define param-prefix "@parameter")
+(define void-return-value (ast:const "__no_return"))
 
 
 ;============ Helper functions ============
@@ -244,6 +246,10 @@
      (build-ast-stmt-if stmt-stx)]
     [({p:~literal nop_stmt})
      (build-ast-stmt-nop stmt-stx)]
+    [({p:~literal return_stmt} (p:~optional _))
+     (build-ast-stmt-return stmt-stx)]
+    [({p:~literal ret_stmt} (p:~optional _))
+     (std:error "Ret statement should not occur")]
   ))
 
 
@@ -287,6 +293,17 @@
     [({p:~literal label_stmt}
         ({p:~literal label_name} name))
      (ast:stat-label (ast:label (std:syntax-e #'name)))]))
+
+
+(define (build-ast-stmt-return stmt-return-stx)
+  (p:syntax-parse stmt-return-stx
+    [({p:~literal return_stmt}
+        (p:~optional ({p:~literal immediate} imm)))
+     (ast:stat-ret
+       (ast:dexpr
+         (if (p:attribute imm)
+             (build-ast-expr-immediate #'imm)
+             (ast:expr-const void-return-value))))]))
 
 
 (define (build-ast-expression expr-stx)
