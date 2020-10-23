@@ -4,6 +4,7 @@
 (provide build-ast-program)
 (provide build-ast-file)
 (provide void-return-value)
+(provide void-return-var)
 
 (require (prefix-in std: racket/base))
 (require (prefix-in l: racket/list))
@@ -16,8 +17,9 @@
 
 
 ;============ Constants ============
-(define param-prefix "@parameter")
 (define void-return-value (ast:const "__no_return"))
+(define void-return-var (ast:variable "__void_return"))
+(define param-prefix "@parameter")
 
 
 ;============ Helper functions ============
@@ -250,6 +252,8 @@
      (build-ast-stmt-return stmt-stx)]
     [({p:~literal ret_stmt} (p:~optional _))
      (std:error "Ret statement should not occur")]
+    [({p:~literal invoke_stmt} _)
+     (build-ast-stmt-invoke stmt-stx)]
   ))
 
 
@@ -306,11 +310,99 @@
              (ast:expr-const void-return-value))))]))
 
 
+(define (build-ast-stmt-invoke stmt-invoke-stx)
+  (p:syntax-parse stmt-invoke-stx
+    [({p:~literal invoke_stmt}
+        ({p:~literal invoke_expr} invoke-expr))
+     (build-ast-expr-invoke #'invoke-expr)]))
+
+
 (define (build-ast-expression expr-stx)
   (p:syntax-parse expr-stx
     [({p:~literal immediate} imm)
      (build-ast-expr-immediate #'imm)]
   ))
+
+
+(define (build-ast-expr-invoke expr-invoke-stx)
+  (p:syntax-parse expr-invoke-stx
+    [({p:~literal nonstatic_invoke_expr} p:~rest _)
+     (build-ast-expr-nonstatic-invoke expr-invoke-stx)]
+    [({p:~literal static_invoke_expr} p:~rest _)
+     (build-ast-expr-static-invoke expr-invoke-stx)]
+    [({p:~literal dynamic_invoke_expr} p:~rest _)
+     (std:error "Not implemented yet")]))
+
+
+(define (build-ast-expr-nonstatic-invoke expr-invoke-stx)
+  (p:syntax-parse expr-invoke-stx
+    [({p:~literal nonstatic_invoke_expr} invoke-type receiver-name method-sig (p:~optional arg-list))
+     (let* ([cmd-str (build-ast-invoke-type #'invoke-type)]
+            [receiver (build-ast-name #'receiver-name)]
+            [ret-list (build-ast-method-sig #'method-sig)]
+            [cls-name (first ret-list)]
+            [m-name (second ret-list)]
+            [param-types (third ret-list)]
+            [args (if (p:attribute arg-list)
+                      (build-ast-arg-list #'arg-list)
+                      (ast:arguments-caller (ast:argument-caller-list null)))])
+       (case cmd-str
+         [("virtualinvoke") (ast:stat-virtual-call void-return-var receiver cls-name m-name param-types args)]
+         [("specialinvoke") (ast:stat-special-call void-return-var receiver cls-name m-name param-types args)]
+         [("interfaceinvoke") (ast:stat-virtual-call void-return-var receiver cls-name m-name param-types args)]
+         [else (std:error (std:string-append "Unknown invoke type: " cmd-str))]))]))
+
+
+(define (build-ast-expr-static-invoke expr-invoke-stx)
+  (p:syntax-parse expr-invoke-stx
+    [({p:~literal static_invoke_expr} method-sig (p:~optional arg-list))
+     (let* ([ret-list (build-ast-method-sig #'method-sig)]
+            [cls-name (first ret-list)]
+            [m-name (second ret-list)]
+            [param-types (third ret-list)]
+            [args (if (p:attribute arg-list)
+                      (build-ast-arg-list #'arg-list)
+                      (ast:arguments-caller (ast:argument-caller-list null)))])
+       (ast:stat-static-call void-return-var cls-name m-name param-types args))]))
+
+
+(define (build-ast-invoke-type invoke-type-stx)
+  (p:syntax-parse invoke-type-stx
+    [({p:~literal nonstatic_invoke} invoke-type)
+     (std:syntax-e #'invoke-type)]))
+
+
+(define (build-ast-method-sig method-sig-stx)
+  (p:syntax-parse method-sig-stx
+    [({p:~literal method_signature} class-name ret-type method-name (p:~optional param-list))
+     (let ([cls-name (build-ast-type-name #'class-name)]
+           [m-name (build-ast-method-name #'method-name)]
+           [param-types (if (p:attribute param-list)
+                            (build-ast-param-types #'param-list)
+                            (ast:types (ast:type-list null)))])
+       (list cls-name m-name param-types))]))
+
+
+(define (build-ast-param-types param-types-stx)
+  (p:syntax-parse param-types-stx
+    [({p:~literal parameter_list} params ...)
+     (ast:types
+       (ast:type-list
+         (map build-ast-param-type (std:syntax->list #'(params ...)))))]))
+
+
+(define (build-ast-param-type param-type-stx)
+  (p:syntax-parse param-type-stx
+    [({p:~literal parameter} nonvoid-type)
+     (ast:type-name (build-ast-nonvoid-type #'nonvoid-type))]))
+
+
+(define (build-ast-arg-list arg-list-stx)
+  (p:syntax-parse arg-list-stx
+    [({p:~literal arg_list} imms ...)
+     (ast:arguments-caller
+       (ast:argument-caller-list
+         (map build-ast-expr-immediate (std:syntax->list #'(imms ...)))))]))
 
 
 (define (build-ast-bool-expr bool-expr-stx)

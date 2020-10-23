@@ -221,10 +221,19 @@ bool_expr
     | unop_expr
 
 invoke_expr
-  ::= nonstatic_invoke local_name DOT method_signature LPAREN arg_list? RPAREN
-    | STATICINVOKE method_signature LPAREN arg_list? RPAREN
-    | DYNAMICINVOKE STRING_CONSTANT unnamed_method_signature LPAREN arg_list? RPAREN
-        method_signature LPAREN arg_list? RPAREN
+  ::= nonstatic_invoke_expr
+    | static_invoke_expr
+    | dynamic_invoke_expr
+
+nonstatic_invoke_expr
+  ::= nonstatic_invoke local_name /DOT method_signature /LPAREN arg_list? /RPAREN
+
+static_invoke_expr
+  ::= /STATICINVOKE method_signature /LPAREN arg_list? /RPAREN
+
+dynamic_invoke_expr
+  ::= /DYNAMICINVOKE STRING_CONSTANT unnamed_method_signature /LPAREN arg_list? /RPAREN
+        method_signature /LPAREN arg_list? /RPAREN
 
 binop_expr
   ::= immediate binop immediate
@@ -241,7 +250,7 @@ unnamed_method_signature
   ::= CMPLT j_type LPAREN parameter_list? RPAREN CMPGT
 
 method_signature
-  ::= CMPLT class_name COLON j_type name LPAREN parameter_list? RPAREN CMPGT
+  ::= /CMPLT class_name /COLON j_type name /LPAREN parameter_list? /RPAREN /CMPGT
 
 reference
   ::= array_ref
@@ -262,8 +271,7 @@ fixed_array_descriptor
   ::= LBRACKET immediate RBRACKET
 
 arg_list
-  ::= immediate
-    | immediate /COMMA arg_list
+  ::= immediate (/COMMA immediate)*
 
 immediate
   ::= local_name

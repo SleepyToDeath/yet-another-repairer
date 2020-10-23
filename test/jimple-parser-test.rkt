@@ -343,3 +343,33 @@
     "stmt return 2")
 )
 
+(test-case "stmt-invoke"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    T r0;"
+      "    specialinvoke r0.<java.lang.Object: void <init>()>();"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "r0") (ast:type-name "T"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-special-call
+                void-return-var
+                (ast:variable "r0")
+                (ast:type-name "java.lang.Object")
+                (ast:func-name "<init>")
+                (ast:types (ast:type-list null))
+                (ast:arguments-caller (ast:argument-caller-list null)))))))))
+    "stmt invoke 1")
+)
+
