@@ -402,7 +402,13 @@
     [({p:~literal arg_list} imms ...)
      (ast:arguments-caller
        (ast:argument-caller-list
-         (map build-ast-expr-immediate (std:syntax->list #'(imms ...)))))]))
+         (map build-ast-arg (std:syntax->list #'(imms ...)))))]))
+
+
+(define (build-ast-arg arg-stx)
+  (p:syntax-parse arg-stx
+    [({p:~literal immediate} imm)
+     (ast:dexpr (build-ast-expr-immediate #'imm))]))
 
 
 (define (build-ast-bool-expr bool-expr-stx)

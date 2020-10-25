@@ -371,5 +371,62 @@
                 (ast:types (ast:type-list null))
                 (ast:arguments-caller (ast:argument-caller-list null)))))))))
     "stmt invoke 1")
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    T r0;"
+      "    int a, b;"
+      "    virtualinvoke r0.<T: int bar(int, int)>(a, b);"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition (ast:variable-n-type (ast:variable "r0") (ast:type-name "T")))
+              (ast:variable-definition (ast:variable-n-type (ast:variable "a") (ast:type-name "int")))
+              (ast:variable-definition (ast:variable-n-type (ast:variable "b") (ast:type-name "int"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-virtual-call
+                void-return-var
+                (ast:variable "r0")
+                (ast:type-name "T")
+                (ast:func-name "bar")
+                (ast:types (ast:type-list (list (ast:type-name "int") (ast:type-name "int"))))
+                (ast:arguments-caller (ast:argument-caller-list (list
+                  (ast:dexpr (ast:expr-var (ast:variable "a")))
+                  (ast:dexpr (ast:expr-var (ast:variable "b")))))))))))))
+    "stmt invoke 2")
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    int a;"
+      "    staticinvoke <T: int baz(int)>(a);"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition (ast:variable-n-type (ast:variable "a") (ast:type-name "int"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-static-call
+                void-return-var
+                (ast:type-name "T")
+                (ast:func-name "baz")
+                (ast:types (ast:type-list (list (ast:type-name "int"))))
+                (ast:arguments-caller (ast:argument-caller-list (list
+                  (ast:dexpr (ast:expr-var (ast:variable "a")))))))))))))
+    "stmt invoke 3")
 )
 
