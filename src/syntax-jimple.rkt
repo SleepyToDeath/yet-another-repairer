@@ -52,7 +52,8 @@
 (LHS-C stats (rhs ::= stat-list))
 	(RHS-C-List stat-list (sl : stat))
 
-(LHS-C stat (rhs ::= stat-ass stat-jmp stat-label stat-static-call stat-virtual-call stat-special-call stat-nop stat-ret))
+(LHS-C stat (rhs ::= stat-ass stat-jmp stat-label stat-static-call stat-virtual-call stat-special-call stat-nop stat-ret stat-new))
+	(RHS-C stat-new (v : variable))
 	(RHS-C stat-ass (lvalue : lexpr) (rvalue : expr))
 	(RHS-C stat-jmp (condition : expr) (target : label))
 	(RHS-C stat-label (name : label))
@@ -93,9 +94,9 @@
 ;	(RHS-E stats-single -> stats-single-enum (stat-enum))
 
 (LHS-E stat -> (stat-enum ::= stat-ass-enum))
-	(RHS-E stat-ass -> stat-ass-enum (variable-enum expr-enum))
-	(RHS-E stat-jmp -> stat-jmp-enum (expr-enum label-enum))
-	(RHS-E stat-label -> stat-label-enum (label-enum))
+	(RHS-E stat-ass -> stat-ass-enum (lexpr-enum expr-enum))
+;	(RHS-E stat-jmp -> stat-jmp-enum (expr-enum label-enum))
+;	(RHS-E stat-label -> stat-label-enum (label-enum))
 
 
 ;(define (expr-enum ctxt depth-limit)
@@ -111,7 +112,10 @@
 ;			)
 ;		(invalid 0)))
 
+(LHS-E lexpr -> (lexpr-enum ::= expr-var-enum expr-field-enum))
 (LHS-E expr -> (expr-enum ::= expr-const-enum expr-var-enum expr-binary-enum))
+	(RHS-E expr-array -> expr-array-enum (variable-enum expr-enum))
+	(RHS-E expr-field -> expr-field-enum (variable-enum type-name-enum field-enum))
 	(RHS-E expr-const -> expr-const-enum (const-enum))
 	(RHS-E expr-var -> expr-var-enum (variable-enum))
 	(RHS-E expr-binary -> expr-binary-enum (expr-enum op-enum expr-enum))
@@ -120,6 +124,14 @@
 (define (variable-enum ctxt depth-limit)
 	(if (< depth-limit 0) (invalid 0)
 		(variable (apply choose* (syntax-context-vars ctxt)))))
+
+(define (type-name-enum ctxt depth-limit)
+	(if (< depth-limit 0) (invalid 0)
+		(type-name (apply choose* (syntax-context-vars ctxt)))))
+
+(define (field-enum ctxt depth-limit)
+	(if (< depth-limit 0) (invalid 0)
+		(field (apply choose* (syntax-context-vars ctxt)))))
 
 (define (const-enum ctxt depth-limit)
 	(if (< depth-limit 0) (invalid 0)

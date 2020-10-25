@@ -3,7 +3,7 @@
 (require "map.rkt")
 (require (prefix-in std: racket/base))
 
-(provide maybe-string-id string-id string-id-map)
+(provide (all-defined-out))
 
 (define string-id-map imap-empty)
 (define string-id-counter 0)
@@ -22,4 +22,6 @@
 	(if (std:string? s) (real-string-id s) s))
 
 (define (string-id s)
-	(real-string-id s))
+;	(print s)
+;	(display "\n")
+	(maybe-string-id s))

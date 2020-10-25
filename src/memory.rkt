@@ -56,7 +56,7 @@
 ;	(std:struct-copy memory mem [heap (imap-set iheap (update (imap-get iheap addr)))]))
 
 ;allocate memory on heap
-;memory X size -> memory(new) X addr(allocated)
+;memory X size -> addr(allocated) X memory(new) 
 (define (memory-alloc mem size)
 	(cons (memory-top mem) (std:struct-copy memory mem [top (+ (memory-top mem) size)])))
 

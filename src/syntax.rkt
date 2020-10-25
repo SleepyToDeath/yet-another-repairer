@@ -32,7 +32,7 @@
 						((id2pred rhs) __et) ...
 					)
 					(expanded-check __et)))
-				(if flag flag (begin (print name) (display "\n")))
+				;(if flag flag (begin (print name) (display "\n")))
 				flag)
 		]
 	)

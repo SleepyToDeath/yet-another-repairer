@@ -13,9 +13,10 @@
 		(variable-definition (variable-n-type (variable "var-4") (type-name "ClassA")))
 		(variable-definition (variable-n-type (variable "var-3") (type-name "int"))))))
 	(stats (stat-list (list
+		(stat (stat-new (variable "var-4")))
 		(stat (stat-special-call 
 			(variable "var-4") 
-			(variable "var-4") (type-name "ClassA") (func-name "init") 
+			(variable "var-4") (type-name "ClassA") (func-name "<init>") 
 			(types (type-list null))
 			(arguments-caller (argument-caller-list null))))
 		(stat (stat-virtual-call 
@@ -34,7 +35,7 @@
 				(expr (expr-var (variable "var-1")))
 				(op +)
 				(expr (expr-field (variable "var-4") (type-name "ClassA") (field "field-2")))))))
-		(stat (stat-ret (variable "var-3")))))))))
+		(stat (stat-ret (dexpr (expr-var (variable "var-3")))))))))))
 
 (define get-field-1 (function-declare (function-content
 	(func-name "get-field-1")
@@ -45,7 +46,7 @@
 		(stat (stat-ass 
 			(lexpr (expr-var (variable "tmp")))
 			(expr (expr-field (variable "this") (type-name "ClassA") (field "field-1")))))
-		(stat (stat-ret (variable "tmp")))))))))
+		(stat (stat-ret (dexpr (expr-var (variable "tmp")))))))))))
 
 (define set-field-1 (function-declare (function-content
 	(func-name "set-field-1")
@@ -56,17 +57,17 @@
 		(stat (stat-ass 
 			(lexpr (expr-field (variable "this") (type-name "ClassA") (field "field-1")))
 			(expr (expr-var (variable "param0")))))
-		(stat (stat-ret (variable "dummy")))))))))
+		(stat (stat-ret (dexpr (expr-var (variable "dummy")))))))))))
 
 (define init-func (function-declare (function-content
-	(func-name "init")
+	(func-name "<init>")
 	(variable-definitions (variable-definition-list null))
 	(variable-definitions (variable-definition-list null))
 	(stats (stat-list (list
 		(stat (stat-ass
 			(lexpr (expr-field (variable "this") (type-name "ClassA") (field "field-2")))
 			(expr (expr-const (const 2)))))
-		(stat (stat-ret (variable "this")))))))))
+		(stat (stat-ret (dexpr (expr-var (variable "this")))))))))))
 
 (define class-1 (class-def (class-default
 	(type-name "helloworld")

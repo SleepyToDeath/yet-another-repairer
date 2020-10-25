@@ -10,47 +10,80 @@
 
 (provide (all-defined-out))
 
+(struct function-formula (func lids pmarks fmls) #:transparent)
+
 ;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
 (define (ast->relation ast)
-	(define mac (ast->machine ast))
+	(define mac-raw (ast->machine ast))
+	(define mac (initialize-machine-encoding mac-raw))
 
-	;global line id
-	(define line-ids (map 
-		(lambda (any) (define-symbolic* id boolean?) id)
-		(machine-prog mac)))
+	(define all-funcs 
+		(cons (function->relation (machine-boot mac))
+			(apply append (map 
+				(lambda (cls) (append
+					(map function->relation (class-sfuncs cls))
+					(map function->relation (class-vfuncs cls))))
+				(machine-classes mac)))))
 
-	(cons 
-	line-ids
-	(lambda (input output)
-		;example-specific path mark
-		(define inst-tris (map
-			(lambda (inst id) 
-				(define-symbolic* path-mark boolean?) 
-				(cons inst (cons id path-mark)))
-			(machine-prog mac) line-ids))
-		(define mem-input (foldl (lambda (kv mem) (define-symbolic* vs integer?) (memory-store mem (car kv) vs)) memory-empty input))
-		(define fml-input (foldl 
-			(lambda (kv fml) 
-				(and fml 
-					(=
-						(memory-load mem-input (car kv))
-						(cdr kv))))
-			#t
-			input))
+	(define soft-cons (apply append (map (lambda (func) (function-formula-line-ids func)) all-funcs)))
+	;[TODO] add input output
+	(define (hard-cons input output) 
+		(apply and (map (lambda (func) (function-formula-fmls func)) all-funcs))))
 
-		(define mac-input (std:struct-copy machine mac [mem mem-input][prog inst-tris]))
+;	(lambda (input output)
+;		;example-specific path mark
+;		(define inst-tris (map
+;			(lambda (inst id) 
+;				(define-symbolic* path-mark boolean?) 
+;				(cons inst (cons id path-mark)))
+;			(machine-prog mac) line-ids))
+;		(define mem-input (foldl (lambda (kv mem) (define-symbolic* vs integer?) (memory-store mem (car kv) vs)) memory-empty input))
+;		(define fml-input (foldl 
+;			(lambda (kv fml) 
+;				(and fml 
+;					(=
+;						(memory-load mem-input (car kv))
+;						(cdr kv))))
+;			#t
+;			input))
+;
+;		(define mac-input (std:struct-copy machine mac [mem mem-input][prog inst-tris]))
+;
+;		;encode program
+;		(define pc-fml-mac (foldl inst->relation.wrapper (cons 0 (cons #t mac-input)) (machine-prog mac-input)))
+;
+;		;encode output
+;		(define fml-exec (cadr pc-fml-mac))
+;		(define mem-output (machine-mem (cddr pc-fml-mac)))
+;		(define fml-output (foldl (lambda (kv fml) (and fml (= (memory-load mem-output (car kv)) (cdr kv)))) #t output))
+;		(define mark0 (cddr (car (machine-prog mac-input))))
+;		
+;		;final result
+;		(and mark0 fml-exec fml-input fml-output))))
 
-		;encode program
-		(define pc-fml-mac (foldl inst->relation.wrapper (cons 0 (cons #t mac-input)) (machine-prog mac-input)))
 
-		;encode output
-		(define fml-exec (cadr pc-fml-mac))
-		(define mem-output (machine-mem (cddr pc-fml-mac)))
-		(define fml-output (foldl (lambda (kv fml) (and fml (= (memory-load mem-output (car kv)) (cdr kv)))) #t output))
-		(define mark0 (cddr (car (machine-prog mac-input))))
-		
-		;final result
-		(and mark0 fml-exec fml-input fml-output))))
+
+(define (initialize-machine-encoding mac)
+	(define mac-tmp (std:struct-copy machine mac [classes
+		(map 
+			(lambda (cls) (std:struct-copy class cls 
+				[sfuncs (map function->function-formula (class-sfuncs cls))]
+				[vfuncs (map function->function-formula (class-vfuncs cls))])
+			machine-classes))]))
+	(std:struct-copy machine mac-tmp [cmap
+		(foldl (lambda (cls cm) (imap-set cm (class-name cls) cls)) imap-empty (machine-classes mac-tmp))))
+
+
+(define (function->function-formula func)
+	(function-formula func 
+		(map (lambda (any) (define-symbolic* line-id boolean?) line-id) (function-prog func))
+		(map (lambda (any) (define-symbolic* path-mark boolean?) path-mark) (function-prog func))
+		#t))
+
+
+(define (function->relation func mac)
+
+
 
 (define (inst->relation.wrapper inst-tri pc-fml-mac)
 	(define inst (car inst-tri))
@@ -69,7 +102,7 @@
 	(cons pc-new (cons fml-new mac-new)))
 
 ;instruction X machine -> relation X machine
-(define (inst->relation pc inst id mark mac)
+(define (inst->relation mac func pc inst id mark)
 
 	(define-symbolic* vs integer?)
 	(define-symbolic* shadow-key integer?)
