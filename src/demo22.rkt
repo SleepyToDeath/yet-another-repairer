@@ -1,5 +1,6 @@
 #lang rosette/safe
 
+(require rosette/lib/match)   ; provides `match`
 (require "string-id.rkt")
 
 (string-id "var1")
@@ -46,3 +47,8 @@ s
 (equal? a b)
 
 (equal? a (list 2 b))
+
+(match (cons a b) [(list a b)
+	(begin
+		(define c a)
+		c)])

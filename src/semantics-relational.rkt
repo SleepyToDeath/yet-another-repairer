@@ -17,18 +17,17 @@
 	(define mac-raw (ast->machine ast))
 	(define mac (initialize-machine-encoding mac-raw))
 
-	(define all-funcs 
-		(cons (function->relation (machine-boot mac))
-			(apply append (map 
-				(lambda (cls) (append
-					(map function->relation (class-sfuncs cls))
-					(map function->relation (class-vfuncs cls))))
-				(machine-classes mac)))))
+	(define all-invokes (invoke->relation (alloc-pmarks (machine-boot mac))))
 
-	(define soft-cons (apply append (map (lambda (func) (function-formula-line-ids func)) all-funcs)))
+	(define soft-cons 
+		(map (lambda (b) (if b 1 0)) 
+			(apply append (map (lambda (func) (function-formula-line-ids func)) (all-functions mac)))))
+
 	;[TODO] add input output
 	(define (hard-cons input output) 
-		(apply and (map (lambda (func) (function-formula-fmls func)) all-funcs))))
+		(apply and (map (lambda (func) (function-formula-fmls func)) all-invokes)))
+
+	(cons soft-cons hard-cons))
 
 ;	(lambda (input output)
 ;		;example-specific path mark
@@ -62,55 +61,100 @@
 ;		(and mark0 fml-exec fml-input fml-output))))
 
 
-
 (define (initialize-machine-encoding mac)
 	(define mac-tmp (std:struct-copy machine mac [classes
 		(map 
 			(lambda (cls) (std:struct-copy class cls 
-				[sfuncs (map function->function-formula (class-sfuncs cls))]
-				[vfuncs (map function->function-formula (class-vfuncs cls))])
-			machine-classes))]))
-	(std:struct-copy machine mac-tmp [cmap
-		(foldl (lambda (cls cm) (imap-set cm (class-name cls) cls)) imap-empty (machine-classes mac-tmp))))
+				[sfuncs (map alloc-lid (class-sfuncs cls))]
+				[vfuncs (map alloc-lid (class-vfuncs cls))])
+			(machine-classes mac)))]))
+	(std:struct-copy machine mac-tmp 
+		[boot (alloc-lid (machine-boot mac))] 
+		[cmap (foldl 
+			(lambda (cls cm) (imap-set cm (class-name cls) cls)) 
+			imap-empty 
+			(machine-classes mac-tmp))]))
 
 
-(define (function->function-formula func)
+;funcion -> function-formula (with line id, pmark is empty)
+(define (alloc-lid func)
 	(function-formula func 
 		(map (lambda (any) (define-symbolic* line-id boolean?) line-id) (function-prog func))
-		(map (lambda (any) (define-symbolic* path-mark boolean?) path-mark) (function-prog func))
+		null
 		#t))
 
+;function-formula -> function-formula (with pmark)
+(define (alloc-pmark func)
+	(std:struct-copy function-formula func-fml [pmarks
+		(map (lambda (any) (define-symbolic* path-mark boolean?) path-mark) (function-prog func))]))
 
-(define (function->relation func mac)
+;function-formula -> bool?
+(define (starting-pmark func-fml)
+	(car (function-formula-pmarks func-fml)))
+
+;function-formula X int(pc) -> bool?
+(define (get-pmark func-fml pc)
+	(list-ref (function-formula-pmarks func-fml) pc))
+
+;function-formula X int(pc) -> bool?
+(define (get-lid func-fml pc)
+	(list-ref (function-formula-lids func-fml) pc))
+
+(define (all-functions mac)
+	(apply append
+		(map (lambda (cls) (append (class-sfuncs cls) (class-vfuncs cls))) (machine-classes mac))))
 
 
 
-(define (inst->relation.wrapper inst-tri pc-fml-mac)
-	(define inst (car inst-tri))
-	(define id (cadr inst-tri))
-	(define mark (cddr inst-tri))
-	(define pc (car pc-fml-mac))
-	(define fml (cadr pc-fml-mac))
-	(define mac (cddr pc-fml-mac))
 
-	(define ret-pair (inst->relation pc inst id mark mac))
+;function X machine -> list of function-formula from all functions in `mac` transitively invoked by `func`
+(define (invoke->relation func mac)
+	(insts->relation func (invoke-setup func mac)))
 
-	(define pc-new (+ pc 1))
-	(define fml-new (and fml (car ret-pair)))
-	(define mac-new (cdr ret-pair))
+;basically a copy of `function-call`
+(define (invoke-setup func mac)
+	(define mac-reset (std:struct-copy machine mac [pc pc-init][mem (memory-spush (machine-mem mac))]))
+	(define mac-decl (std:struct-copy machine mac-reset [mem 
+		(foldl 
+			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)))) 
+			(machine-mem mac-reset) 
+			(append (function-args func) (function-locals func)))]))
+	(define mac-input (std:struct-copy machine mac-decl [mem
+		(foldl 
+			(lambda (arg-src arg-dst mem) (memory-swrite mem (string-id (car arg-dst)) (expr-eval arg-src mac)))
+			(machine-mem mac-decl)
+			args 
+			(function-args func))]))
+	mac-input)
 
-	(cons pc-new (cons fml-new mac-new)))
+
+
+;relation building state
+(struct rbstate (funcs pc fml func-fml mac) #:transparent)
+
+(define (insts->relation func-fml mac)
+	(match (foldl inst->relation
+					(rbstate null 0 #t func-fml mac) 
+					(function-prog (function-formula-func func-fml)))
+		[(rbstate funcs pc fml func-fml mac) 
+				(cons (std:struct-copy function-formula func-fml [fmls fml]) funcs)]))
+
+
 
 ;instruction X machine -> relation X machine
-(define (inst->relation mac func pc inst id mark)
+(define (inst->relation inst st)
 
 	(define-symbolic* vs integer?)
 	(define-symbolic* shadow-key integer?)
 
-	(define (next-mark) (cddr (list-ref (machine-prog mac) (+ 1 pc))))
-	(define (label-mark label) 
-		(define new-pc (imap-get (machine-lmap mac) label))
-		(cddr (list-ref (machine-prog mac) new-pc)))
+	(match st [(rbstate funcs pc fml func-fml mac)
+		(begin
+			(define func (function-formula-func func-fml))
+			(define (next-mark) (get-pmark func-fml (+ 1 pc)))
+			(define (label-mark label) 
+				(define new-pc (imap-get (function-lmap func) label))
+				(get-pmark func-fml pc))
+
 
 	(match inst 
 		[(inst-nop _) 
