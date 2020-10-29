@@ -4,6 +4,7 @@
 (require "syntax-jimple.rkt")
 (require "memory.rkt")
 (require "map.rkt")
+(require "match-define.rkt")
 (require "semantics-computational.rkt")
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
@@ -169,38 +170,67 @@
 				(equal? mark (and fml (next-mark))))
 
 			(define (assert-pc-branch cnd-t cnd-f label)
-				(letrec 
-					([fml-t (equal? cnd-t (label-mark label))]
-					 [fml-f (equal? cnd-f (next-mark))]
-					 [fml-cnd (and fml-t fml-f)]
-					 [fml-br (or (label-mark label) (next-mark))]
-					 [fml-path (equal? mark (and fml-cnd fml-br))])
-					fml-path))
+				(letrec ([fml-t (equal? cnd-t (label-mark label))]
+					 	 [fml-f (equal? cnd-f (next-mark))]
+					 	 [fml-cnd (and fml-t fml-f)]
+					 	 [fml-br (or (label-mark label) (next-mark))]
+					 	 [fml-path (equal? mark (and fml-cnd fml-br))])
+						fml-path))
 
 			(define (assert-pc-invoke fml func-fmls cnds)
-				(letrec
-					([fml-cnds (map (lambda (func-fml cnd) (equal? cnd (starting-pmark func-fml))) func-fmls cnds)]
-					 [fml-brs (apply or (map ending-pmark func-fmls))]
-					 [fml-path (equal? mark (and fml fml-cnds fml-brs (next-mark)))])
-					fml-path))
+				(letrec	([fml-cnds (map (lambda (func-fml cnd) (equal? cnd (starting-pmark func-fml))) func-fmls cnds)]
+					 	 [fml-brs (apply or (map ending-pmark func-fmls))]
+					 	 [fml-path (equal? mark (and fml fml-cnds fml-brs (next-mark)))])
+						fml-path))
 
 			; (int -> any) X int -> any X formula
 			(define (maybe-happen f v)
+				(maybe-happen-alt f v nullptr))
+
+			(define (maybe-happen-alt f v v-alt)
 				(define-symbolic* shadow-key integer?)
-				(letrec
-					([fml-key (= shadow-key (if mark v nullptr))]
-					 [result (f shadow-key)])
-					(cons result fml-key)))
+				(letrec ([fml-key (= shadow-key (if mark v v-alt))]
+					 	 [result (f shadow-key)])
+						(cons result fml-key)))
+
+
 
 			(match inst 
 				[(inst-nop _) 
-					(letrec 
-						([fml-switch (select-fml? #t)]
-						 [fml-path (assert-pc-next fml-switch)])
-						(std:struct-copy rbstate st [pc (+ 1 pc)] [fml (and fml fml-path)]))]
+					(letrec ([fml-switch (select-fml? #t)]
+						 	 [fml-path (assert-pc-next fml-switch)])
+							(std:struct-copy rbstate st [pc (+ 1 pc)] [fml (and fml fml-path)]))]
 
-				[(inst-init classname) #f]
-				[(inst-new v-name)  #f]
+				[(inst-init classname)
+					(letrec ([mem-0 (machine-mem mac)]
+						 	 [addr (memory-sread mem-0 var-this-name)]
+							 [mem-bind-func+fml 
+								(foldl
+									(lambda (func mem+fml) 
+										(define func-id (vfunc-id m classname (function-name func) (map cdr (function-args func))))
+										(if (is-not-found? (memory-fread mem func-id addr))
+											(match (maybe-happen (lambda (addr) (memory-fwrite (car mem+fml) func-id addr func)) addr)
+												[(cons mem fml) (cons mem (and fml (cdr mem+fml)))])
+											mem+fml))
+									(cons mem-0 #t)
+									(class-vfuncs (imap-get (machine-cmap m) classname)))]
+							 [pc-next (+ 1 pc)])
+							(std:struct-copy rbstate st 
+								[mac (std:struct-copy machine m [mem (car mem-bind-func+fml)])] 
+								[fml (and fml (cdr mem-bind-func+fml))] 
+								[pc pc-next]))]
+
+				[(inst-new v-name) 
+					(begin
+					(define mem-0 (machine-mem m))
+					(match-define (cons addr+mem fml) (maybe-happen-alt (lambda (size) (memory-alloc mem-0 size)) 1 0))
+					(match-define (cons addr mem-alloc) addr+mem)
+					(define mac-new 
+						(letrec ([pc-next (+ 1 (machine-pc m))]
+								 [mem-ass (memory-swrite mem-alloc v-name addr)])
+								(std:struct-copy machine m [pc pc-next][mem mem-ass])))]
+
+
 				[(inst-ret v-expr) #f]
 				[(inst-static-call ret cls-name func-name arg-types args) #f]
 				[(inst-virtual-call ret obj-name cls-name func-name arg-types args) #f]

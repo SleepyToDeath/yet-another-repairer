@@ -2,6 +2,7 @@
 
 (require rosette/lib/match)   ; provides `match`
 (require "string-id.rkt")
+(require "match-define.rkt")
 
 (string-id "var1")
 
@@ -63,3 +64,21 @@ s
           #:guarantee (assert #t)))
 
 debug-sol
+
+(match (cons 1 (cons 2 (cons 3 null))) [(list a b c) (println c)])
+
+(cons 1 (cons 2 3))
+(list 1 2 3)
+
+(match-define (list aa bb cc) (list 1 2 3))
+aa
+bb
+cc
+
+(match-define (cons aaa bbb) (cons 4 5))
+aaa
+bbb
+
+(match-define (list a4 b4) (list 7 8))
+a4
+b4
