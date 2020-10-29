@@ -10,7 +10,7 @@
 
 (provide (all-defined-out))
 
-(struct function-formula (func lids pmarks fmls) #:transparent)
+(struct function-formula (func lids pmarks ret-pmark fmls) #:transparent)
 
 ;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
 (define (ast->relation ast)
@@ -85,12 +85,17 @@
 
 ;function-formula -> function-formula (with pmark)
 (define (alloc-pmark func)
-	(std:struct-copy function-formula func-fml [pmarks
-		(map (lambda (any) (define-symbolic* path-mark boolean?) path-mark) (function-prog func))]))
+	(std:struct-copy function-formula func-fml 
+		[ret-pmark (begin (define-symbolic* path-mark-ret boolean?) path-mark-ret)] 
+		[pmarks	(map (lambda (any) (define-symbolic* path-mark boolean?) path-mark) (function-prog func))]))
 
 ;function-formula -> bool?
 (define (starting-pmark func-fml)
 	(car (function-formula-pmarks func-fml)))
+
+;function-formula -> bool?
+(define (ending-pmark func-fml)
+	(function-formula-ret-pmark func-fml))
 
 ;function-formula X int(pc) -> bool?
 (define (get-pmark func-fml pc)
@@ -141,60 +146,96 @@
 
 
 
-;instruction X machine -> relation X machine
+;instruction X rbstate -> rbstate
 (define (inst->relation inst st)
 
 	(define-symbolic* vs integer?)
-	(define-symbolic* shadow-key integer?)
 
 	(match st [(rbstate funcs pc fml func-fml mac)
 		(begin
 			(define func (function-formula-func func-fml))
+			(define mark (get-pmark func-fml pc))
+			(define id (get-lid func-fml pc))
+
 			(define (next-mark) (get-pmark func-fml (+ 1 pc)))
 			(define (label-mark label) 
 				(define new-pc (imap-get (function-lmap func) label))
-				(get-pmark func-fml pc))
+				(get-pmark func-fml new-pc))
 
+			(define (select-fml? fml)
+				(implies id fml))
 
-	(match inst 
-		[(inst-nop _) 
-			(letrec 
-				([fml-switch (implies id #t)]
-				[fml-path (equal? mark (and fml-switch (next-mark)))])
-			(cons fml-path mac))]
+			(define (assert-pc-next fml)
+				(equal? mark (and fml (next-mark))))
 
-		[(inst-ret _) (cons #t mac)]
+			(define (assert-pc-branch cnd-t cnd-f label)
+				(letrec 
+					([fml-t (equal? cnd-t (label-mark label))]
+					 [fml-f (equal? cnd-f (next-mark))]
+					 [fml-cnd (and fml-t fml-f)]
+					 [fml-br (or (label-mark label) (next-mark))]
+					 [fml-path (equal? mark (and fml-cnd fml-br))])
+					fml-path))
 
-		[(inst-ass vl vr) 
-			(letrec 
-				([mem (machine-mem mac)]
-				[value (expr-eval vr mac)]
-				[mem-new (memory-store mem shadow-key vs)]
-				[mac-new (std:struct-copy machine mac [mem mem-new])]
+			(define (assert-pc-invoke fml func-fmls cnds)
+				(letrec
+					([fml-cnds (map (lambda (func-fml cnd) (equal? cnd (starting-pmark func-fml))) func-fmls cnds)]
+					 [fml-brs (apply or (map ending-pmark func-fmls))]
+					 [fml-path (equal? mark (and fml fml-cnds fml-brs (next-mark)))])
+					fml-path))
 
-				[fml-key (= shadow-key (if mark vl nullptr))]
-				[fml-value (= value vs)]
-				[fml-new fml-value]
-				[fml-switch (implies id fml-new)]
-				[fml-path (and 
-					fml-key
-					(equal? mark (and fml-switch (next-mark))))])
+			; (int -> any) X int -> any X formula
+			(define (maybe-happen f v)
+				(define-symbolic* shadow-key integer?)
+				(letrec
+					([fml-key (= shadow-key (if mark v nullptr))]
+					 [result (f shadow-key)])
+					(cons result fml-key)))
 
-				(cons fml-path mac-new))
-		]
+			(match inst 
+				[(inst-nop _) 
+					(letrec 
+						([fml-switch (select-fml? #t)]
+						 [fml-path (assert-pc-next fml-switch)])
+						(std:struct-copy rbstate st [pc (+ 1 pc)] [fml (and fml fml-path)]))]
 
-		[(inst-jmp condition label)
-			(letrec
-				([mem (machine-mem mac)]
-				[lmap (machine-lmap mac)]
-				[value (expr-eval condition mac)]
-				[fml-t (equal? (implies id value) (label-mark label))]
-				[fml-f (equal? (implies id (not value)) (next-mark))]
-				[fml-switch (and fml-t fml-f)]
-				[fml-br (or (label-mark label) (next-mark))]
-				[fml-path (equal? mark (and fml-switch fml-br))])
-				(cons fml-path mac))
-		]))
-				
-	
+				[(inst-init classname) #f]
+				[(inst-new v-name)  #f]
+				[(inst-ret v-expr) #f]
+				[(inst-static-call ret cls-name func-name arg-types args) #f]
+				[(inst-virtual-call ret obj-name cls-name func-name arg-types args) #f]
+				[(inst-special-call ret obj-name cls-name func-name arg-types args) #f]
+
+				[(inst-ass vl vr) 
+					(letrec 
+						([mem (machine-mem mac)]
+						 [value (expr-eval vr mac)]
+						 [mem-new (memory-store mem shadow-key vs)]
+						 [mac-new (std:struct-copy machine mac [mem mem-new])]
+
+						 [fml-key (= shadow-key (if mark vl nullptr))]
+						 [fml-value (= value vs)]
+						 [fml-new fml-value]
+						 [fml-switch (implies id fml-new)]
+						 [fml-path (and 
+							fml-key
+							(equal? mark (and fml-switch (next-mark))))])
+
+						(cons fml-path mac-new))
+				]
+
+				[(inst-jmp condition label)
+					(letrec
+						([mem (machine-mem mac)]
+						[lmap (machine-lmap mac)]
+						[value (expr-eval condition mac)]
+						[fml-t (equal? (implies id value) (label-mark label))]
+						[fml-f (equal? (implies id (not value)) (next-mark))]
+						[fml-switch (and fml-t fml-f)]
+						[fml-br (or (label-mark label) (next-mark))]
+						[fml-path (equal? mark (and fml-switch fml-br))])
+						(cons fml-path mac))
+				]))
+						
+			
 

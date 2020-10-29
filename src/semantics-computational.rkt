@@ -355,16 +355,16 @@
 
 ;======================== Instructions ===========================
 ;globals: list of (cons var-name(string) value(ast))
-(struct inst-boot (globals) #:transparent
-	#:methods gen:instruction
-	[(define (inst-exec i m f) 
-		(define (init-var vi mem)
-			(define name (car vi))
-			(define value-ast (cdr vi))
-			(define value (expr-eval (ast->expression value-ast) m))
-			(memory-swrite mem name value))
-		(foldl init-var (machine-mem m) (inst-boot-globals i))
-	)])
+;(struct inst-boot (globals) #:transparent
+;	#:methods gen:instruction
+;	[(define (inst-exec i m f) 
+;		(define (init-var vi mem)
+;			(define name (car vi))
+;			(define value-ast (cdr vi))
+;			(define value (expr-eval (ast->expression value-ast) m))
+;			(memory-swrite mem name value))
+;		(foldl init-var (machine-mem m) (inst-boot-globals i))
+;	)])
 
 ;assign virtual function to "this" from class information
 ;"this" should be give by caller of special call
