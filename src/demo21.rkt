@@ -101,5 +101,5 @@
 
 (compare-output mac-comp (list (cons var-ret-name 3)))
 
-(println string-id-map)
+;(println string-id-map)
 

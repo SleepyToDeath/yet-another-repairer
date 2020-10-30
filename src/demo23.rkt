@@ -1,6 +1,7 @@
 #lang rosette/safe
 
 (require (prefix-in std: racket/base))
+(require rosette/lib/angelic)
 
 (require "string-id.rkt")
 (require "syntax.rkt")
@@ -10,20 +11,25 @@
 (display "Preparing\n")
 
 (define SEARCH-DEPTH 5)
+
+(define vars (list (string-id "this") (string-id "param0")))
+(define itypes (list (string-id "ClassA")))
+(define fields (list (string-id "field-1")))
+(define funcs null)
 (define consts (list 0 1 2))
 (define ops (list + -))
-(define vars (list (string-id "param0") (string-id "this") (string-id "ClassA") (string-id "field-1") (string-id "field-2")))
 (define labels (list 0 1 2))
 
-(define ctxt-enum (syntax-context vars consts ops labels))
+(define ctxt-enum (syntax-context vars itypes fields funcs consts ops labels))
+
 
 (define main-func (function-declare (function-content 
 	(func-name "main")
 	(variable-definitions (variable-definition-list null))
 	(variable-definitions (variable-definition-list (list 
-		(variable-definition (variable-n-type (variable "var-1") (type-name "int")))
 		(variable-definition (variable-n-type (variable "var-4") (type-name "ClassA")))
-		(variable-definition (variable-n-type (variable "var-3") (type-name "int"))))))
+		(variable-definition (variable-n-type (variable "var-3") (type-name "int")))
+		(variable-definition (variable-n-type (variable "var-5") (type-name "int"))))))
 	(stats (stat-list (list
 		(stat (stat-new (variable "var-4")))
 		(stat (stat-special-call 
@@ -35,16 +41,16 @@
 			(variable "dummy")
 			(variable "var-4") (type-name "ClassA") (func-name "set-field-1")
 			(types (type-list (list (type-name "int"))))
-			(arguments-caller (argument-caller-list (list (dexpr (expr-const (const 1))))))))
+			(arguments-caller (argument-caller-list (list (dexpr (expr-var (variable "var-1"))))))))
 		(stat (stat-virtual-call 
-			(variable "var-1")
+			(variable "var-5")
 			(variable "var-4") (type-name "ClassA") (func-name "get-field-1")
 			(types (type-list null))
 			(arguments-caller (argument-caller-list null))))
 		(stat (stat-ass 
 			(lexpr (expr-var (variable "var-3"))) 
 			(expr (expr-binary 
-				(expr (expr-var (variable "var-1")))
+				(expr (expr-var (variable "var-5")))
 				(op +)
 				(expr (expr-field (variable "var-4") (type-name "ClassA") (field "field-2")))))))
 		(stat (stat-ret (dexpr (expr-var (variable "var-3")))))))))))
@@ -53,12 +59,12 @@
 	(func-name "get-field-1")
 	(variable-definitions (variable-definition-list null))
 	(variable-definitions (variable-definition-list (list
-		(variable-definition (variable-n-type (variable "tmp") (type-name "int"))))))
+		(variable-definition (variable-n-type (variable "t-mp") (type-name "int"))))))
 	(stats (stat-list (list
 		(stat (stat-ass 
-			(lexpr (expr-var (variable "tmp")))
+			(lexpr (expr-var (variable "t-mp")))
 			(expr (expr-field (variable "this") (type-name "ClassA") (field "field-1")))))
-		(stat (stat-ret (dexpr (expr-var (variable "tmp")))))))))))
+		(stat (stat-ret (dexpr (expr-var (variable "t-mp")))))))))))
 
 (define set-field-1 (function-declare (function-content
 	(func-name "set-field-1")
@@ -68,9 +74,14 @@
 	(stats (stat-list (list
 		(stat-enum ctxt-enum SEARCH-DEPTH)
 ;		(stat (stat-ass 
-;			(lexpr (expr-field (variable (string-id "this")) (type-name (string-id "ClassA")) (field (string-id "field-1"))))
-;			(lexpr (expr-field (variable-enum ctxt-enum SEARCH-DEPTH) (type-name-enum ctxt-enum SEARCH-DEPTH) (field (string-id "field-1"))))
+;			(lexpr (expr-field (variable "this") (type-name "ClassA") (field "field-1")))
+;			(lexpr (expr-field (variable-enum ctxt-enum SEARCH-DEPTH) (type-name-enum ctxt-enum SEARCH-DEPTH) (field-enum ctxt-enum SEARCH-DEPTH)))
+;			(let ([rhs-list (list (expr-field-enum ctxt-enum (- SEARCH-DEPTH 1)) (expr-var-enum ctxt-enum (- SEARCH-DEPTH 1)))])
+;			(lexpr (apply choose* rhs-list)))
+			;(lexpr-enum ctxt-enum SEARCH-DEPTH)
 ;			(expr (expr-var (variable (string-id "param0"))))))
+			;(expr (expr-var (variable-enum ctxt-enum SEARCH-DEPTH)))))
+;			(expr-enum ctxt-enum SEARCH-DEPTH)))
 		(stat (stat-ret (dexpr (expr-var (variable "dummy")))))))))))
 
 (define init-func (function-declare (function-content
@@ -101,9 +112,11 @@
 	(function-declares (function-list (list init-func)))
 	(function-declares (function-list (list set-field-1 get-field-1))))))
 
+(println string-id-map)
 
 (define sketch (program
 	(class-list (list class-1 class-2))))
+
 
 ;(ast-check prog-1)
 
@@ -117,8 +130,11 @@
 
 ;(println string-id-map)
 
-(define input1 (list (cons "var-1" 1) (cons "var-2" 2)))
+(define input1 (list (cons "var-1" 1)))
 (define output1 (list (cons var-ret-name 3)))
+
+(define input2 (list (cons "var-1" 5) ))
+(define output2 (list (cons var-ret-name 7)))
 
 (define (sketch->spec skt input output)
 	(compare-output (compute (assign-input (ast->machine skt) input)) output))
@@ -126,6 +142,8 @@
 (define start-time (std:current-inexact-milliseconds))
 
 (display "Synthesis Starts\n")
+
+sketch
 
 (define syn-sol 
 	(synthesize
@@ -135,6 +153,7 @@
 				#t
 				(ast-check sketch)
 				(sketch->spec sketch input1 output1)
+		;		(sketch->spec sketch input2 output2)
 			)
 		)))
 
@@ -147,3 +166,4 @@ result
 (define finish-time (std:current-inexact-milliseconds))
 
 (display (format "Synthesis took ~a milliseconds. Search depth: ~a\n" (- finish-time start-time) SEARCH-DEPTH))
+

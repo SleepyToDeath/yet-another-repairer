@@ -82,3 +82,12 @@ bbb
 (match-define (list a4 b4) (list 7 8))
 a4
 b4
+
+(define (foo x)
+	(list x (+ x x) (* x x)))
+
+(match-define (list x1 x2 x3) (foo 10))
+x1
+x2
+x3
+

@@ -118,7 +118,8 @@
 
 
 ;============= Default Values ===========
-(define memory-empty (memory stack-empty imap-empty imap-empty 0))
+(define top-default 233)
+(define memory-empty (memory stack-empty imap-empty imap-empty top-default))
 ;========================================
 
 

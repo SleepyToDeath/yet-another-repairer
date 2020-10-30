@@ -34,8 +34,8 @@
 
 
 ;============= Default Values ===========
-(define nullptr -1)
-(define not-found -2)
+(define nullptr 0)
+(define not-found -666)
 
 (define (default-func x) not-found)
 

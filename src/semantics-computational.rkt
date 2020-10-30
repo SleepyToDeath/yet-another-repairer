@@ -74,7 +74,7 @@
 		#f))
 
 (define (lookup-virtual-field mac cls field)
-	(if cls
+	(if cls 
 		(begin
 			(define cls-0 (imap-get (machine-cmap mac) cls))
 
@@ -229,11 +229,12 @@
 	(build-virtual-table classes mac-init))
 
 (define (ast->class ast)
-	(match (class-def-rhs ast)
+	(define rhs (class-def-rhs ast))
+	(match rhs
 		[(class-default name-ast extend-ast interfaces-ast globals-ast fields-ast sfuncs-ast vfuncs-ast)
 			(letrec 
 				([name (string-id (type-name-name name-ast))]
-				[extend (string-id (type-name-name extend-ast))]
+				[extend (if (type-name-name extend-ast) (string-id (type-name-name extend-ast)) #f)]
 				[interfaces 
 					(map (lambda (ast) (string-id (type-name-name ast))) (interface-name-list-il (interface-implements-rhs interfaces-ast)))]
 				[sfuncs 
@@ -250,7 +251,8 @@
 ;(LHS-C function-declare (rhs ::= function-content))
 ;	(RHS-C function-content (name : function-name) (args : arguments) (local-variables : variable-declares) (statements : stats))
 (define (ast->function classname ast)
-	(match (function-declare-rhs ast)
+	(define rhs (function-declare-rhs ast))
+	(match rhs
 		[(function-content name-ast args-ast local-vars-ast statements-ast)
 			(letrec 
 				([name (string-id (func-name-name name-ast))]
@@ -276,7 +278,13 @@
 (define (ast->instruction ast lmap line-num)
 	(match ast
 		[(stat s) (ast->instruction s lmap line-num)]
-		[(stat-ass target rvalue) (cons (inst-ass target (ast->expression rvalue)) lmap)]
+		[(stat-ass target rvalue) 
+			(begin
+			(println target)
+			(display "\n")
+			(println rvalue)
+			(display "\n")
+			(cons (inst-ass target (ast->expression rvalue)) lmap))]
 		[(stat-jmp condition target) (cons (inst-jmp (ast->expression condition) (label-v target)) lmap)]
 		[(stat-label here) (cons #f (imap-set lmap (label-v here) line-num))]
 		[(stat-nop any) (cons (inst-nop nullptr) lmap)]
@@ -388,7 +396,7 @@
 
 		(std:struct-copy machine m [mem mem-bind-func] [pc pc-next]))])
 
-;addr(int) X iexpr
+
 (struct inst-ass (vl vr) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f) 
@@ -396,20 +404,31 @@
 		(define mem0 (machine-mem m))
 		(define v-new (expr-eval (inst-ass-vr i) m))
 
+		(display "\n")
+		(println (inst-ass-vl i))
+		(display "\n")
+		(println (inst-ass-vr i))
+		(display "\n")
+		(println v-new)
+		(display "\n")
 ;		(println v-new)
+		(define rhs (lexpr-rhs (inst-ass-vl i)))
 		(define mem-new 
-			(match (lexpr-rhs (inst-ass-vl i))
-				[(expr-var v) (memory-swrite mem0 (string-id (variable-name v)) v-new)]
+			(match rhs
+				[(expr-var v) (begin (display "Branch1\n") (memory-swrite mem0 (string-id (variable-name v)) v-new))]
 				[(expr-array arr idx)
+					(begin (display "Branch2\n")
 					(letrec
 						([addr (memory-sread mem0 (string-id (variable-name arr)))]
 						[idx-e (ast->expression idx)]
 						[idx-v (expr-eval idx-e m)])
-						(memory-awrite mem0 addr idx-v v-new))]
+						(memory-awrite mem0 addr idx-v v-new)))]
 				[(expr-field obj cls fname)
+					(begin (display "Branch3\n")
 					(letrec
 						([addr (memory-sread mem0 (string-id (variable-name obj)))])
-						(memory-fwrite mem0 (vfield-id m (string-id (type-name-name cls)) (string-id (field-name fname))) addr v-new))]))
+						(memory-fwrite mem0 (vfield-id m (string-id (type-name-name cls)) (string-id (field-name fname))) addr v-new)))]
+				[_ (display "Default\n")]))
 
 		(define pc-next (+ 1 (machine-pc m)))
 
@@ -441,7 +460,8 @@
 	[(define (inst-exec i m f)
 		(define mem-0 (machine-mem m))
 		(define v-name (inst-new-v-name i))
-		(match (memory-alloc mem-0 1)
+		(define mem-alloc (memory-alloc mem-0 1))
+		(match mem-alloc
 			[(cons addr mem-alloc)
 				(letrec ([pc-next (+ 1 (machine-pc m))]
 						[mem-ass (memory-swrite mem-alloc v-name addr)])

@@ -112,8 +112,9 @@
 ;			)
 ;		(invalid 0)))
 
-(LHS-E lexpr -> (lexpr-enum ::= expr-var-enum expr-field-enum))
-(LHS-E expr -> (expr-enum ::= expr-const-enum expr-var-enum expr-binary-enum))
+(LHS-E lexpr -> (lexpr-enum ::= expr-field-enum expr-var-enum))
+(LHS-E expr -> (expr-enum ::= expr-field-enum expr-array-enum expr-const-enum expr-var-enum expr-binary-enum))
+;(LHS-E expr -> (expr-enum ::= expr-const-enum expr-var-enum))
 	(RHS-E expr-array -> expr-array-enum (variable-enum expr-enum))
 	(RHS-E expr-field -> expr-field-enum (variable-enum type-name-enum field-enum))
 	(RHS-E expr-const -> expr-const-enum (const-enum))
@@ -123,15 +124,18 @@
 ;[TODO] implement
 (define (variable-enum ctxt depth-limit)
 	(if (< depth-limit 0) (invalid 0)
-		(variable (apply choose* (syntax-context-vars ctxt)))))
+		(if (empty? (syntax-context-vars ctxt)) (invalid 0)
+			(variable (apply choose* (syntax-context-vars ctxt))))))
 
 (define (type-name-enum ctxt depth-limit)
 	(if (< depth-limit 0) (invalid 0)
-		(type-name (apply choose* (syntax-context-vars ctxt)))))
+		(if (empty? (syntax-context-types ctxt)) (invalid 0)
+			(type-name (apply choose* (syntax-context-types ctxt))))))
 
 (define (field-enum ctxt depth-limit)
 	(if (< depth-limit 0) (invalid 0)
-		(field (apply choose* (syntax-context-vars ctxt)))))
+		(if (empty? (syntax-context-fields ctxt)) (invalid 0)
+			(field (apply choose* (syntax-context-fields ctxt))))))
 
 (define (const-enum ctxt depth-limit)
 	(if (< depth-limit 0) (invalid 0)
