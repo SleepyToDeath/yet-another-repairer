@@ -16,13 +16,12 @@
 (define (imap-set m index value)
 	(define oldf (imap-func m))
 	(define newf (lambda (args)
-                 (if (equal? args index)
-                     value (oldf args))))
+		(if (equal? args nullptr) nullptr
+			(if (equal? args index) value (oldf args)))))
+
 	(define oldlog (imap-ilog m))
 	(define newlog (cons (cons index (if (number? value) value #f)) oldlog))
-;	(print "-->")
-;	(std:println index)
-;	(std:println newlog)
+
 	(std:struct-copy imap m [func newf][ilog newlog]))
 
 (define (imap-contains? m index)
@@ -34,7 +33,7 @@
 
 
 ;============= Default Values ===========
-(define nullptr 0)
+(define nullptr -1)
 (define not-found -666)
 
 (define (default-func x) not-found)

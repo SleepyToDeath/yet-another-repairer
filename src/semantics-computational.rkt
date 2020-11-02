@@ -528,8 +528,8 @@
 ;		(println (format "obj addr: ~a" obj-addr))
 ;		(println (format "sfunc id: ~a" (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-args i))))
 		;never virtual
-		(define func (memory-sread (machine-mem m) (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-args i))))
-		(define args (map car (inst-special-call-args i)))
+		(define func (memory-sread mem0 (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-arg-types i))))
+		(define args (inst-special-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
 		(define mac-this (std:struct-copy machine m [mem mem-this]))
