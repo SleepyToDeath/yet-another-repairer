@@ -85,9 +85,7 @@ base_type
 
 nonvoid_type
   ::= @base_type_no_name array_brackets*
-    | QUOTED_NAME array_brackets*
-    | IDENTIFIER array_brackets*
-    | FULL_IDENTIFIER array_brackets*
+    | @class_name array_brackets*
 
 array_brackets
   ::= LBRACKET RBRACKET
