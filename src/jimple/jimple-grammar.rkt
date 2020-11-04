@@ -191,7 +191,7 @@ j_expression
     | cast_expr
     | instanceof_expr
     | invoke_expr
-    | reference
+    | @reference
     | binop_expr
     | unop_expr
     | immediate
@@ -211,7 +211,7 @@ array_descriptor
   ::= LBRACKET immediate? RBRACKET
 
 variable
-  ::= reference
+  ::= @reference
     | local_name
 
 bool_expr
@@ -259,11 +259,11 @@ array_ref
     | QUOTED_NAME fixed_array_descriptor
 
 field_ref
-  ::= local_name DOT field_signature
+  ::= local_name /DOT field_signature
     | field_signature
 
 field_signature
-  ::= CMPLT class_name COLON j_type name CMPGT
+  ::= /CMPLT class_name /COLON j_type name /CMPGT
 
 fixed_array_descriptor
   ::= LBRACKET immediate RBRACKET

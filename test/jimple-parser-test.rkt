@@ -545,3 +545,38 @@
     "stmt invoke 3")
 )
 
+(test-case "expr-field-ref"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    int x, y;"
+      "    B b;"
+      "    b.<B: int f1> = x;"
+      "    y = b.<B: int f2>;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "x") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "y") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b") (ast:type-name "B"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-field (ast:variable "b") (ast:type-name "B") (ast:field "f1")))
+                (ast:expr (ast:expr-var (ast:variable "x"))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "y")))
+                (ast:expr (ast:expr-field (ast:variable "b") (ast:type-name "B") (ast:field "f2"))))))))))
+    "expr field reference 1")
+)
+

@@ -19,6 +19,7 @@
 ;============ Constants ============
 (define void-return-value (ast:const "__no_return"))
 (define void-return-var (ast:variable "__void_return"))
+(define void-receiver (ast:variable "__no_receiver"))
 (define param-prefix "@parameter")
 
 
@@ -339,9 +340,22 @@
 
 (define (build-ast-expression expr-stx)
   (p:syntax-parse expr-stx
+    [({p:~literal new_expr} p:~rest _)
+     (std:error "New expression is not supported yet")]
+    [({p:~literal cast_expr} p:~rest _)
+     (std:error "Cast expression is not supported yet")]
+    [({p:~literal instanceof_expr} p:~rest _)
+     (std:error "Instanceof expression is not supported yet")]
+    [({p:~literal array_ref} p:~rest _)
+     (std:error "Array reference is not supported yet")]
+    [({p:~literal field_ref} p:~rest _)
+     (build-ast-expr-field-ref expr-stx)]
+    [({p:~literal binop_expr} p:~rest _)
+     (std:error "Binary operation is not supported yet")]
+    [({p:~literal unop_expr} p:~rest _)
+     (std:error "Unary operation is not supported yet")]
     [({p:~literal immediate} imm)
-     (build-ast-expr-immediate #'imm)]
-  ))
+     (build-ast-expr-immediate #'imm)]))
 
 
 (define (build-ast-expr-invoke expr-invoke-stx)
@@ -431,6 +445,32 @@
      (ast:dexpr (build-ast-expr-immediate #'imm))]))
 
 
+(define (build-ast-expr-field-ref expr-field-stx)
+  (p:syntax-parse expr-field-stx
+    [({p:~literal field_ref} (p:~optional name) signature)
+     (let* ([ctype-fname (build-ast-field-sig #'signature)]
+            [ctype (first ctype-fname)]
+            [fname (second ctype-fname)]
+            [receiver (if (p:attribute name)
+                          (build-ast-name #'name)
+                          void-receiver)])
+       (ast:expr-field receiver ctype fname))]))
+
+
+(define (build-ast-field-sig field-sig-stx)
+  (p:syntax-parse field-sig-stx
+    [({p:~literal field_signature} class-name f-type f-name)
+     (let ([ctype (build-ast-type-name #'class-name)]
+           [fname (build-ast-field-name #'f-name)])
+       (list ctype fname))]))
+
+
+(define (build-ast-field-name field-name-stx)
+  (p:syntax-parse field-name-stx
+    [({p:~literal name} f-name)
+     (ast:field (std:syntax-e #'f-name))]))
+
+
 (define (build-ast-bool-expr bool-expr-stx)
   (std:error "Not impelemented yet"))
 
@@ -444,15 +484,17 @@
     [({p:~literal float_const} p:~rest _)
      (build-ast-const-float expr-imm-stx)]
     [({p:~literal class_const} _)
-     (std:error "Class constants are not supported yet")]
+     (std:error "Class constant is not supported yet")]
     ;FIXME: null is currently considered as a string
     [_ (build-ast-const-str expr-imm-stx)]))
 
 
 (define (build-ast-variable var-stx)
   (p:syntax-parse var-stx
-    [({p:~literal reference} p:~rest _)
+    [({p:~literal array_ref} _ _)
      (std:error "not implemented yet")]
+    [({p:~literal field_ref} p:~rest _)
+     (build-ast-expr-field-ref var-stx)]
     [({p:~literal name} _)
      (ast:expr-var (build-ast-name var-stx))]))
 
