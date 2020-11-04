@@ -219,8 +219,14 @@
     (build-ast-file (parse-to-stx (string-append-newline
       "public class A {"
       "  public void foo() {"
-      "    java.lang.String a;"
-      "    a = \"bbb\";"
+      "    int a;"
+      "    double b;"
+      "    java.lang.String c;"
+      "    A d;"
+      "    a = 1;"
+      "    b = 1.5;"
+      "    c = \"str\";"
+      "    d = null;"
       "  }"
       "}")))
     (single-func-in-class "A"
@@ -231,12 +237,27 @@
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
-                (ast:variable-n-type (ast:variable "a") (ast:type-name "java.lang.String"))))))
+                (ast:variable-n-type (ast:variable "a") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b") (ast:type-name "double")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "c") (ast:type-name "java.lang.String")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "d") (ast:type-name "A"))))))
           (ast:stats
             (ast:stat-list (list
               (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "a")))
-                (ast:expr (ast:expr-const (ast:const "bbb"))))))))))
+                (ast:expr (ast:expr-const (ast:const 1))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "b")))
+                (ast:expr (ast:expr-const (ast:const 1.5))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "c")))
+                (ast:expr (ast:expr-const (ast:const "str"))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "d")))
+                (ast:expr (ast:expr-const (ast:const "null"))))))))))
     "stmt assigment 2")
 )
 
