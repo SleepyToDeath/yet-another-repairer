@@ -181,7 +181,7 @@ case_stmt
 
 case_label
   ::= CASE MINUS? INTEGER_CONSTANT
-  ::= DEFAULT
+    | DEFAULT
 
 catch_clause
   ::= CATCH class_name FROM label_name TO label_name WITH label_name /SEMICOLON
