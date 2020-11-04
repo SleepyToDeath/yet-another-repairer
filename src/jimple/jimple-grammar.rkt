@@ -180,7 +180,7 @@ case_stmt
   ::= case_label COLON goto_stmt
 
 case_label
-  ::= CASE MINUS? INTEGER_CONSTANT
+  ::= CASE int_const
     | DEFAULT
 
 catch_clause
@@ -273,14 +273,23 @@ arg_list
 
 immediate
   ::= local_name
-    | j_constant
+    | @j_constant
 
 j_constant
-  ::= MINUS? INTEGER_CONSTANT
-    | MINUS? FLOAT_CONSTANT
+  ::= int_const
+    | float_const
+    | class_const
     | STRING_CONSTANT
-    | CLASS STRING_CONSTANT
     | NULL
+
+int_const
+  ::= MINUS? INTEGER_CONSTANT
+
+float_const
+  ::= MINUS? FLOAT_CONSTANT
+
+class_const
+  ::= /CLASS STRING_CONSTANT
 
 binop
   ::= AND

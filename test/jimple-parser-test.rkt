@@ -219,12 +219,14 @@
     (build-ast-file (parse-to-stx (string-append-newline
       "public class A {"
       "  public void foo() {"
-      "    int a;"
-      "    double b;"
+      "    int a1, a2;"
+      "    double b1, b2;"
       "    java.lang.String c;"
       "    A d;"
-      "    a = 1;"
-      "    b = 1.5;"
+      "    a1 = 1;"
+      "    a2 = -1;"
+      "    b1 = 1.5;"
+      "    b2 = -1.5;"
       "    c = \"str\";"
       "    d = null;"
       "  }"
@@ -237,9 +239,13 @@
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
-                (ast:variable-n-type (ast:variable "a") (ast:type-name "int")))
+                (ast:variable-n-type (ast:variable "a1") (ast:type-name "int")))
               (ast:variable-definition
-                (ast:variable-n-type (ast:variable "b") (ast:type-name "double")))
+                (ast:variable-n-type (ast:variable "a2") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b1") (ast:type-name "double")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b2") (ast:type-name "double")))
               (ast:variable-definition
                 (ast:variable-n-type (ast:variable "c") (ast:type-name "java.lang.String")))
               (ast:variable-definition
@@ -247,11 +253,17 @@
           (ast:stats
             (ast:stat-list (list
               (ast:stat-ass
-                (ast:lexpr (ast:expr-var (ast:variable "a")))
+                (ast:lexpr (ast:expr-var (ast:variable "a1")))
                 (ast:expr (ast:expr-const (ast:const 1))))
               (ast:stat-ass
-                (ast:lexpr (ast:expr-var (ast:variable "b")))
+                (ast:lexpr (ast:expr-var (ast:variable "a2")))
+                (ast:expr (ast:expr-const (ast:const -1))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "b1")))
                 (ast:expr (ast:expr-const (ast:const 1.5))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "b2")))
+                (ast:expr (ast:expr-const (ast:const -1.5))))
               (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "c")))
                 (ast:expr (ast:expr-const (ast:const "str"))))

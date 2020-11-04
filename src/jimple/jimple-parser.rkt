@@ -437,17 +437,23 @@
 
 (define (build-ast-expr-immediate expr-imm-stx)
   (p:syntax-parse expr-imm-stx
-    [({p:~literal name} name)
+    [({p:~literal name} _)
      (build-ast-variable expr-imm-stx)]
-    [({p:~literal j_constant} const)
-     (build-ast-constant expr-imm-stx)]))
+    [({p:~literal int_const} p:~rest _)
+     (build-ast-const-int expr-imm-stx)]
+    [({p:~literal float_const} p:~rest _)
+     (build-ast-const-float expr-imm-stx)]
+    [({p:~literal class_const} _)
+     (std:error "Class constants are not supported yet")]
+    ;FIXME: null is currently considered as a string
+    [_ (build-ast-const-str expr-imm-stx)]))
 
 
 (define (build-ast-variable var-stx)
   (p:syntax-parse var-stx
     [({p:~literal reference} p:~rest _)
      (std:error "not implemented yet")]
-    [({p:~literal name} p:~rest _)
+    [({p:~literal name} _)
      (ast:expr-var (build-ast-name var-stx))]))
 
 
@@ -455,10 +461,24 @@
   (ast:variable (std:syntax-e at-ident-stx)))
 
 
-(define (build-ast-constant const-stx)
-  (p:syntax-parse const-stx
-    [({p:~literal j_constant} c)
-     (ast:expr-const (ast:const (std:syntax-e #'c)))]))
+(define (build-ast-const-int const-int-stx)
+  (p:syntax-parse const-int-stx
+    [({p:~literal int_const} (p:~optional minus-sign) lit)
+     (ast:expr-const (ast:const (if (p:attribute minus-sign)
+                                    (- (std:syntax-e #'lit))
+                                    (std:syntax-e #'lit))))]))
+
+
+(define (build-ast-const-float const-float-stx)
+  (p:syntax-parse const-float-stx
+    [({p:~literal float_const} (p:~optional minus-sign) lit)
+     (ast:expr-const (ast:const (if (p:attribute minus-sign)
+                                    (- (std:syntax-e #'lit))
+                                    (std:syntax-e #'lit))))]))
+
+
+(define (build-ast-const-str const-str-stx)
+  (ast:expr-const (ast:const (std:syntax-e const-str-stx))))
 
 
 ;(define program-text
