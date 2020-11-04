@@ -240,6 +240,10 @@
   (p:syntax-parse stmt-stx
     [({p:~literal assign_stmt} _ _)
      (build-ast-stmt-ass stmt-stx)]
+    [({p:~literal identity_stmt} _ _ _)
+     (build-ast-stmt-ident stmt-stx)]
+    [({p:~literal identity_no_type_stmt} _ _)
+     (build-ast-stmt-ident-nt stmt-stx)]
     [({p:~literal label_stmt} _)
      (build-ast-stmt-label stmt-stx)]
     [({p:~literal goto_stmt} _)
@@ -265,6 +269,22 @@
      (ast:stat-ass
        (ast:lexpr (build-ast-variable #'lhs-var))
        (ast:expr (build-ast-expression #'rhs-expr)))]))
+
+
+(define (build-ast-stmt-ident stmt-ident-stx)
+  (p:syntax-parse stmt-ident-stx
+    [({p:~literal identity_stmt} lhs-var rhs-var rhs-type)
+     (ast:stat-ass
+       (ast:lexpr (build-ast-variable #'lhs-var))
+       (ast:expr (ast:expr-var (build-ast-at-ident #'rhs-var))))]))
+
+
+(define (build-ast-stmt-ident-nt stmt-ident-nt-stx)
+  (p:syntax-parse stmt-ident-nt-stx
+    [({p:~literal identity_no_type_stmt} lhs-var rhs-var)
+     (ast:stat-ass
+       (ast:lexpr (build-ast-variable #'lhs-var))
+       (ast:expr (ast:expr-var (build-ast-at-ident #'rhs-var))))]))
 
 
 (define (build-ast-stmt-goto stmt-goto-stx)
@@ -429,6 +449,10 @@
      (std:error "not implemented yet")]
     [({p:~literal name} p:~rest _)
      (ast:expr-var (build-ast-name var-stx))]))
+
+
+(define (build-ast-at-ident at-ident-stx)
+  (ast:variable (std:syntax-e at-ident-stx)))
 
 
 (define (build-ast-constant const-stx)

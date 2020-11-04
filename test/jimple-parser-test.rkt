@@ -240,6 +240,88 @@
     "stmt assigment 2")
 )
 
+(test-case "stmt-identity"
+;  (check-equal?
+;    (build-ast-file (parse-to-stx (string-append-newline
+;      "public class A {"
+;      "  public void foo() {"
+;      "    A r0;"
+;      "    r0 := @this: A;"
+;      "  }"
+;      "}")))
+;    (single-func-in-class "A"
+;      (ast:function-declare
+;        (ast:function-content
+;          (ast:func-name "foo")
+;          (ast:variable-definitions (ast:variable-definition-list null))
+;          (ast:variable-definitions
+;            (ast:variable-definition-list (list
+;              (ast:variable-definition
+;                (ast:variable-n-type (ast:variable "r0") (ast:type-name "A"))))))
+;          (ast:stats
+;            (ast:stat-list (list
+;              (ast:stat-ass
+;                (ast:lexpr (ast:expr-var (ast:variable "r0")))
+;                (ast:expr (ast:expr-var (ast:variable "@this"))))))))))
+;    "stmt identity 1")
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo(int) {"
+      "    int r1;"
+      "    r1 := @parameter0: int;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "@parameter0") (ast:type-name "int"))))))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "r1") (ast:type-name "int"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "r1")))
+                (ast:expr (ast:expr-var (ast:variable "@parameter0"))))))))))
+    "stmt identity 2")
+)
+
+
+(test-case "stmt-identity-nt"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo(int) {"
+      "    int r1;"
+      "    r1 := @parameter0;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "@parameter0") (ast:type-name "int"))))))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "r1") (ast:type-name "int"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "r1")))
+                (ast:expr (ast:expr-var (ast:variable "@parameter0"))))))))))
+    "stmt identity no type 2")
+)
+
 (test-case "stmt-label"
   (check-equal?
     (build-ast-file (parse-to-stx (string-append-newline

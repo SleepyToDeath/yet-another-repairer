@@ -51,8 +51,8 @@
   [identifier (sre:or (sre:: (sre:or first_id_char escape_char) (sre:* (sre:or simple_id_char escape_char)))
                       "<clinit>"
                       "<init>")]
-  [at_identifier (sre:: "@" (sre:or (sre:: "parameter" (sre:+ dec_digit) ":")
-                                    "this:"
+  [at_identifier (sre:: "@" (sre:or (sre:: "parameter" (sre:+ dec_digit))
+                                    "this"
                                     "caughtexception"))]
   [bool_constant (sre:or "true" "false")]
   [integer_constant (sre:: (sre:or dec_constant hex_constant oct_constant) (sre:? "L"))]

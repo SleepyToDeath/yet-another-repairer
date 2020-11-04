@@ -146,10 +146,10 @@ lookupswitch_stmt
   ::= LOOKUPSWITCH LPAREN immediate RPAREN LBRACE case_stmt+ RBRACE /SEMICOLON
 
 identity_stmt
-  ::= local_name COLON_EQUALS AT_IDENTIFIER j_type /SEMICOLON
+  ::= local_name /COLON_EQUALS AT_IDENTIFIER /COLON j_type /SEMICOLON
 
 identity_no_type_stmt
-  ::= local_name COLON_EQUALS AT_IDENTIFIER /SEMICOLON
+  ::= local_name /COLON_EQUALS AT_IDENTIFIER /SEMICOLON
 
 assign_stmt
   ::= variable /EQUALS j_expression /SEMICOLON
