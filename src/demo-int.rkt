@@ -13,11 +13,11 @@
 public class A {
   private int f1;
   public int f2;
-  public void <init>() {
+  public static void <init>() {
     A r0;
     r0 := @this: A;
     r0.<A: int f2> = 2;
-    return;
+    return r0;
   }
   public void setF1(int) {
     A r0;
@@ -39,10 +39,10 @@ public class A {
 (define class-T (p:build-ast-file (p:parse-to-stx
 "
 public class T {
-  public void <init>() {
+  public static void <init>() {
     T r0;
     r0 := @this: T;
-    return;
+    return r0;
   }
   public static int main() {
     A $r0;
@@ -68,5 +68,9 @@ public class T {
 (define input (list (cons "@parameter0" 1)))
 (define output (list (cons var-ret-name 3)))
 
-(compare-output (compute (assign-input (ast->machine prog) input)) output)
+(define mac (ast->machine prog))
+
+(pretty-print string-id-map)
+
+(compare-output (compute (assign-input mac input)) output)
 

@@ -7,6 +7,7 @@
 (require "string-id.rkt")
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
+(require racket/pretty)
 
 (provide (all-defined-out))
 
@@ -43,7 +44,7 @@
 (define pc-ret -1)
 (define pc-init 0)
 (define var-ret-name (string-id "__return__"))
-(define var-this-name (string-id "this"))
+(define var-this-name (string-id "@this"))
 (define func-name-main (string-id "main"))
 (define func-name-boot (string-id "__boot__"))
 (define func-name-init (string-id "<init>"))
@@ -213,7 +214,14 @@
 ;machine X list of (key, value) -> boolean
 (define (compare-output mac output)
 	(define mem0 (machine-mem mac))
-	(foldl (lambda (kv fml-cur) (and fml-cur (= (cdr kv) (memory-sread mem0 (string-id (car kv)))))) #t output))
+	(foldl (lambda (kv fml-cur) (and fml-cur (= (cdr kv) 
+			((lambda ()
+				(begin
+					(define ret-v (memory-sread mem0 (string-id (car kv))))
+					(println ret-v)
+					ret-v
+					)))
+			))) #t output))
 
 ;machine X list of string(output var names)
 ;(define (get-output mac output-names)
@@ -483,6 +491,9 @@
 	[(define (inst-exec i m f)
 ;		(println i)
 		(define func (memory-sread (machine-mem m) (sfunc-id (inst-static-call-cls-name i) (inst-static-call-func-name i) (inst-static-call-arg-types i))))
+		(display "\n")
+		(pretty-print i)
+		(pretty-print func)
 		(define args (map car (inst-static-call-args i)))
 		(define ret (inst-static-call-ret i))
 ;		(println++ "Ret Var: " ret)
@@ -507,6 +518,10 @@
 ;		(println (format "vfunc id: ~a" (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i) (inst-virtual-call-arg-types i))))
 		;virtual
 		(define func (memory-fread mem0 (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i) (inst-virtual-call-arg-types i)) obj-addr))
+		(display "\n")
+		(pretty-print obj-addr)
+		(pretty-print i)
+		(pretty-print func)
 		(define args (inst-virtual-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
@@ -533,6 +548,9 @@
 ;		(println (format "sfunc id: ~a" (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-args i))))
 		;never virtual
 		(define func (memory-sread mem0 (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-arg-types i))))
+		(display "\n")
+		(pretty-print i)
+		(pretty-print func)
 		(define args (inst-special-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
