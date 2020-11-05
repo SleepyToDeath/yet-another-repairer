@@ -303,7 +303,7 @@
         ({p:~literal bool_expr} expr)
         ({p:~literal label_name} name))
      (ast:stat-jmp
-       (build-ast-bool-expr #'expr)
+       (build-ast-expr-binop #'expr)
        (ast:label (std:syntax-e #'name)))]))
 
 
@@ -350,8 +350,8 @@
      (std:error "Array reference is not supported yet")]
     [({p:~literal field_ref} p:~rest _)
      (build-ast-expr-field-ref expr-stx)]
-    [({p:~literal binop_expr} p:~rest _)
-     (std:error "Binary operation is not supported yet")]
+    [({p:~literal binop_expr} _ _ _)
+     (build-ast-expr-binop expr-stx)]
     [({p:~literal unop_expr} p:~rest _)
      (std:error "Unary operation is not supported yet")]
     [({p:~literal immediate} imm)
@@ -471,8 +471,40 @@
      (ast:field (std:syntax-e #'f-name))]))
 
 
-(define (build-ast-bool-expr bool-expr-stx)
-  (std:error "Not impelemented yet"))
+(define (build-ast-expr-binop expr-binop-stx)
+  (p:syntax-parse expr-binop-stx
+    [({p:~literal binop_expr}
+        ({p:~literal immediate} lhs)
+        bop
+        ({p:~literal immediate} rhs))
+     (let ([l (build-ast-expr-immediate #'lhs)]
+           [o (build-ast-expr-bop #'bop)]
+           [r (build-ast-expr-immediate #'rhs)])
+       (ast:expr-binary (ast:expr l) o (ast:expr r)))]))
+
+
+(define (build-ast-expr-bop expr-bop-stx)
+  (p:syntax-parse expr-bop-stx
+    ;[({p:~literal binop} "&") and]
+    ;[({p:~literal binop} "|") or]
+    ;[({p:~literal binop} "^") xor]
+    [({p:~literal binop} "%") (ast:op std:modulo)]
+    ;[({p:~literal binop} "cmp") ???]
+    ;[({p:~literal binop} "cmpg") ???]
+    ;[({p:~literal binop} "cmpl") ???]
+    [({p:~literal binop} "==") (ast:op std:=)]
+    [({p:~literal binop} "!=") (ast:op (compose std:not std:=))]
+    [({p:~literal binop} ">") (ast:op std:>)]
+    [({p:~literal binop} ">=") (ast:op std:>=)]
+    [({p:~literal binop} "<") (ast:op std:<)]
+    [({p:~literal binop} "<=") (ast:op std:<=)]
+    ;[({p:~literal binop} "<<") ???]
+    ;[({p:~literal binop} ">>") ???]
+    ;[({p:~literal binop} ">>>") ???]
+    [({p:~literal binop} "+") (ast:op std:+)]
+    [({p:~literal binop} "-") (ast:op std:-)]
+    [({p:~literal binop} "*") (ast:op std:*)]
+    [({p:~literal binop} "/") (ast:op std:/)]))
 
 
 (define (build-ast-expr-immediate expr-imm-stx)

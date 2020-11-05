@@ -580,3 +580,44 @@
     "expr field reference 1")
 )
 
+(test-case "expr-binop"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    int x, y;"
+      "    bool z;"
+      "    y = x + 1;"
+      "    z = x > y;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "x") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "y") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "z") (ast:type-name "bool"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "y")))
+                (ast:expr (ast:expr-binary
+                  (ast:expr (ast:expr-var (ast:variable "x")))
+                  (ast:op +)
+                  (ast:expr (ast:expr-const (ast:const 1))))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "z")))
+                (ast:expr (ast:expr-binary
+                  (ast:expr (ast:expr-var (ast:variable "x")))
+                  (ast:op >)
+                  (ast:expr (ast:expr-var (ast:variable "y"))))))))))))
+    "expr field reference 1")
+)
+
