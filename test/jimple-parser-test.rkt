@@ -273,6 +273,30 @@
     "stmt assigment 2")
 )
 
+(test-case "stmt-new"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    B b;"
+      "    b = new B;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b") (ast:type-name "B"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-new (ast:variable "b"))))))))
+    "stmt new 1")
+)
+
 (test-case "stmt-identity"
   (check-equal?
     (build-ast-file (parse-to-stx (string-append-newline

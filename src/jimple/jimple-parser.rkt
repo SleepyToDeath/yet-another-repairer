@@ -266,6 +266,14 @@
   (p:syntax-parse stmt-ass-stx
     [({p:~literal assign_stmt}
         ({p:~literal variable} lhs-var)
+        ({p:~literal j_expression}
+           ({p:~literal simple_new} _)))
+     (ast:stat-new
+       (let ([lhs (build-ast-variable #'lhs-var)])
+         (ast:expr-var-name lhs)))]
+    ; All other cases
+    [({p:~literal assign_stmt}
+        ({p:~literal variable} lhs-var)
         ({p:~literal j_expression} rhs-expr))
      (ast:stat-ass
        (ast:lexpr (build-ast-variable #'lhs-var))
@@ -340,8 +348,12 @@
 
 (define (build-ast-expression expr-stx)
   (p:syntax-parse expr-stx
-    [({p:~literal new_expr} p:~rest _)
-     (std:error "New expression is not supported yet")]
+    [({p:~literal simple_new} _)
+     (build-ast-expr-new-simple expr-stx)]
+    [({p:~literal new_array} _ _)
+     (std:error "New array is not supported yet")]
+    [({p:~literal new_multiarray} p:~rest _)
+     (std:error "New multiarray is not supported yet")]
     [({p:~literal cast_expr} p:~rest _)
      (std:error "Cast expression is not supported yet")]
     [({p:~literal instanceof_expr} p:~rest _)
@@ -358,6 +370,10 @@
      (build-ast-expr-immediate #'imm)]))
 
 
+(define (build-ast-expr-new-simple expr-new-stx)
+  (std:error "Unreachable: simple new is handled in assignment"))
+
+
 (define (build-ast-expr-invoke expr-invoke-stx)
   (p:syntax-parse expr-invoke-stx
     [({p:~literal nonstatic_invoke_expr} p:~rest _)
@@ -365,7 +381,7 @@
     [({p:~literal static_invoke_expr} p:~rest _)
      (build-ast-expr-static-invoke expr-invoke-stx)]
     [({p:~literal dynamic_invoke_expr} p:~rest _)
-     (std:error "Not implemented yet")]))
+     (std:error "Dynamic invoke is not supported yet")]))
 
 
 (define (build-ast-expr-nonstatic-invoke expr-invoke-stx)

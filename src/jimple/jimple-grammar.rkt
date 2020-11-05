@@ -187,7 +187,7 @@ catch_clause
   ::= CATCH class_name FROM label_name TO label_name WITH label_name /SEMICOLON
 
 j_expression
-  ::= new_expr
+  ::= @new_expr
     | cast_expr
     | instanceof_expr
     | invoke_expr
@@ -197,9 +197,18 @@ j_expression
     | immediate
 
 new_expr
-  ::= NEW base_type
-    | NEWARRAY LPAREN nonvoid_type RPAREN fixed_array_descriptor
-    | NEWMULTIARRAY LPAREN base_type RPAREN array_descriptor+
+  ::= simple_new
+    | new_array
+    | new_multiarray
+
+simple_new
+  ::= /NEW base_type
+
+new_array
+  ::= /NEWARRAY /LPAREN nonvoid_type /RPAREN fixed_array_descriptor
+
+new_multiarray
+  ::= /NEWMULTIARRAY /LPAREN base_type /RPAREN array_descriptor+
 
 cast_expr
   ::= /LPAREN nonvoid_type /RPAREN immediate
