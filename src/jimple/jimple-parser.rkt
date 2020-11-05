@@ -366,8 +366,9 @@
      (ast:stat-static-call lhs cls-name func arg-types args)]
     [(ast:stat-virtual-call ret obj cls-name func arg-types args)
      (ast:stat-virtual-call lhs obj cls-name func arg-types args)]
-    [(ast:stat-special-call ret obj cls-name func arg-types args)
-     (ast:stat-special-call lhs obj cls-name func arg-types args)]
+    ; specialinvoke does not have a return value
+    ;[(ast:stat-special-call ret obj cls-name func arg-types args)
+    ; (ast:stat-special-call lhs obj cls-name func arg-types args)]
     [else (std:error "Unknown invoke type")]))
 
 
@@ -426,7 +427,7 @@
                       (ast:arguments-caller (ast:argument-caller-list null)))])
        (case cmd-str
          [("virtualinvoke") (ast:stat-virtual-call void-return-var receiver cls-name m-name param-types args)]
-         [("specialinvoke") (ast:stat-special-call void-return-var receiver cls-name m-name param-types args)]
+         [("specialinvoke") (ast:stat-special-call receiver receiver cls-name m-name param-types args)]
          [("interfaceinvoke") (ast:stat-virtual-call void-return-var receiver cls-name m-name param-types args)]
          [else (std:error (std:string-append "Unknown invoke type: " cmd-str))]))]))
 

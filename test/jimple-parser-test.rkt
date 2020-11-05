@@ -504,7 +504,7 @@
           (ast:stats
             (ast:stat-list (list
               (ast:stat (ast:stat-special-call
-                void-return-var
+                (ast:variable "r0")
                 (ast:variable "r0")
                 (ast:type-name "java.lang.Object")
                 (ast:func-name "<init>")
