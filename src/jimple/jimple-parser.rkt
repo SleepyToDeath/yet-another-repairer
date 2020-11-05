@@ -346,8 +346,8 @@
      (std:error "Cast expression is not supported yet")]
     [({p:~literal instanceof_expr} p:~rest _)
      (std:error "Instanceof expression is not supported yet")]
-    [({p:~literal array_ref} p:~rest _)
-     (std:error "Array reference is not supported yet")]
+    [({p:~literal array_ref} _ _)
+     (build-ast-expr-array-ref expr-stx)]
     [({p:~literal field_ref} p:~rest _)
      (build-ast-expr-field-ref expr-stx)]
     [({p:~literal binop_expr} _ _ _)
@@ -445,6 +445,16 @@
      (ast:dexpr (build-ast-expr-immediate #'imm))]))
 
 
+(define (build-ast-expr-array-ref expr-array-stx)
+  (p:syntax-parse expr-array-stx
+    [({p:~literal array_ref}
+        name
+        ({p:~literal immediate} imm))
+     (let ([base (build-ast-name #'name)]
+           [index (build-ast-expr-immediate #'imm)])
+       (ast:expr-array base (ast:expr index)))]))
+
+
 (define (build-ast-expr-field-ref expr-field-stx)
   (p:syntax-parse expr-field-stx
     [({p:~literal field_ref} (p:~optional name) signature)
@@ -524,7 +534,7 @@
 (define (build-ast-variable var-stx)
   (p:syntax-parse var-stx
     [({p:~literal array_ref} _ _)
-     (std:error "not implemented yet")]
+     (build-ast-expr-array-ref var-stx)]
     [({p:~literal field_ref} p:~rest _)
      (build-ast-expr-field-ref var-stx)]
     [({p:~literal name} _)

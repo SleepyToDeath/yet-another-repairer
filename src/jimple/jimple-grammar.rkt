@@ -255,8 +255,7 @@ reference
     | field_ref
 
 array_ref
-  ::= IDENTIFIER fixed_array_descriptor
-    | QUOTED_NAME fixed_array_descriptor
+  ::= name @fixed_array_descriptor
 
 field_ref
   ::= local_name /DOT field_signature
@@ -266,7 +265,7 @@ field_signature
   ::= /CMPLT class_name /COLON j_type name /CMPGT
 
 fixed_array_descriptor
-  ::= LBRACKET immediate RBRACKET
+  ::= /LBRACKET immediate /RBRACKET
 
 arg_list
   ::= immediate (/COMMA immediate)*
