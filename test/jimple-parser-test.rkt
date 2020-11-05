@@ -212,9 +212,9 @@
                 (ast:variable-n-type (ast:variable "b") (ast:type-name "int"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-ass
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "a")))
-                (ast:expr (ast:expr-var (ast:variable "b"))))))))))
+                (ast:expr (ast:expr-var (ast:variable "b")))))))))))
     "stmt assigment 1")
   (check-equal?
     (build-ast-file (parse-to-stx (string-append-newline
@@ -253,24 +253,24 @@
                 (ast:variable-n-type (ast:variable "d") (ast:type-name "A"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-ass
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "a1")))
-                (ast:expr (ast:expr-const (ast:const 1))))
-              (ast:stat-ass
+                (ast:expr (ast:expr-const (ast:const 1)))))
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "a2")))
-                (ast:expr (ast:expr-const (ast:const -1))))
-              (ast:stat-ass
+                (ast:expr (ast:expr-const (ast:const -1)))))
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "b1")))
-                (ast:expr (ast:expr-const (ast:const 1.5))))
-              (ast:stat-ass
+                (ast:expr (ast:expr-const (ast:const 1.5)))))
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "b2")))
-                (ast:expr (ast:expr-const (ast:const -1.5))))
-              (ast:stat-ass
+                (ast:expr (ast:expr-const (ast:const -1.5)))))
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "c")))
-                (ast:expr (ast:expr-const (ast:const "str"))))
-              (ast:stat-ass
+                (ast:expr (ast:expr-const (ast:const "str")))))
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "d")))
-                (ast:expr (ast:expr-const (ast:const "null"))))))))))
+                (ast:expr (ast:expr-const (ast:const "null")))))))))))
     "stmt assigment 2")
 )
 
@@ -294,7 +294,7 @@
                 (ast:variable-n-type (ast:variable "b") (ast:type-name "B"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-new (ast:variable "b"))))))))
+              (ast:stat (ast:stat-new (ast:variable "b")))))))))
     "stmt new 1")
 )
 
@@ -318,9 +318,9 @@
                 (ast:variable-n-type (ast:variable "r0") (ast:type-name "A"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-ass
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "r0")))
-                (ast:expr (ast:expr-var (ast:variable "@this"))))))))))
+                (ast:expr (ast:expr-var (ast:variable "@this")))))))))))
     "stmt identity 1")
   (check-equal?
     (build-ast-file (parse-to-stx (string-append-newline
@@ -344,9 +344,9 @@
                 (ast:variable-n-type (ast:variable "r1") (ast:type-name "int"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-ass
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "r1")))
-                (ast:expr (ast:expr-var (ast:variable "@parameter0"))))))))))
+                (ast:expr (ast:expr-var (ast:variable "@parameter0")))))))))))
     "stmt identity 2")
 )
 
@@ -374,9 +374,9 @@
                 (ast:variable-n-type (ast:variable "r1") (ast:type-name "int"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-ass
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "r1")))
-                (ast:expr (ast:expr-var (ast:variable "@parameter0"))))))))))
+                (ast:expr (ast:expr-var (ast:variable "@parameter0")))))))))))
     "stmt identity no type 1")
 )
 
@@ -396,7 +396,7 @@
           (ast:variable-definitions (ast:variable-definition-list null))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-label (ast:label "l1"))))))))
+              (ast:stat (ast:stat-label (ast:label "l1")))))))))
     "stmt label 1")
 )
 
@@ -416,9 +416,9 @@
           (ast:variable-definitions (ast:variable-definition-list null))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-jmp
+              (ast:stat (ast:stat-jmp
                 (ast:expr (ast:expr-const (ast:const #t)))
-                (ast:label "l1"))))))))
+                (ast:label "l1")))))))))
     "stmt goto 1")
 )
 
@@ -438,7 +438,7 @@
           (ast:variable-definitions (ast:variable-definition-list null))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-nop (ast:nop #f))))))))
+              (ast:stat (ast:stat-nop (ast:nop #f)))))))))
     "stmt nop 1")
 )
 
@@ -458,7 +458,7 @@
           (ast:variable-definitions (ast:variable-definition-list null))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-ret (ast:dexpr (ast:expr-const void-return-value)))))))))
+              (ast:stat (ast:stat-ret (ast:dexpr (ast:expr-const void-return-value))))))))))
     "stmt return 1")
   (check-equal?
     (build-ast-file (parse-to-stx (string-append-newline
@@ -479,7 +479,7 @@
                 (ast:variable-n-type (ast:variable "a") (ast:type-name "int"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-ret (ast:dexpr (ast:expr-var (ast:variable "a"))))))))))
+              (ast:stat (ast:stat-ret (ast:dexpr (ast:expr-var (ast:variable "a")))))))))))
     "stmt return 2")
 )
 
@@ -503,13 +503,13 @@
                 (ast:variable-n-type (ast:variable "r0") (ast:type-name "T"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-special-call
+              (ast:stat (ast:stat-special-call
                 void-return-var
                 (ast:variable "r0")
                 (ast:type-name "java.lang.Object")
                 (ast:func-name "<init>")
                 (ast:types (ast:type-list null))
-                (ast:arguments-caller (ast:argument-caller-list null)))))))))
+                (ast:arguments-caller (ast:argument-caller-list null))))))))))
     "stmt invoke 1")
   (check-equal?
     (build-ast-file (parse-to-stx (string-append-newline
@@ -532,7 +532,7 @@
               (ast:variable-definition (ast:variable-n-type (ast:variable "b") (ast:type-name "int"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-virtual-call
+              (ast:stat (ast:stat-virtual-call
                 void-return-var
                 (ast:variable "r0")
                 (ast:type-name "T")
@@ -540,7 +540,7 @@
                 (ast:types (ast:type-list (list (ast:type-name "int") (ast:type-name "int"))))
                 (ast:arguments-caller (ast:argument-caller-list (list
                   (ast:dexpr (ast:expr-var (ast:variable "a")))
-                  (ast:dexpr (ast:expr-var (ast:variable "b")))))))))))))
+                  (ast:dexpr (ast:expr-var (ast:variable "b"))))))))))))))
     "stmt invoke 2")
   (check-equal?
     (build-ast-file (parse-to-stx (string-append-newline
@@ -560,13 +560,13 @@
               (ast:variable-definition (ast:variable-n-type (ast:variable "a") (ast:type-name "int"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-static-call
+              (ast:stat (ast:stat-static-call
                 void-return-var
                 (ast:type-name "T")
                 (ast:func-name "baz")
                 (ast:types (ast:type-list (list (ast:type-name "int"))))
                 (ast:arguments-caller (ast:argument-caller-list (list
-                  (ast:dexpr (ast:expr-var (ast:variable "a")))))))))))))
+                  (ast:dexpr (ast:expr-var (ast:variable "a"))))))))))))))
     "stmt invoke 3")
   (check-equal?
     (build-ast-file (parse-to-stx (string-append-newline
@@ -590,7 +590,7 @@
               (ast:variable-definition (ast:variable-n-type (ast:variable "b") (ast:type-name "int"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-virtual-call
+              (ast:stat (ast:stat-virtual-call
                 (ast:variable "x")
                 (ast:variable "r0")
                 (ast:type-name "T")
@@ -598,7 +598,7 @@
                 (ast:types (ast:type-list (list (ast:type-name "int") (ast:type-name "int"))))
                 (ast:arguments-caller (ast:argument-caller-list (list
                   (ast:dexpr (ast:expr-var (ast:variable "a")))
-                  (ast:dexpr (ast:expr-var (ast:variable "b")))))))))))))
+                  (ast:dexpr (ast:expr-var (ast:variable "b"))))))))))))))
     "stmt invoke 4")
 )
 
@@ -628,12 +628,12 @@
                 (ast:variable-n-type (ast:variable "z") (ast:type-name "int"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-ass
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "y")))
-                (ast:expr (ast:expr-array (ast:variable "x") (ast:expr (ast:expr-var (ast:variable "z"))))))
-              (ast:stat-ass
+                (ast:expr (ast:expr-array (ast:variable "x") (ast:expr (ast:expr-var (ast:variable "z")))))))
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-array (ast:variable "x") (ast:expr (ast:expr-var (ast:variable "y")))))
-                (ast:expr (ast:expr-var (ast:variable "z"))))))))))
+                (ast:expr (ast:expr-var (ast:variable "z")))))))))))
     "expr array reference 1")
 )
 
@@ -663,12 +663,12 @@
                 (ast:variable-n-type (ast:variable "b") (ast:type-name "B"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-ass
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-field (ast:variable "b") (ast:type-name "B") (ast:field "f1")))
-                (ast:expr (ast:expr-var (ast:variable "x"))))
-              (ast:stat-ass
+                (ast:expr (ast:expr-var (ast:variable "x")))))
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "y")))
-                (ast:expr (ast:expr-field (ast:variable "b") (ast:type-name "B") (ast:field "f2"))))))))))
+                (ast:expr (ast:expr-field (ast:variable "b") (ast:type-name "B") (ast:field "f2")))))))))))
     "expr field reference 1")
 )
 
@@ -698,18 +698,18 @@
                 (ast:variable-n-type (ast:variable "z") (ast:type-name "bool"))))))
           (ast:stats
             (ast:stat-list (list
-              (ast:stat-ass
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "y")))
                 (ast:expr (ast:expr-binary
                   (ast:expr (ast:expr-var (ast:variable "x")))
                   (ast:op +)
-                  (ast:expr (ast:expr-const (ast:const 1))))))
-              (ast:stat-ass
+                  (ast:expr (ast:expr-const (ast:const 1)))))))
+              (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "z")))
                 (ast:expr (ast:expr-binary
                   (ast:expr (ast:expr-var (ast:variable "x")))
                   (ast:op >)
-                  (ast:expr (ast:expr-var (ast:variable "y"))))))))))))
+                  (ast:expr (ast:expr-var (ast:variable "y")))))))))))))
     "expr binary operation 1")
 )
 

@@ -240,6 +240,9 @@
 
 
 (define (build-ast-statement stmt-stx)
+  (ast:stat (build-ast-statement-dispatch stmt-stx)))
+
+(define (build-ast-statement-dispatch stmt-stx)
   (p:syntax-parse stmt-stx
     [({p:~literal assign_stmt} _ _)
      (build-ast-stmt-ass stmt-stx)]
@@ -286,7 +289,7 @@
         ({p:~literal j_expression} rhs-expr))
      (ast:stat-ass
        (ast:lexpr (build-ast-variable #'lhs-var))
-       (ast:expr (build-ast-expression #'rhs-expr)))]))
+       (build-ast-expression #'rhs-expr))]))
 
 
 (define (build-ast-stmt-ident stmt-ident-stx)
@@ -320,7 +323,7 @@
         ({p:~literal bool_expr} expr)
         ({p:~literal label_name} name))
      (ast:stat-jmp
-       (build-ast-expr-binop #'expr)
+       (build-ast-expression #'expr)
        (ast:label (std:syntax-e #'name)))]))
 
 
@@ -369,6 +372,9 @@
 
 
 (define (build-ast-expression expr-stx)
+  (ast:expr (build-ast-expression-dispatch expr-stx)))
+
+(define (build-ast-expression-dispatch expr-stx)
   (p:syntax-parse expr-stx
     [({p:~literal simple_new} _)
      (build-ast-expr-new-simple expr-stx)]
