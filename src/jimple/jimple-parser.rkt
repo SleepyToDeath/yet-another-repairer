@@ -10,6 +10,7 @@
 (require (prefix-in l: racket/list))
 (require (prefix-in s: racket/string))
 (require (prefix-in p: syntax/parse))
+(require (prefix-in r: rosette/lib/match))
 (require "jimple-grammar.rkt")
 (require "jimple-lexer.rkt")
 (require "../syntax.rkt")
@@ -264,6 +265,7 @@
 
 (define (build-ast-stmt-ass stmt-ass-stx)
   (p:syntax-parse stmt-ass-stx
+    ; simple new
     [({p:~literal assign_stmt}
         ({p:~literal variable} lhs-var)
         ({p:~literal j_expression}
@@ -271,7 +273,13 @@
      (ast:stat-new
        (let ([lhs (build-ast-variable #'lhs-var)])
          (ast:expr-var-name lhs)))]
-    ; All other cases
+    ; invoke statement with non-void return
+    [({p:~literal assign_stmt}
+        ({p:~literal variable} lhs-var)
+        ({p:~literal j_expression}
+           ({p:~literal invoke_expr} expr)))
+     (build-ast-stmt-invoke-return #'(invoke_stmt (invoke_expr expr)) #'lhs-var)]
+    ; all other cases
     [({p:~literal assign_stmt}
         ({p:~literal variable} lhs-var)
         ({p:~literal j_expression} rhs-expr))
@@ -344,6 +352,19 @@
     [({p:~literal invoke_stmt}
         ({p:~literal invoke_expr} invoke-expr))
      (build-ast-expr-invoke #'invoke-expr)]))
+
+
+(define (build-ast-stmt-invoke-return stmt-invoke-stx return-var-stx)
+  (define stmt (build-ast-stmt-invoke stmt-invoke-stx))
+  (define lhs (ast:expr-var-name (build-ast-variable return-var-stx)))
+  (r:match stmt
+    [(ast:stat-static-call ret cls-name func arg-types args)
+     (ast:stat-static-call lhs cls-name func arg-types args)]
+    [(ast:stat-virtual-call ret obj cls-name func arg-types args)
+     (ast:stat-virtual-call lhs obj cls-name func arg-types args)]
+    [(ast:stat-special-call ret obj cls-name func arg-types args)
+     (ast:stat-special-call lhs obj cls-name func arg-types args)]
+    [else (std:error "Unknown invoke type")]))
 
 
 (define (build-ast-expression expr-stx)
