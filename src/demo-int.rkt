@@ -1,6 +1,7 @@
 #lang rosette/safe
 
 (require (prefix-in std: racket/base))
+(require racket/pretty)
 (require "string-id.rkt")
 (require "syntax.rkt")
 (require "syntax-jimple.rkt")
@@ -61,7 +62,7 @@
   "  label1:"
   "    virtualinvoke $r0.<A: void set(int)>(20);"
   "  label2:"
-;  "    $i1 = virtualinvoke $r0.<A: int get()>();"
+  "    $i1 = virtualinvoke $r0.<A: int get()>();"
   "    return $i1;"
   "  }"
   "}"))))
@@ -71,7 +72,7 @@
 
 (ast-check prog)
 
-prog
+(pretty-print prog)
 
 ;(define mac (ast->machine prog))
 
