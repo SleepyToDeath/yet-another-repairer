@@ -154,23 +154,26 @@
 
 ;(struct function (name prog lmap args locals) #:transparent)
 (define (print-func f indent)
-	(begin
-		(display indent)
-		(println (function-name f))
-		(display indent)
-		(println (function-prog f))
-		(display indent)
-		(println (function-lmap f))
-		(display indent)
-		(println (function-args f))
-		(display indent)
-		(println (function-locals f))))
+	(if (function? f)
+		(begin
+			(display indent)
+			(println (function-name f))
+			(display indent)
+			(println (function-prog f))
+			(display indent)
+			(println (function-lmap f))
+			(display indent)
+			(println (function-args f))
+			(display indent)
+			(println (function-locals f)))
+		(println f)))
 
 
 ;======================== Execution Interface ===========================
 ;machine(init) X list of names -> machine(fin)
 (define (compute mac)
-	(function-call mac (machine-boot mac) null))
+	(define mac-init (build-virtual-table mac))
+	(function-call mac-init (machine-boot mac-init) null))
 
 (define (function-call mac func args)
 	(define mac-reset (std:struct-copy machine mac [pc pc-init][mem (memory-spush (machine-mem mac))]))
@@ -210,7 +213,7 @@
 ;machine X list of (key, value) -> boolean
 (define (compare-output mac output)
 	(define mem0 (machine-mem mac))
-	(foldl (lambda (kv fml-cur) (= (cdr kv) (memory-sread mem0 (string-id (car kv))))) #t output))
+	(foldl (lambda (kv fml-cur) (and fml-cur (= (cdr kv) (memory-sread mem0 (string-id (car kv)))))) #t output))
 
 ;machine X list of string(output var names)
 ;(define (get-output mac output-names)
@@ -226,7 +229,7 @@
 	(define cmap (foldl (lambda (cls cm) (imap-set cm (class-name cls) cls)) imap-empty classes))
 	(define boot (build-boot-func))
 	(define mac-init (machine boot classes cmap memory-empty pc-init))
-	(build-virtual-table classes mac-init))
+	mac-init)
 
 (define (ast->class ast)
 	(define rhs (class-def-rhs ast))
@@ -280,10 +283,10 @@
 		[(stat s) (ast->instruction s lmap line-num)]
 		[(stat-ass target rvalue) 
 			(begin
-			(println target)
-			(display "\n")
-			(println rvalue)
-			(display "\n")
+;			(println target)
+;			(display "\n")
+;			(println rvalue)
+;			(display "\n")
 			(cons (inst-ass target (ast->expression rvalue)) lmap))]
 		[(stat-jmp condition target) (cons (inst-jmp (ast->expression condition) (label-v target)) lmap)]
 		[(stat-label here) (cons #f (imap-set lmap (label-v here) line-num))]
@@ -328,7 +331,8 @@
 	(define iret (inst-ret (iexpr-var var-ret-name)))
 	(function func-name-boot (list icall iret) imap-empty null (list (cons var-ret-name "int"))))
 
-(define (build-virtual-table classes mac) 
+(define (build-virtual-table mac) 
+	(define classes (machine-classes mac))
 	(define (process-class cls mem)
 		(define cls-name (class-name cls))
 
@@ -404,13 +408,13 @@
 		(define mem0 (machine-mem m))
 		(define v-new (expr-eval (inst-ass-vr i) m))
 
-		(display "\n")
-		(println (inst-ass-vl i))
-		(display "\n")
-		(println (inst-ass-vr i))
-		(display "\n")
-		(println v-new)
-		(display "\n")
+;		(display "\n")
+;		(println (inst-ass-vl i))
+;		(display "\n")
+;		(println (inst-ass-vr i))
+;		(display "\n")
+;		(println v-new)
+;		(display "\n")
 ;		(println v-new)
 		(define rhs (lexpr-rhs (inst-ass-vl i)))
 		(define mem-new 
