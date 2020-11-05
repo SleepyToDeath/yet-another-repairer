@@ -14,10 +14,16 @@
                  (std:string-append line "\n"))
          strs)))
 
+(define class-Object (p:build-ast-file (p:parse-to-stx (string-append-newline
+  "public class java.lang.Object {"
+  "  public static void <init>() {"
+  "  }"
+  "}"))))
+
 (define class-A (p:build-ast-file (p:parse-to-stx (string-append-newline
   "class A extends java.lang.Object {"
   "  private int a;"
-  "  void <init>() {"
+  "  static void <init>() {"
   "    A r0;"
   "    r0 := @this: A;"
   "    specialinvoke r0.<java.lang.Object: void <init>()>();"
@@ -42,7 +48,7 @@
 
 (define class-T (p:build-ast-file (p:parse-to-stx (string-append-newline
   "public class T extends java.lang.Object {"
-  "  public void <init>() {"
+  "  public static void <init>() {"
   "    T r0;"
   "    r0 := @this: T;"
   "    specialinvoke r0.<java.lang.Object: void <init>()>();"
@@ -65,22 +71,25 @@
   "    $i1 = virtualinvoke $r0.<A: int get()>();"
   "    return $i1;"
   "  }"
+  "  public static int main() {"  
+  "    T $r0;"
+  "    int i0;"
+  "    $r0 = new T;"
+  "    specialinvoke $r0.<T: void <init>()>();"
+  "    i0 = virtualinvoke $r0.<T: int foo(int)>(15);"
+  "    return i0;"
+  "  }"
   "}"))))
 
 (define prog (program
-	(class-list (list class-A class-T))))
+	(class-list (list class-Object class-A class-T))))
 
 (ast-check prog)
 
 (pretty-print prog)
 
-;(define mac (ast->machine prog))
+(define input null)
+(define output (list (cons var-ret-name 10)))
 
-;(define mac-in (assign-input mac (list (cons "var-1" 1) (cons "var-2" 2))))
-
-;(define mac-comp (compute mac-in))
-
-;(compare-output mac-comp (list (cons var-ret-name 3)))
-
-;(println string-id-map)
+(compare-output (compute (assign-input (ast->machine prog) input)) output)
 
