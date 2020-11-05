@@ -18,7 +18,7 @@
 
 
 ;============ Constants ============
-(define void-return-value (ast:const "__no_return"))
+(define void-return-value (ast:const -233))
 (define void-return-var (ast:variable "__void_return"))
 (define void-receiver (ast:variable "__no_receiver"))
 (define param-prefix "@parameter")
@@ -69,11 +69,11 @@
                (ast:type-name #f))
            (if (p:attribute impls)
                (build-ast-implements #'impls)
-               (ast:interface-implements null))
-           (ast:field-declares global-list)
-           (ast:field-declares field-list)
-           (ast:function-declares static-func-list)
-           (ast:function-declares virtual-func-list))))]))
+               (ast:interface-implements (ast:interface-name-list null)))
+           (ast:field-declares (ast:field-list global-list))
+           (ast:field-declares (ast:field-list field-list))
+           (ast:function-declares (ast:function-list static-func-list))
+           (ast:function-declares (ast:function-list virtual-func-list)))))]))
 
 
 (define (build-ast-type-name class-name-stx)
@@ -86,7 +86,8 @@
   (p:syntax-parse implements-stx
     [({p:~literal class_name_list} names ...)
      (ast:interface-implements
-       (map build-ast-type-name (std:syntax->list #'(names ...))))]))
+       (ast:interface-name-list
+         (map build-ast-type-name (std:syntax->list #'(names ...)))))]))
 
 
 (define (build-ast-member member-stx)

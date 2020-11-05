@@ -19,22 +19,23 @@
                   (ast:class-default
                     (ast:type-name "A")
                     (ast:type-name #f)
-                    (ast:interface-implements null)
-                    (ast:field-declares null)
-                    (ast:field-declares null)
-                    (ast:function-declares null)
-                    (ast:function-declares null)))
+                    (ast:interface-implements (ast:interface-name-list null))
+                    (ast:field-declares (ast:field-list null))
+                    (ast:field-declares (ast:field-list null))
+                    (ast:function-declares (ast:function-list null))
+                    (ast:function-declares (ast:function-list null))))
                 "file test 1")
   (check-equal? (build-ast-file (parse-to-stx "public class A extends B implements C, D {}"))
                 (ast:class-def
                   (ast:class-default
                     (ast:type-name "A")
                     (ast:type-name "B")
-                    (ast:interface-implements (list (ast:type-name "C") (ast:type-name "D")))
-                    (ast:field-declares null)
-                    (ast:field-declares null)
-                    (ast:function-declares null)
-                    (ast:function-declares null)))
+                    (ast:interface-implements
+                      (ast:interface-name-list (list (ast:type-name "C") (ast:type-name "D"))))
+                    (ast:field-declares (ast:field-list null))
+                    (ast:field-declares (ast:field-list null))
+                    (ast:function-declares (ast:function-list null))
+                    (ast:function-declares (ast:function-list null))))
                 "file test 2")
 )
 
@@ -49,11 +50,11 @@
                   (ast:class-default
                     (ast:type-name "A")
                     (ast:type-name #f)
-                    (ast:interface-implements null)
-                    (ast:field-declares (list (ast:field "a")))
-                    (ast:field-declares (list (ast:field "b") (ast:field "c")))
-                    (ast:function-declares null)
-                    (ast:function-declares null)))
+                    (ast:interface-implements (ast:interface-name-list null))
+                    (ast:field-declares (ast:field-list (list (ast:field "a"))))
+                    (ast:field-declares (ast:field-list (list (ast:field "b") (ast:field "c"))))
+                    (ast:function-declares (ast:function-list null))
+                    (ast:function-declares (ast:function-list null))))
                 "field test 1")
 )
 
@@ -66,17 +67,17 @@
                   (ast:class-default
                     (ast:type-name "A")
                     (ast:type-name #f)
-                    (ast:interface-implements null)
-                    (ast:field-declares null)
-                    (ast:field-declares null)
-                    (ast:function-declares null)
-                    (ast:function-declares (list
+                    (ast:interface-implements (ast:interface-name-list null))
+                    (ast:field-declares (ast:field-list null))
+                    (ast:field-declares (ast:field-list null))
+                    (ast:function-declares (ast:function-list null))
+                    (ast:function-declares (ast:function-list (list
                       (ast:function-declare
                         (ast:function-content
                           (ast:func-name "foo")
                           (ast:variable-definitions (ast:variable-definition-list null))
                           (ast:variable-definitions (ast:variable-definition-list null))
-                          (ast:stats (ast:stat-list null))))))))
+                          (ast:stats (ast:stat-list null)))))))))
                 "method test 1")
   (check-equal? (build-ast-file (parse-to-stx (string-append-newline
                     "public class A {"
@@ -87,10 +88,10 @@
                   (ast:class-default
                     (ast:type-name "A")
                     (ast:type-name #f)
-                    (ast:interface-implements null)
-                    (ast:field-declares null)
-                    (ast:field-declares null)
-                    (ast:function-declares (list
+                    (ast:interface-implements (ast:interface-name-list null))
+                    (ast:field-declares (ast:field-list null))
+                    (ast:field-declares (ast:field-list null))
+                    (ast:function-declares (ast:function-list (list
                       (ast:function-declare
                         (ast:function-content
                           (ast:func-name "bar")
@@ -105,8 +106,8 @@
                                   (ast:variable "@parameter1")
                                   (ast:type-name "java.util.List"))))))
                           (ast:variable-definitions (ast:variable-definition-list null))
-                          (ast:stats (ast:stat-list null))))))
-                    (ast:function-declares (list
+                          (ast:stats (ast:stat-list null)))))))
+                    (ast:function-declares (ast:function-list (list
                       (ast:function-declare
                         (ast:function-content
                           (ast:func-name "foo")
@@ -121,7 +122,7 @@
                                   (ast:variable "@parameter1")
                                   (ast:type-name "double"))))))
                           (ast:variable-definitions (ast:variable-definition-list null))
-                          (ast:stats (ast:stat-list null))))))))
+                          (ast:stats (ast:stat-list null)))))))))
                 "method test 2")
 )
 
@@ -130,11 +131,11 @@
     (ast:class-default
       (ast:type-name class-name)
       (ast:type-name #f)
-      (ast:interface-implements null)
-      (ast:field-declares null)
-      (ast:field-declares null)
-      (ast:function-declares null)
-      (ast:function-declares (list func-decl)))))
+      (ast:interface-implements (ast:interface-name-list null))
+      (ast:field-declares (ast:field-list null))
+      (ast:field-declares (ast:field-list null))
+      (ast:function-declares (ast:function-list null))
+      (ast:function-declares (ast:function-list (list func-decl))))))
 
 
 (test-case "declaration"
