@@ -219,8 +219,16 @@
     (build-ast-file (parse-to-stx (string-append-newline
       "public class A {"
       "  public void foo() {"
-      "    java.lang.String a;"
-      "    a = \"bbb\";"
+      "    int a1, a2;"
+      "    double b1, b2;"
+      "    java.lang.String c;"
+      "    A d;"
+      "    a1 = 1;"
+      "    a2 = -1;"
+      "    b1 = 1.5;"
+      "    b2 = -1.5;"
+      "    c = \"str\";"
+      "    d = null;"
       "  }"
       "}")))
     (single-func-in-class "A"
@@ -231,13 +239,144 @@
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
-                (ast:variable-n-type (ast:variable "a") (ast:type-name "java.lang.String"))))))
+                (ast:variable-n-type (ast:variable "a1") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "a2") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b1") (ast:type-name "double")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b2") (ast:type-name "double")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "c") (ast:type-name "java.lang.String")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "d") (ast:type-name "A"))))))
           (ast:stats
             (ast:stat-list (list
               (ast:stat-ass
-                (ast:lexpr (ast:expr-var (ast:variable "a")))
-                (ast:expr (ast:expr-const (ast:const "bbb"))))))))))
+                (ast:lexpr (ast:expr-var (ast:variable "a1")))
+                (ast:expr (ast:expr-const (ast:const 1))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "a2")))
+                (ast:expr (ast:expr-const (ast:const -1))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "b1")))
+                (ast:expr (ast:expr-const (ast:const 1.5))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "b2")))
+                (ast:expr (ast:expr-const (ast:const -1.5))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "c")))
+                (ast:expr (ast:expr-const (ast:const "str"))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "d")))
+                (ast:expr (ast:expr-const (ast:const "null"))))))))))
     "stmt assigment 2")
+)
+
+(test-case "stmt-new"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    B b;"
+      "    b = new B;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b") (ast:type-name "B"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-new (ast:variable "b"))))))))
+    "stmt new 1")
+)
+
+(test-case "stmt-identity"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    A r0;"
+      "    r0 := @this: A;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "r0") (ast:type-name "A"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "r0")))
+                (ast:expr (ast:expr-var (ast:variable "@this"))))))))))
+    "stmt identity 1")
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo(int) {"
+      "    int r1;"
+      "    r1 := @parameter0: int;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "@parameter0") (ast:type-name "int"))))))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "r1") (ast:type-name "int"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "r1")))
+                (ast:expr (ast:expr-var (ast:variable "@parameter0"))))))))))
+    "stmt identity 2")
+)
+
+
+(test-case "stmt-identity-nt"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo(int) {"
+      "    int r1;"
+      "    r1 := @parameter0;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "@parameter0") (ast:type-name "int"))))))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "r1") (ast:type-name "int"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "r1")))
+                (ast:expr (ast:expr-var (ast:variable "@parameter0"))))))))))
+    "stmt identity no type 1")
 )
 
 (test-case "stmt-label"
@@ -428,5 +567,116 @@
                 (ast:arguments-caller (ast:argument-caller-list (list
                   (ast:dexpr (ast:expr-var (ast:variable "a")))))))))))))
     "stmt invoke 3")
+)
+
+(test-case "expr-array-ref"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    int[] x;"
+      "    int y, z;"
+      "    y = x[z];"
+      "    x[y] = z;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "x") (ast:type-name "int[]")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "y") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "z") (ast:type-name "int"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "y")))
+                (ast:expr (ast:expr-array (ast:variable "x") (ast:expr (ast:expr-var (ast:variable "z"))))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-array (ast:variable "x") (ast:expr (ast:expr-var (ast:variable "y")))))
+                (ast:expr (ast:expr-var (ast:variable "z"))))))))))
+    "expr array reference 1")
+)
+
+(test-case "expr-field-ref"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    int x, y;"
+      "    B b;"
+      "    b.<B: int f1> = x;"
+      "    y = b.<B: int f2>;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "x") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "y") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "b") (ast:type-name "B"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-field (ast:variable "b") (ast:type-name "B") (ast:field "f1")))
+                (ast:expr (ast:expr-var (ast:variable "x"))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "y")))
+                (ast:expr (ast:expr-field (ast:variable "b") (ast:type-name "B") (ast:field "f2"))))))))))
+    "expr field reference 1")
+)
+
+(test-case "expr-binop"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    int x, y;"
+      "    bool z;"
+      "    y = x + 1;"
+      "    z = x > y;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "x") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "y") (ast:type-name "int")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "z") (ast:type-name "bool"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "y")))
+                (ast:expr (ast:expr-binary
+                  (ast:expr (ast:expr-var (ast:variable "x")))
+                  (ast:op +)
+                  (ast:expr (ast:expr-const (ast:const 1))))))
+              (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "z")))
+                (ast:expr (ast:expr-binary
+                  (ast:expr (ast:expr-var (ast:variable "x")))
+                  (ast:op >)
+                  (ast:expr (ast:expr-var (ast:variable "y"))))))))))))
+    "expr binary operation 1")
 )
 

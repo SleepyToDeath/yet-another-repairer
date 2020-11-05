@@ -19,6 +19,7 @@
 ;============ Constants ============
 (define void-return-value (ast:const "__no_return"))
 (define void-return-var (ast:variable "__void_return"))
+(define void-receiver (ast:variable "__no_receiver"))
 (define param-prefix "@parameter")
 
 
@@ -240,6 +241,10 @@
   (p:syntax-parse stmt-stx
     [({p:~literal assign_stmt} _ _)
      (build-ast-stmt-ass stmt-stx)]
+    [({p:~literal identity_stmt} _ _ _)
+     (build-ast-stmt-ident stmt-stx)]
+    [({p:~literal identity_no_type_stmt} _ _)
+     (build-ast-stmt-ident-nt stmt-stx)]
     [({p:~literal label_stmt} _)
      (build-ast-stmt-label stmt-stx)]
     [({p:~literal goto_stmt} _)
@@ -261,10 +266,34 @@
   (p:syntax-parse stmt-ass-stx
     [({p:~literal assign_stmt}
         ({p:~literal variable} lhs-var)
+        ({p:~literal j_expression}
+           ({p:~literal simple_new} _)))
+     (ast:stat-new
+       (let ([lhs (build-ast-variable #'lhs-var)])
+         (ast:expr-var-name lhs)))]
+    ; All other cases
+    [({p:~literal assign_stmt}
+        ({p:~literal variable} lhs-var)
         ({p:~literal j_expression} rhs-expr))
      (ast:stat-ass
        (ast:lexpr (build-ast-variable #'lhs-var))
        (ast:expr (build-ast-expression #'rhs-expr)))]))
+
+
+(define (build-ast-stmt-ident stmt-ident-stx)
+  (p:syntax-parse stmt-ident-stx
+    [({p:~literal identity_stmt} lhs-var rhs-var rhs-type)
+     (ast:stat-ass
+       (ast:lexpr (build-ast-variable #'lhs-var))
+       (ast:expr (ast:expr-var (build-ast-at-ident #'rhs-var))))]))
+
+
+(define (build-ast-stmt-ident-nt stmt-ident-nt-stx)
+  (p:syntax-parse stmt-ident-nt-stx
+    [({p:~literal identity_no_type_stmt} lhs-var rhs-var)
+     (ast:stat-ass
+       (ast:lexpr (build-ast-variable #'lhs-var))
+       (ast:expr (ast:expr-var (build-ast-at-ident #'rhs-var))))]))
 
 
 (define (build-ast-stmt-goto stmt-goto-stx)
@@ -282,7 +311,7 @@
         ({p:~literal bool_expr} expr)
         ({p:~literal label_name} name))
      (ast:stat-jmp
-       (build-ast-bool-expr #'expr)
+       (build-ast-expr-binop #'expr)
        (ast:label (std:syntax-e #'name)))]))
 
 
@@ -319,9 +348,30 @@
 
 (define (build-ast-expression expr-stx)
   (p:syntax-parse expr-stx
+    [({p:~literal simple_new} _)
+     (build-ast-expr-new-simple expr-stx)]
+    [({p:~literal new_array} _ _)
+     (std:error "New array is not supported yet")]
+    [({p:~literal new_multiarray} p:~rest _)
+     (std:error "New multiarray is not supported yet")]
+    [({p:~literal cast_expr} p:~rest _)
+     (std:error "Cast expression is not supported yet")]
+    [({p:~literal instanceof_expr} p:~rest _)
+     (std:error "Instanceof expression is not supported yet")]
+    [({p:~literal array_ref} _ _)
+     (build-ast-expr-array-ref expr-stx)]
+    [({p:~literal field_ref} p:~rest _)
+     (build-ast-expr-field-ref expr-stx)]
+    [({p:~literal binop_expr} _ _ _)
+     (build-ast-expr-binop expr-stx)]
+    [({p:~literal unop_expr} p:~rest _)
+     (std:error "Unary operation is not supported yet")]
     [({p:~literal immediate} imm)
-     (build-ast-expr-immediate #'imm)]
-  ))
+     (build-ast-expr-immediate #'imm)]))
+
+
+(define (build-ast-expr-new-simple expr-new-stx)
+  (std:error "Unreachable: simple new is handled in assignment"))
 
 
 (define (build-ast-expr-invoke expr-invoke-stx)
@@ -331,7 +381,7 @@
     [({p:~literal static_invoke_expr} p:~rest _)
      (build-ast-expr-static-invoke expr-invoke-stx)]
     [({p:~literal dynamic_invoke_expr} p:~rest _)
-     (std:error "Not implemented yet")]))
+     (std:error "Dynamic invoke is not supported yet")]))
 
 
 (define (build-ast-expr-nonstatic-invoke expr-invoke-stx)
@@ -411,30 +461,124 @@
      (ast:dexpr (build-ast-expr-immediate #'imm))]))
 
 
-(define (build-ast-bool-expr bool-expr-stx)
-  (std:error "Not impelemented yet"))
+(define (build-ast-expr-array-ref expr-array-stx)
+  (p:syntax-parse expr-array-stx
+    [({p:~literal array_ref}
+        name
+        ({p:~literal immediate} imm))
+     (let ([base (build-ast-name #'name)]
+           [index (build-ast-expr-immediate #'imm)])
+       (ast:expr-array base (ast:expr index)))]))
+
+
+(define (build-ast-expr-field-ref expr-field-stx)
+  (p:syntax-parse expr-field-stx
+    [({p:~literal field_ref} (p:~optional name) signature)
+     (let* ([ctype-fname (build-ast-field-sig #'signature)]
+            [ctype (first ctype-fname)]
+            [fname (second ctype-fname)]
+            [receiver (if (p:attribute name)
+                          (build-ast-name #'name)
+                          void-receiver)])
+       (ast:expr-field receiver ctype fname))]))
+
+
+(define (build-ast-field-sig field-sig-stx)
+  (p:syntax-parse field-sig-stx
+    [({p:~literal field_signature} class-name f-type f-name)
+     (let ([ctype (build-ast-type-name #'class-name)]
+           [fname (build-ast-field-name #'f-name)])
+       (list ctype fname))]))
+
+
+(define (build-ast-field-name field-name-stx)
+  (p:syntax-parse field-name-stx
+    [({p:~literal name} f-name)
+     (ast:field (std:syntax-e #'f-name))]))
+
+
+(define (build-ast-expr-binop expr-binop-stx)
+  (p:syntax-parse expr-binop-stx
+    [({p:~literal binop_expr}
+        ({p:~literal immediate} lhs)
+        bop
+        ({p:~literal immediate} rhs))
+     (let ([l (build-ast-expr-immediate #'lhs)]
+           [o (build-ast-expr-bop #'bop)]
+           [r (build-ast-expr-immediate #'rhs)])
+       (ast:expr-binary (ast:expr l) o (ast:expr r)))]))
+
+
+(define (build-ast-expr-bop expr-bop-stx)
+  (p:syntax-parse expr-bop-stx
+    ;[({p:~literal binop} "&") and]
+    ;[({p:~literal binop} "|") or]
+    ;[({p:~literal binop} "^") xor]
+    [({p:~literal binop} "%") (ast:op std:modulo)]
+    ;[({p:~literal binop} "cmp") ???]
+    ;[({p:~literal binop} "cmpg") ???]
+    ;[({p:~literal binop} "cmpl") ???]
+    [({p:~literal binop} "==") (ast:op std:=)]
+    [({p:~literal binop} "!=") (ast:op (compose std:not std:=))]
+    [({p:~literal binop} ">") (ast:op std:>)]
+    [({p:~literal binop} ">=") (ast:op std:>=)]
+    [({p:~literal binop} "<") (ast:op std:<)]
+    [({p:~literal binop} "<=") (ast:op std:<=)]
+    ;[({p:~literal binop} "<<") ???]
+    ;[({p:~literal binop} ">>") ???]
+    ;[({p:~literal binop} ">>>") ???]
+    [({p:~literal binop} "+") (ast:op std:+)]
+    [({p:~literal binop} "-") (ast:op std:-)]
+    [({p:~literal binop} "*") (ast:op std:*)]
+    [({p:~literal binop} "/") (ast:op std:/)]))
 
 
 (define (build-ast-expr-immediate expr-imm-stx)
   (p:syntax-parse expr-imm-stx
-    [({p:~literal name} name)
+    [({p:~literal name} _)
      (build-ast-variable expr-imm-stx)]
-    [({p:~literal j_constant} const)
-     (build-ast-constant expr-imm-stx)]))
+    [({p:~literal int_const} p:~rest _)
+     (build-ast-const-int expr-imm-stx)]
+    [({p:~literal float_const} p:~rest _)
+     (build-ast-const-float expr-imm-stx)]
+    [({p:~literal class_const} _)
+     (std:error "Class constant is not supported yet")]
+    ;FIXME: null is currently considered as a string
+    [_ (build-ast-const-str expr-imm-stx)]))
 
 
 (define (build-ast-variable var-stx)
   (p:syntax-parse var-stx
-    [({p:~literal reference} p:~rest _)
-     (std:error "not implemented yet")]
-    [({p:~literal name} p:~rest _)
+    [({p:~literal array_ref} _ _)
+     (build-ast-expr-array-ref var-stx)]
+    [({p:~literal field_ref} p:~rest _)
+     (build-ast-expr-field-ref var-stx)]
+    [({p:~literal name} _)
      (ast:expr-var (build-ast-name var-stx))]))
 
 
-(define (build-ast-constant const-stx)
-  (p:syntax-parse const-stx
-    [({p:~literal j_constant} c)
-     (ast:expr-const (ast:const (std:syntax-e #'c)))]))
+(define (build-ast-at-ident at-ident-stx)
+  (ast:variable (std:syntax-e at-ident-stx)))
+
+
+(define (build-ast-const-int const-int-stx)
+  (p:syntax-parse const-int-stx
+    [({p:~literal int_const} (p:~optional minus-sign) lit)
+     (ast:expr-const (ast:const (if (p:attribute minus-sign)
+                                    (- (std:syntax-e #'lit))
+                                    (std:syntax-e #'lit))))]))
+
+
+(define (build-ast-const-float const-float-stx)
+  (p:syntax-parse const-float-stx
+    [({p:~literal float_const} (p:~optional minus-sign) lit)
+     (ast:expr-const (ast:const (if (p:attribute minus-sign)
+                                    (- (std:syntax-e #'lit))
+                                    (std:syntax-e #'lit))))]))
+
+
+(define (build-ast-const-str const-str-stx)
+  (ast:expr-const (ast:const (std:syntax-e const-str-stx))))
 
 
 ;(define program-text

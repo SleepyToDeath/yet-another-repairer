@@ -85,9 +85,7 @@ base_type
 
 nonvoid_type
   ::= @base_type_no_name array_brackets*
-    | QUOTED_NAME array_brackets*
-    | IDENTIFIER array_brackets*
-    | FULL_IDENTIFIER array_brackets*
+    | @class_name array_brackets*
 
 array_brackets
   ::= LBRACKET RBRACKET
@@ -146,10 +144,10 @@ lookupswitch_stmt
   ::= LOOKUPSWITCH LPAREN immediate RPAREN LBRACE case_stmt+ RBRACE /SEMICOLON
 
 identity_stmt
-  ::= local_name COLON_EQUALS AT_IDENTIFIER j_type /SEMICOLON
+  ::= local_name /COLON_EQUALS AT_IDENTIFIER /COLON j_type /SEMICOLON
 
 identity_no_type_stmt
-  ::= local_name COLON_EQUALS AT_IDENTIFIER /SEMICOLON
+  ::= local_name /COLON_EQUALS AT_IDENTIFIER /SEMICOLON
 
 assign_stmt
   ::= variable /EQUALS j_expression /SEMICOLON
@@ -182,26 +180,35 @@ case_stmt
   ::= case_label COLON goto_stmt
 
 case_label
-  ::= CASE MINUS? INTEGER_CONSTANT
-  ::= DEFAULT
+  ::= CASE int_const
+    | DEFAULT
 
 catch_clause
   ::= CATCH class_name FROM label_name TO label_name WITH label_name /SEMICOLON
 
 j_expression
-  ::= new_expr
+  ::= @new_expr
     | cast_expr
     | instanceof_expr
     | invoke_expr
-    | reference
+    | @reference
     | binop_expr
     | unop_expr
     | immediate
 
 new_expr
-  ::= NEW base_type
-    | NEWARRAY LPAREN nonvoid_type RPAREN fixed_array_descriptor
-    | NEWMULTIARRAY LPAREN base_type RPAREN array_descriptor+
+  ::= simple_new
+    | new_array
+    | new_multiarray
+
+simple_new
+  ::= /NEW base_type
+
+new_array
+  ::= /NEWARRAY /LPAREN nonvoid_type /RPAREN fixed_array_descriptor
+
+new_multiarray
+  ::= /NEWMULTIARRAY /LPAREN base_type /RPAREN array_descriptor+
 
 cast_expr
   ::= /LPAREN nonvoid_type /RPAREN immediate
@@ -213,7 +220,7 @@ array_descriptor
   ::= LBRACKET immediate? RBRACKET
 
 variable
-  ::= reference
+  ::= @reference
     | local_name
 
 bool_expr
@@ -257,32 +264,40 @@ reference
     | field_ref
 
 array_ref
-  ::= IDENTIFIER fixed_array_descriptor
-    | QUOTED_NAME fixed_array_descriptor
+  ::= name @fixed_array_descriptor
 
 field_ref
-  ::= local_name DOT field_signature
+  ::= local_name /DOT field_signature
     | field_signature
 
 field_signature
-  ::= CMPLT class_name COLON j_type name CMPGT
+  ::= /CMPLT class_name /COLON j_type name /CMPGT
 
 fixed_array_descriptor
-  ::= LBRACKET immediate RBRACKET
+  ::= /LBRACKET immediate /RBRACKET
 
 arg_list
   ::= immediate (/COMMA immediate)*
 
 immediate
   ::= local_name
-    | j_constant
+    | @j_constant
 
 j_constant
-  ::= MINUS? INTEGER_CONSTANT
-    | MINUS? FLOAT_CONSTANT
+  ::= int_const
+    | float_const
+    | class_const
     | STRING_CONSTANT
-    | CLASS STRING_CONSTANT
     | NULL
+
+int_const
+  ::= MINUS? INTEGER_CONSTANT
+
+float_const
+  ::= MINUS? FLOAT_CONSTANT
+
+class_const
+  ::= /CLASS STRING_CONSTANT
 
 binop
   ::= AND
