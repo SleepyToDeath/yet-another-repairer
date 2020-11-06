@@ -192,7 +192,7 @@
 	(function-exec mac-input func))
 
 (define (function-exec mac func)
-	(if (= (machine-pc mac) pc-ret) 
+	(if (equal? (machine-pc mac) pc-ret) 
 		mac
 		(let ([inst-cur (list-ref (function-prog func) (machine-pc mac))])
 ;			(display "\n\n")
@@ -214,7 +214,7 @@
 ;machine X list of (key, value) -> boolean
 (define (compare-output mac output)
 	(define mem0 (machine-mem mac))
-	(foldl (lambda (kv fml-cur) (and fml-cur (= (cdr kv) 
+	(foldl (lambda (kv fml-cur) (and fml-cur (equal? (cdr kv) 
 			((lambda ()
 				(begin
 					(define ret-v (memory-sread mem0 (string-id (car kv))))

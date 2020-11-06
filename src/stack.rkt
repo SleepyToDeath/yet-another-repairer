@@ -20,7 +20,20 @@
 (define (stack-read st name)
 	;use the first definition in the highest possible scope
 	(define (rec-read sc)
+;		(display "\nAssert Num:\n")
+;		(print (length (asserts)))
+;		(display " ---> ")
 		(define cur (imap-get (scope-imap sc) name))
+;		(print (length (asserts)))
+;		(display "\nCurrent Assert:\n")
+;		(print (if (empty? (asserts)) null (car (asserts))))
+;		(display "\nKey:\n")
+;		(print name)
+;		(display "\nValue:\n")
+;		(print cur)
+;		(display "\nSolve:\n")
+;		(print (solve (assert #t)))
+;		(display "\n")
 		(if (not (is-not-found? cur)) cur
 			(if (not (scope-next sc)) nullptr
 				(rec-read (scope-next sc)))))

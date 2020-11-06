@@ -67,7 +67,7 @@
 ;does not overwrite if exists
 (define (memory-fdecl mem _name) 
 	(define name (maybe-string-id _name))
-	(if (= (imap-get (memory-names mem) name) not-found)
+	(if (equal? (imap-get (memory-names mem) name) not-found)
 		(begin
 			(define ret-pair (memory-alloc mem 1))
 			(define addr (car ret-pair))
@@ -93,11 +93,11 @@
 	(define fmap (memory-hread mem fid))
 	(define faddr (imap-get fmap obj-addr))
 	(define ret-pair 
-		(if (= faddr not-found)
+		(if (equal? faddr not-found)
 			(memory-alloc mem 1)
 			(cons faddr mem)))
 	(define mem-before-write
-		(if (= faddr not-found)
+		(if (equal? faddr not-found)
 			(memory-hwrite (cdr ret-pair) fid (imap-set fmap obj-addr (car ret-pair)))
 			mem))
 	(memory-hwrite mem-before-write (car ret-pair) value))
@@ -126,7 +126,7 @@
 ;============== Helpers =================
 (define (memory->list mem from to)
 	(define app (lambda (i)
-		(if (= i to) null
+		(if (equal? i to) null
 		(cons (memory-hread mem i) (app (+ i 1)))))) 
 	(app from))
 ;========================================

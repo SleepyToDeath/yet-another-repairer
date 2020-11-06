@@ -11,7 +11,7 @@
 ;provide an unique id to each string; equal? strings have same id
 (define (real-string-id s)
 	(define id (imap-get string-id-map s))
-	(define id-true (if (not (= id not-found)) id
+	(define id-true (if (not (equal? id not-found)) id
 		(begin
 			(set! string-id-map (imap-set string-id-map s string-id-counter))
 			(set! string-id-counter (+ 1 string-id-counter))

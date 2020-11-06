@@ -28,7 +28,7 @@
 	(not (is-not-found? (imap-get m index))))
 
 (define (is-not-found? v)
-	(and (number? v) (= v not-found)))
+	(equal? v not-found))
 ;==================================================
 
 
