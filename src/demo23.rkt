@@ -2,6 +2,7 @@
 
 (require (prefix-in std: racket/base))
 (require rosette/lib/angelic)
+(require racket/pretty)
 
 (require "string-id.rkt")
 (require "syntax.rkt")
@@ -12,7 +13,7 @@
 
 (define SEARCH-DEPTH 5)
 
-(define vars (list (string-id "this") (string-id "param0")))
+(define vars (list (string-id "@this") (string-id "param0")))
 (define itypes (list (string-id "ClassA")))
 (define fields (list (string-id "field-1")))
 (define funcs null)
@@ -63,7 +64,7 @@
 	(stats (stat-list (list
 		(stat (stat-ass 
 			(lexpr (expr-var (variable "t-mp")))
-			(expr (expr-field (variable "this") (type-name "ClassA") (field "field-1")))))
+			(expr (expr-field (variable "@this") (type-name "ClassA") (field "field-1")))))
 		(stat (stat-ret (dexpr (expr-var (variable "t-mp")))))))))))
 
 (define set-field-1 (function-declare (function-content
@@ -90,9 +91,9 @@
 	(variable-definitions (variable-definition-list null))
 	(stats (stat-list (list
 		(stat (stat-ass
-			(lexpr (expr-field (variable "this") (type-name "ClassA") (field "field-2")))
+			(lexpr (expr-field (variable "@this") (type-name "ClassA") (field "field-2")))
 			(expr (expr-const (const 2)))))
-		(stat (stat-ret (dexpr (expr-var (variable "this")))))))))))
+		(stat (stat-ret (dexpr (expr-var (variable "@this")))))))))))
 
 (define class-1 (class-def (class-default
 	(type-name "helloworld")
@@ -159,7 +160,7 @@ sketch
 
 (define result (evaluate sketch syn-sol))
 
-result
+(pretty-print result)
 
 (display "Synthesis Finishes\n")
 

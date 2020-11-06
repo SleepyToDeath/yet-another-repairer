@@ -50,7 +50,7 @@
 	(stats (stat-list (list
 		(stat (stat-ass 
 			(lexpr (expr-var (variable "t-mp")))
-			(expr (expr-field (variable "this") (type-name "ClassA") (field "field-1")))))
+			(expr (expr-field (variable "@this") (type-name "ClassA") (field "field-1")))))
 		(stat (stat-ret (dexpr (expr-var (variable "t-mp")))))))))))
 
 (define set-field-1 (function-declare (function-content
@@ -60,7 +60,7 @@
 	(variable-definitions (variable-definition-list null))
 	(stats (stat-list (list
 		(stat (stat-ass 
-			(lexpr (expr-field (variable "this") (type-name "ClassA") (field "field-1")))
+			(lexpr (expr-field (variable "@this") (type-name "ClassA") (field "field-1")))
 ;			(expr (expr-field (variable "this") (type-name "ClassA") (field "field-2")))))
 			(expr (expr-var (variable "param0")))))
 		(stat (stat-ret (dexpr (expr-var (variable "dummy")))))))))))
@@ -71,9 +71,9 @@
 	(variable-definitions (variable-definition-list null))
 	(stats (stat-list (list
 		(stat (stat-ass
-			(lexpr (expr-field (variable "this") (type-name "ClassA") (field "field-2")))
+			(lexpr (expr-field (variable "@this") (type-name "ClassA") (field "field-2")))
 			(expr (expr-const (const 2)))))
-		(stat (stat-ret (dexpr (expr-var (variable "this")))))))))))
+		(stat (stat-ret (dexpr (expr-var (variable "@this")))))))))))
 
 (define class-1 (class-def (class-default
 	(type-name "helloworld")
