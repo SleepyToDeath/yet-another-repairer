@@ -12,6 +12,9 @@
 
 (provide (all-defined-out))
 
+;============================= Debug ========================================
+(define eval-pending null)
+
 ;============================= Definition ====================================
 (struct function-formula (func lids pmarks ret-pmark fmls vid sid) #:transparent)
 
