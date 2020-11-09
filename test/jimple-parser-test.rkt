@@ -1,15 +1,15 @@
 #lang rosette/safe
 
 (require rackunit)
-(require racket/base)
+(require (prefix-in std: racket/base))
 (require "../src/jimple/jimple-parser.rkt")
 (require (prefix-in ast: "../src/syntax-jimple.rkt"))
 
 
 (define (string-append-newline . strs)
-  (apply string-append
+  (apply std:string-append
     (map (lambda (line)
-                 (string-append line "\n"))
+                 (std:string-append line "\n"))
          strs)))
 
 
