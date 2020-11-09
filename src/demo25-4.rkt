@@ -98,14 +98,20 @@ public class Test
 (display "\nAsserts\n")
 (asserts)
 
-(clear-asserts!)
+;(clear-asserts!)
 
 (display "\ntf1\n")
 tf1
 
+;(define debug-tf (equal? 0 (list-ref soft 11)))
+(define debug-tf #t)
+
+(display "\nDebug-tf\n")
+debug-tf
+
 (display "\nSolution:\n")
-(define debug-sol (optimize #:maximize soft
-          #:guarantee (assert (and tf1))))
+(define debug-sol (optimize #:maximize (list (apply + soft))
+          #:guarantee (assert (and tf1 tf2 debug-tf))))
 
 debug-sol
 
