@@ -3,3 +3,7 @@
 *.swp
 *~
 
+# Java/Jimple
+*.class
+*.jimple
+
