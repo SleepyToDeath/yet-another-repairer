@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project basedir="." default="build" name="repairer">
+    <property file="ant.settings"/>
+
+    <property name="target" value="1.8"/>
+    <property name="source" value="1.8"/>
+    <property name="classes.dir" value="classes"/>
+    <property name="src.dir" value="src"/>
+    <property name="test.dir" value="test"/>
+
+    <target name="clean">
+        <delete dir="${classes.dir}"/>
+    </target>
+
+    <target name="build">
+        <mkdir dir="${classes.dir}"/>
+        <echo message="${ant.project.name}: ${ant.file}"/>
+        <javac srcdir="${src.dir}"
+               destdir="${classes.dir}"
+               includeantruntime="false"
+               source="${source}"
+               target="${target}">
+        </javac>
+    </target>
+
+    <target name="soot" depends="build">
+        <java classname="soot.Main">
+            <arg line="-f J -process-dir ${classes.dir}"/>
+            <classpath>
+                <pathelement location="../soot-4.1.0.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+</project>
