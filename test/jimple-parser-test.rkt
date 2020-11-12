@@ -270,7 +270,7 @@
                 (ast:expr (ast:expr-const (ast:const "str")))))
               (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "d")))
-                (ast:expr (ast:expr-const (ast:const "null")))))))))))
+                (ast:expr (ast:expr-const (ast:const -1)))))))))))
     "stmt assigment 2")
 )
 

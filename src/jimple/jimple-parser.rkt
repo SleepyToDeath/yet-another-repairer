@@ -15,6 +15,7 @@
 (require "jimple-lexer.rkt")
 (require "../syntax.rkt")
 (require (prefix-in ast: "../syntax-jimple.rkt"))
+(require (prefix-in m: "../map.rkt"))
 
 
 ;============ Constants ============
@@ -580,7 +581,7 @@
      (build-ast-const-float expr-imm-stx)]
     [({p:~literal class_const} _)
      (std:error "Class constant is not supported yet")]
-    ;FIXME: null is currently considered as a string
+    ["null" (build-ast-const-null expr-imm-stx)]
     [_ (build-ast-const-str expr-imm-stx)]))
 
 
@@ -612,6 +613,10 @@
      (ast:expr-const (ast:const (if (p:attribute minus-sign)
                                     (- (std:syntax-e #'lit))
                                     (std:syntax-e #'lit))))]))
+
+
+(define (build-ast-const-null null-str-stx)
+  (ast:expr-const (ast:const m:nullptr)))
 
 
 (define (build-ast-const-str const-str-stx)
