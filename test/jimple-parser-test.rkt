@@ -602,6 +602,35 @@
     "stmt invoke 4")
 )
 
+(test-case "expr-cast"
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    T1 x;"
+      "    T2 y;"
+      "    y = (T1) x;"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "x") (ast:type-name "T1")))
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "y") (ast:type-name "T2"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "y")))
+                (ast:expr (ast:expr-var (ast:variable "x")))))))))))
+    "expr cast 1")
+)
+
 (test-case "expr-array-ref"
   (check-equal?
     (build-ast-file (parse-to-stx (string-append-newline

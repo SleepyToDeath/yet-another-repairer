@@ -383,8 +383,8 @@
      (std:error "New array is not supported yet")]
     [({p:~literal new_multiarray} p:~rest _)
      (std:error "New multiarray is not supported yet")]
-    [({p:~literal cast_expr} p:~rest _)
-     (std:error "Cast expression is not supported yet")]
+    [({p:~literal cast_expr} _ _)
+     (build-ast-expr-cast expr-stx)]
     [({p:~literal instanceof_expr} p:~rest _)
      (std:error "Instanceof expression is not supported yet")]
     [({p:~literal array_ref} _ _)
@@ -488,6 +488,14 @@
   (p:syntax-parse arg-stx
     [({p:~literal immediate} imm)
      (ast:dexpr (build-ast-expr-immediate #'imm))]))
+
+
+(define (build-ast-expr-cast expr-cast-stx)
+  (p:syntax-parse expr-cast-stx
+    [({p:~literal cast_expr}
+        type
+        ({p:~literal immediate} imm))
+     (build-ast-expr-immediate #'imm)]))
 
 
 (define (build-ast-expr-array-ref expr-array-stx)
