@@ -30,6 +30,9 @@
                 <pathelement location="../soot-4.1.0.jar"/>
             </classpath>
         </java>
+        <copy todir="sootOutput">
+            <fileset dir="../model"/>
+        </copy>
     </target>
 
 </project>
