@@ -45,8 +45,6 @@ public class IPv4Address {
     }
 
     public static IPv4Address of(final int raw) {
-        if(raw == NONE_VAL)
-            return NONE;
         return new IPv4Address(raw);
     }
 

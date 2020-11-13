@@ -19,7 +19,8 @@
 "net.floodlightcontroller.dhcpserver.DHCPInstance$DHCPInstanceBuilder.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPInstance.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPInstanceTest.jimple"
-"org.projectfloodlight.openflow.types.IPv4Address.jimple"))
+"org.projectfloodlight.openflow.types.IPv4Address.jimple"
+"java.lang.Object.jimple"))
 
 (define class-src-list (map (lambda (src-class) (std:read-string 9999999 (std:open-input-file (std:string-append src-dir src-class)))) src-classes))
 
@@ -30,3 +31,22 @@
 
 (pretty-print buggy)
 
+(define input1 null)
+(define output1 (list (cons var-ret-name 0)))
+
+(define mac (ast->machine buggy))
+(pretty-print string-id-map)
+
+(define mac-in (assign-input mac input1))
+
+(define mac-fin (compute mac-in))
+
+(define result (compare-output mac-fin output1))
+
+result
+
+(pretty-print string-id-map)
+
+(match-define (cons soft hard) (ast->relation buggy))
+
+(define tf1 (hard input1 output1))

@@ -5,6 +5,7 @@
 (require "memory.rkt")
 (require "map.rkt")
 (require "string-id.rkt")
+(require "jimple/jimple-parser.rkt")
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
 (require racket/pretty)
@@ -55,6 +56,7 @@
 (define machine-empty (machine #f null imap-empty memory-empty pc-init))
 
 (define class-name-main (string-id "dummy"))
+(define class-names-clinit null)
 
 
 ;============================= Utils ===================================
@@ -199,9 +201,9 @@
 ;			(println (machine-mem mac))
 ;			(display "\n")
 ;			(println string-id-map)
-;			(display "\n")
-;			(println inst-cur)
-;			(display "\n\n")
+			(display "\n")
+			(println inst-cur)
+			(display "\n\n")
 			(function-exec (inst-exec inst-cur mac func) func))))
 
 ;machine X list of (key, value) -> machine(with input inserted into memory)
@@ -275,6 +277,7 @@
 						imap-empty args local-vars)])
 				(begin
 					(if (equal? name func-name-main) (set! class-name-main classname) #f)
+					(if (equal? name func-name-clinit) (set! class-names-clinit (cons classname class-names-clinit)) #f)
 					(foldl (lambda (st func)
 						(letrec ([ret-pair (ast->instruction st (function-lmap func) (length (function-prog func)))]
 							[inst (car ret-pair)]
@@ -335,9 +338,10 @@
 
 (define (build-boot-func)
 	;(define iboot (inst-boot globals))
-	(define icall (inst-static-call var-ret-name class-name-main func-name-main null null))
+	(define icall-clinit (map (lambda (name) (inst-static-call var-ret-name name func-name-clinit null null)) class-names-clinit))
+	(define icall-main (inst-static-call var-ret-name class-name-main func-name-main null null))
 	(define iret (inst-ret (iexpr-var var-ret-name)))
-	(function func-name-boot (list icall iret) imap-empty null (list (cons var-ret-name "int"))))
+	(function func-name-boot (append icall-clinit (list icall-main iret)) imap-empty null (list (cons var-ret-name "int"))))
 
 (define (build-virtual-table mac) 
 	(define classes (machine-classes mac))
@@ -416,31 +420,23 @@
 		(define mem0 (machine-mem m))
 		(define v-new (expr-eval (inst-ass-vr i) m))
 
-;		(display "\n")
-;		(println (inst-ass-vl i))
-;		(display "\n")
-;		(println (inst-ass-vr i))
-;		(display "\n")
-;		(println v-new)
-;		(display "\n")
-;		(println v-new)
 		(define rhs (lexpr-rhs (inst-ass-vl i)))
 		(define mem-new 
 			(match rhs
-				[(expr-var v) (begin (display "Branch1\n") (memory-swrite mem0 (string-id (variable-name v)) v-new))]
+				[(expr-var v) (memory-swrite mem0 (string-id (variable-name v)) v-new)]
 				[(expr-array arr idx)
-					(begin (display "Branch2\n")
 					(letrec
 						([addr (memory-sread mem0 (string-id (variable-name arr)))]
 						[idx-e (ast->expression idx)]
 						[idx-v (expr-eval idx-e m)])
-						(memory-awrite mem0 addr idx-v v-new)))]
+						(memory-awrite mem0 addr idx-v v-new))]
 				[(expr-field obj cls fname)
-					(begin (display "Branch3\n")
-					(letrec
-						([addr (memory-sread mem0 (string-id (variable-name obj)))])
-						(memory-fwrite mem0 (vfield-id m (string-id (type-name-name cls)) (string-id (field-name fname))) addr v-new)))]
-				[_ (display "Default\n")]))
+					(if (equal? obj void-receiver)
+						(memory-swrite mem0 (sfield-id (string-id (type-name-name cls)) (string-id (field-name fname))) v-new)
+						(letrec
+							([addr (memory-sread mem0 (string-id (variable-name obj)))])
+							(memory-fwrite mem0 (vfield-id m (string-id (type-name-name cls)) (string-id (field-name fname))) addr v-new)))]
+				[_ #f]))
 
 		(define pc-next (+ 1 (machine-pc m)))
 
@@ -494,7 +490,7 @@
 		(display "\n")
 		(pretty-print i)
 		(pretty-print func)
-		(define args (map car (inst-static-call-args i)))
+		(define args (inst-static-call-args i))
 		(define ret (inst-static-call-ret i))
 ;		(println++ "Ret Var: " ret)
 
@@ -582,11 +578,11 @@
 (struct iexpr-binary (op expr1 expr2) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
-;		(println++ "Binary Expr: " e)
+		(println++ "Binary Expr: " e)
 		(define v1 (expr-eval-dispatch (iexpr-binary-expr1 e) m))
 		(define v2 (expr-eval-dispatch (iexpr-binary-expr2 e) m))
-;		(println++ "v1: " v1)
-;		(println++ "v2: " v2)
+		(println++ "v1: " v1)
+		(println++ "v2: " v2)
 		((iexpr-binary-op e) v1 v2))])
 
 (struct iexpr-array (arr-name index) #:transparent
@@ -604,6 +600,8 @@
 		(define fname (iexpr-field-fname e))
 		(define cls-name (iexpr-field-cls-name e))
 		(define obj-name (iexpr-field-obj-name e))
-		(define obj-addr (memory-sread mem0 obj-name))
-		(memory-fread mem0 (vfield-id m cls-name fname) obj-addr))])
+		(if (equal? obj-name (string-id (variable-name void-receiver)))
+			(memory-sread mem0 (sfield-id cls-name fname))
+			(let([obj-addr (memory-sread mem0 obj-name)])
+				(memory-fread mem0 (vfield-id m cls-name fname) obj-addr))))])
 

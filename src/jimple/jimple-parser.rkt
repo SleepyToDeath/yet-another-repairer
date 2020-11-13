@@ -5,6 +5,7 @@
 (provide build-ast-file)
 (provide void-return-value)
 (provide void-return-var)
+(provide void-receiver)
 
 (require (prefix-in std: racket/base))
 (require (prefix-in l: racket/list))
@@ -557,7 +558,7 @@
     ;[({p:~literal binop} "cmpg") ???]
     ;[({p:~literal binop} "cmpl") ???]
     [({p:~literal binop} "==") (ast:op equal?)]
-    [({p:~literal binop} "!=") (ast:op (compose not equal?))]
+    [({p:~literal binop} "!=") (ast:op (lambda (x y) (not (equal? x y))))]
     [({p:~literal binop} ">") (ast:op >)]
     [({p:~literal binop} ">=") (ast:op >=)]
     [({p:~literal binop} "<") (ast:op <)]

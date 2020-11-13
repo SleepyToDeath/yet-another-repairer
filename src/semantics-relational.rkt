@@ -7,6 +7,7 @@
 (require "map.rkt")
 (require "match-define.rkt")
 (require "semantics-computational.rkt")
+(require "jimple/jimple-parser.rkt")
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
 
@@ -445,9 +446,11 @@
 							[idx-v (expr-eval idx-e mac)])
 							(memory-awrite mem addr idx-v vs1))]
 					[(expr-field obj cls fname)
-						(letrec
-							([addr (memory-sread mem (string-id (variable-name obj)))])
-							(memory-fwrite mem (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr vs1))])))
+						(if (equal? obj void-receiver)
+							(memory-swrite mem (sfield-id (string-id (type-name-name cls)) (string-id (field-name fname))) vs1)
+							(letrec
+								([addr (memory-sread mem (string-id (variable-name obj)))])
+								(memory-fwrite mem (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr vs1)))])))
 ;				(match-define (cons mem-new fml-key) (maybe-happen mem (memory-swrite mem vl vs1)))
 ;	(display "\nAssert Num #1:\n")
 ;	(println (length (asserts)))
