@@ -6,4 +6,5 @@
 # Java/Jimple
 *.class
 *.jimple
+!benchmark/model/*.jimple
 
