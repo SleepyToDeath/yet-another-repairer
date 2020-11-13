@@ -1,0 +1,27 @@
+public class java.lang.Object
+{
+	public static void <init>() {
+        java.lang.Object r0;
+
+        r0 := @this: java.lang.Object;
+
+		return r0;
+	}
+
+    public boolean equals(java.lang.Object)
+	{
+        java.lang.Object r0, r1;
+
+        r0 := @this: java.lang.Object;
+
+        r1 := @parameter0: java.lang.Object;
+
+        if r0 != r1 goto label1;
+
+        return 1;
+
+     label1:
+        return 0;
+	}
+}
+
