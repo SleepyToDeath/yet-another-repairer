@@ -6,65 +6,61 @@
 
 (provide (all-defined-out))
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-;map X scope(next scope)
-(struct scope (imap next) #:transparent)
-(define scope-empty (scope imap-empty #f))
-
-;scope(the top one)
-(struct stack (top) #:transparent)
-(define stack-empty (stack #f))
-
-(define (stack-empty? st) 
-	(stack-top st))
+(define (stack-empty m)
+	(equal? (imap-get m stack-top) stack-bottom))
 
 ;read the first defined name in stack
-(define (stack-read st name)
+;m: imap
+(define (stack-read m name)
 	;use the first definition in the highest possible scope
-	(define (rec-read sc)
-		(define cur (imap-get (scope-imap sc) name))
-		(if (not (is-not-found? cur)) cur
-			(if (not (scope-next sc)) nullptr
-				(rec-read (scope-next sc)))))
+	(define (rec-read scope-base)
+		(define cur-addr (scope-abs-addr scope-base name))
+		(define cur-val (imap-get m cur-addr))
+		(if (not (is-not-found? cur-val)) cur-val
+			(if (equal? scope-base stack-bottom) not-found
+				(rec-read (imap-get m scope-base)))))
 	;return not-found if empty
-	(if (not (stack-top st)) not-found
-		(rec-read (stack-top st))))
+	(if (stack-empty m) not-found
+		(rec-read (imap-get m stack-pointer-addr))))
 
 ;write to the first defined name in stack
-(define (stack-write st name value)
+;m: imap
+(define (stack-write m name value)
 	;use the first definition in the highest possible scope, return the updated scope
-	(define (rec-write sc)
-		(define cur (imap-get (scope-imap sc) name))
-		(if (not (is-not-found? cur)) 
-			(std:struct-copy scope sc [imap (imap-set (scope-imap sc) name value)])
-			(if (not (scope-next sc)) sc
-				(std:struct-copy scope sc [next (rec-write (scope-next sc))]))))
+	(define (rec-write scope-base)
+		(define cur-addr (scope-abs-addr scope-base name))
+		(define cur-val (imap-get m cur-addr))
+		(if (not (is-not-found? cur-val)) 
+			(imap-set m cur-addr value)
+			(if (equal? scope-base stack-bottom) m
+				(rec-write (imap-get m scope-base)))))
 	;return input if empty
-	(if (not (stack-top st)) st
-		(stack (rec-write (stack-top st)))))
+	(if (stack-empty m) m
+		(rec-write (imap-get m stack-pointer-addr))))
 	
 ;declare at the current top level scope
 ;default value is nullptr
-(define (stack-decl st name)
-	(stack (std:struct-copy scope (stack-top st) [imap (imap-set (scope-imap (stack-top st)) name nullptr)])))
+;m: imap
+(define (stack-decl m name)
+	(define top-scope-base (imap-get m stack-pointer-addr))
+	(define addr (scope-abs-addr top-scope-base name))
+	(imap-set addr nullptr))
 
 ;push a scope to the top
-(define (stack-push st)
-	(stack (std:struct-copy scope scope-empty [next (stack-top st)])))
+;m: imap
+(define (stack-push m)
+	(define current-top (imap-get m stack-top-addr))
+	(define current-pointer (imap-get m stack-pointer-addr))
+	(define new-top (+ current-top scope-size))
+	(imap-batch-set m (list (cons current-top current-pointer) (cons stack-pointer-addr current-top) (cons stack-top-addr new-top))))
 
 ;pop a scope from the top
-(define (stack-pop st)
-	(stack (scope-next (stack-top st))))
+;m: imap
+(define (stack-pop m)
+	(define current-pointer (imap-get m stack-pointer-addr))
+	(define next-pointer (imap-get m current-pointer))
+	(imap-set m stack-pointer-addr next-pointer))
 
+;absolute address of a name in a scope
+(define (scope-abs-addr scope-base name)
+	(+ scope-base name 1))

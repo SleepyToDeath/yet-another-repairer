@@ -33,7 +33,7 @@
 
 (define stack-top-addr 2)
 (define stack-pointer-addr 3)
-(define stack-bottom (* 1024 virtual-table-size))
+(define stack-bottom-addr (* 1024 virtual-table-size))
 
 (define vt-num 1024)
 (define vt-size 1024)

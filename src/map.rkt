@@ -31,6 +31,9 @@
 (define (is-not-found? v)
 	(equal? v not-found))
 
+(define (imap-batch-set imap kvlist)
+	(foldl (lambda (kv m) (imap-set m (car kv) (cdr kv))) imap kvlist))
+
 ;compare only func, ignore pending updates
 (define (imap-is-update m-new m-base updates)
 	(define f-new (imap-get-func m-new))

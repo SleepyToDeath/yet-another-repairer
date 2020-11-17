@@ -14,53 +14,46 @@
 
 ;-----------------Stack Operations---------------
 ;read from stack
-(define (memory-sread mem _name)
-	(define name (maybe-string-id _name))
-	(stack-read (memory-stack mem) name))
+(define (memory-sread mem name)
+	(stack-read (memory-imap mem) name))
 
 ;write to stack
-(define (memory-swrite mem _name value)
-	(define name (maybe-string-id _name))
+(define (memory-swrite mem name value)
 	(std:struct-copy memory mem 
-		[stack (stack-write (memory-stack mem) name value)]))
+		[imap (stack-write (memory-imap mem) name value)]))
 
 ;declare variable on current stack-top scope
 ;overwrites existing value
-(define (memory-sdecl mem _name)
-	(define name (maybe-string-id _name))
-	(std:struct-copy memory mem [stack (stack-decl (memory-stack mem) name)]))
+(define (memory-sdecl mem name)
+	(std:struct-copy memory mem [imap (stack-decl (memory-imap mem) name)]))
 
 ;decl & write
-(define (memory-sforce-write mem _name value)
-	(define name (maybe-string-id _name))
+(define (memory-sforce-write mem name value)
 	(memory-swrite (memory-sdecl mem name) name value))
 
 ;push a scope to stack
 (define (memory-spush mem)
-	(std:struct-copy memory mem [stack (stack-push (memory-stack mem))]))
+	(std:struct-copy memory mem [imap (stack-push (memory-imap mem))]))
 
 ;pop a scope from stack
 (define (memory-spop mem)
-	(std:struct-copy memory mem [stack (stack-pop (memory-stack mem))]))
+	(std:struct-copy memory mem [imap (stack-pop (memory-imap mem))]))
 	
 
 ;-----------------Heap Operations---------------
 ;read from heap
 (define (memory-hread mem addr)
-	(imap-get (memory-heap mem) addr))
+	(imap-get (memory-imap mem) addr))
 
 ;write to heap
 (define (memory-hwrite mem addr value)
-	(std:struct-copy memory mem [heap (imap-set (memory-heap mem) addr value)]))
-
-;(define (memory-hupdate mem addr update)
-;	(define iheap (memory-heap mem))
-;	(std:struct-copy memory mem [heap (imap-set iheap (update (imap-get iheap addr)))]))
+	(std:struct-copy memory mem [imap (imap-set (memory-imap mem) addr value)]))
 
 ;allocate memory on heap
 ;memory X size -> addr(allocated) X memory(new) 
 (define (memory-alloc mem size)
-	(cons (memory-top mem) (std:struct-copy memory mem [top (+ (memory-top mem) size)])))
+	(define current-top (imap-get (memory-imap mem) heap-top-addr))
+	(cons current-top (std:struct-copy memory mem [imap (imap-set (memory-imap mem) heap-top-addr (+ current-top size))])))
 
 
 ;-----------------Field Access---------------
@@ -119,7 +112,11 @@
 ;==================================================
 
 ;============= Default Values ===========
-(define memory-empty (memory imap-empty))
+(define memory-empty 
+	(imap-batch-set imap-empty (list 
+		(cons heap-top-addr vt-base-addr) 
+		(cons stack-top-addr stack-bottom-addr) 
+		(cons stack-pointer-addr stack-bottom-addr))))
 ;========================================
 
 ;======================= Symbolic Operations =========================
