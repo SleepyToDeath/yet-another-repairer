@@ -3,12 +3,14 @@
 (require (prefix-in std: racket/base))
 (require "map.rkt")
 (require "stack.rkt")
+(require "heap.rkt")
 (require "string-id.rkt")
 
 (provide (all-defined-out))
 
+
 ;============= Definition & Operations ===========
-(struct memory (stack heap names top) #:transparent)
+(struct memory (imap) #:transparent)
 
 ;-----------------Stack Operations---------------
 ;read from stack
@@ -116,18 +118,8 @@
 
 ;==================================================
 
-
 ;============= Default Values ===========
-(define top-default 233)
 (define memory-empty (memory stack-empty imap-empty imap-empty top-default))
 ;========================================
 
-
-;============== Helpers =================
-(define (memory->list mem from to)
-	(define app (lambda (i)
-		(if (equal? i to) null
-		(cons (memory-hread mem i) (app (+ i 1)))))) 
-	(app from))
-;========================================
-
+;============= Symbolic Operations ==============

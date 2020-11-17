@@ -2,8 +2,22 @@
 
 (require (prefix-in std: racket/base))
 (require "map.rkt")
+(require "memory-common.rkt")
 
 (provide (all-defined-out))
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ;map X scope(next scope)
 (struct scope (imap next) #:transparent)
