@@ -55,49 +55,46 @@
 	(define current-top (imap-get (memory-imap mem) heap-top-addr))
 	(cons current-top (std:struct-copy memory mem [imap (imap-set (memory-imap mem) heap-top-addr (+ current-top size))])))
 
-
+;must use this to new object
+(define (memory-new mem)
+	(define current-top (imap-get (memory-imap mem) obj-top-addr))
+	(cons current-top (std:struct-copy memory mem [imap (imap-set (memory-imap mem) ojb-top-addr (+ current-top 1))])))
+	
 ;-----------------Field Access---------------
 ;declare a new field (a field map is a map from obj-addr to field-addr)
 ;return (new memory)
 ;does not overwrite if exists
-(define (memory-fdecl mem _name) 
-	(define name (maybe-string-id _name))
-	(if (equal? (imap-get (memory-names mem) name) not-found)
+(define (memory-fdecl mem name) 
+	(if (equal? (memory-vt-addr mem name) not-found)
 		(begin
-			(define ret-pair (memory-alloc mem 1))
-			(define addr (car ret-pair))
-			(define mem-tmp (cdr ret-pair))
-			(define mem-tmp2 (std:struct-copy memory mem-tmp [names (imap-set (memory-names mem-tmp) name addr)]))
-			(memory-hwrite mem-tmp2 addr imap-empty))
+			(match-define (cons addr mem-alloc) (memory-alloc mem vt-size))
+			(std:struct-copy memory mem-alloc 
+				[imap (imap-batch-set (memory-imap mem-alloc) 
+					(list 
+					(cons (+ name vt-index-addr) addr)
+					(cons obj-butt-addr (memory-hread mem-alloc heap-top-addr))
+					(cons obj-top-addr (memory-hread mem-alloc heap-top-addr))))]))
 		mem))
 
-
 ;read a field value of an object
-(define (memory-fread mem _fname obj-addr)
-	(define fname (maybe-string-id _fname))
-	(define fid (imap-get (memory-names mem) fname))
-	(define fmap (memory-hread mem fid))
-	(define faddr (imap-get fmap obj-addr))
-	(memory-hread mem faddr))
+(define (memory-fread mem fname obj-addr)
+	(define vt-addr (memory-vt-base mem fname))
+	(define faddr (memory-vt-lookup mem vt-addr obj-addr))
+	(memory-hread mem entry-addr))
 
 ;write to a field of an object
-;automatically allocate memory for the field if it's a new object
-(define (memory-fwrite mem _fname obj-addr value) 
-	(define fname (maybe-string-id _fname))
-	(define fid (imap-get (memory-names mem) fname))
-	(define fmap (memory-hread mem fid))
-	(define faddr (imap-get fmap obj-addr))
-	(define ret-pair 
-		(if (equal? faddr not-found)
-			(memory-alloc mem 1)
-			(cons faddr mem)))
-	(define mem-before-write
-		(if (equal? faddr not-found)
-			(memory-hwrite (cdr ret-pair) fid (imap-set fmap obj-addr (car ret-pair)))
-			mem))
-	(memory-hwrite mem-before-write (car ret-pair) value))
+(define (memory-fwrite mem fname obj-addr value) 
+	(define vt-addr (memory-vt-base mem fname))
+	(define faddr (memory-vt-get mem vt-addr obj-addr))
+	(memory-hwrite mem faddr value))
 
+;return baes address of a virtual table
+(define (memory-vt-base mem name)
+	(imap-get (memory-imap mem) (+ name vt-index-addr)))
 
+;return entry address of a virtual table
+(define (memory-vt-lookup mem vt-addr obj-addr)
+	(+ vt-addr (- obj-addr (memory-hread mem obj-butt-addr))))
 ;-----------------Array Access----------------
 ;array =  a memory range of any size on heap
 
@@ -115,6 +112,8 @@
 (define memory-empty 
 	(imap-batch-set imap-empty (list 
 		(cons heap-top-addr vt-base-addr) 
+		(cons obj-top-addr vt-base-addr)
+		(cons obj-butt-addr vt-base-addr)
 		(cons stack-top-addr stack-bottom-addr) 
 		(cons stack-pointer-addr stack-bottom-addr))))
 ;========================================

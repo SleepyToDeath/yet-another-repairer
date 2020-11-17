@@ -3,11 +3,11 @@
 (provide (all-defined-out))
 
 ; Memory Layout:
-;       =========================================================================================================
-; name:  heap top | stack top | stack pointer | virtual table index | virtual tables | arraies | scopes         |
-;       ---------------------------------------------------------------------------------------------------------
-; size:  1        | 1         | 1             | vt-num              | vt-size * n    | n       | scope-size * n |
-;       =========================================================================================================
+;       ========================================================================================================================================
+; name:  heap top | stack top | stack pointer | obj-top | obj-butt | virtual table index | virtual tables | objects | arraies | scopes         |
+;       ----------------------------------------------------------------------------------------------------------------------------------------
+; size:  1        | 1         | 1             | 1       | 1        | vt-num              | vt-size * n    | vt-size | n * n   | scope-size * n |
+;       ========================================================================================================================================
 
 ; Scope Layout:
 ;       =========================
@@ -27,7 +27,9 @@
 (define not-found -666)
 
 (define heap-top-addr 1)
-(define vt-index-addr 4)
+(define obj-top-addr 4)
+(define obj-butt-addr 5)
+(define vt-index-addr 6)
 (define vt-base-addr (+ vt-index-addr vt-num))
 ;no need to know beginning of arraies
 
@@ -35,6 +37,9 @@
 (define stack-pointer-addr 3)
 (define stack-bottom-addr (* 1024 virtual-table-size))
 
+;vt-num = max number of different member fields/functions
 (define vt-num 1024)
+;vt-size = max number of objects
 (define vt-size 1024)
+;scope-size = max number of different variable names
 (define scope-size 1024)
