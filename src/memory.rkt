@@ -119,7 +119,19 @@
 ;==================================================
 
 ;============= Default Values ===========
-(define memory-empty (memory stack-empty imap-empty imap-empty top-default))
+(define memory-empty (memory imap-empty))
 ;========================================
 
-;============= Symbolic Operations ==============
+;======================= Symbolic Operations =========================
+;Usage: 
+;	See "map.rkt". Memory is just a wrapper for imap
+
+(define (memory-sym-new)
+	(memory (imap-sym-new)))
+
+(define (memory-sym-reset m m-base)
+	(memory (imap-sym-reset (memory-imap m) (memory-imap m-base))))
+
+(define (memory-sym-get-fml m)
+	(imap-sym-get-fml (memory-imap m)))
+

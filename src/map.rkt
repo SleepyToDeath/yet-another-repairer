@@ -13,7 +13,9 @@
 ;	  Use `imap-sym-reset` to copy a base map(concrete/symbolic),
 ;	  then use it as if it's concrete. Finally, use `imap-sym-get-fml`
 ;	  to get a formula describing the relation between the updated map
-;	  and the base map set before.
+;	  and the base map.
+;	4.A concrete map can map anything to anything. But a symbolic
+;	  map can only map int to int.
 
 ;============= Definition & Operations ===========
 
