@@ -131,3 +131,6 @@
 (define (memory-sym-get-fml m)
 	(imap-sym-get-fml (memory-imap m)))
 
+;equivalent to (memory-sym-get-fml (memory-sym-reset m m-base))
+(define (memory-is-copy m m-base)
+	(imap-is-copy (memory-imap m) (memory-imap m-base)))
