@@ -8,6 +8,7 @@
 (require "match-define.rkt")
 (require "semantics-computational.rkt")
 (require "jimple/jimple-parser.rkt")
+(require "memory-common.rkt")
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
 
@@ -141,7 +142,8 @@
 		mem-vfields)
 
 	(define mem-push (memory-spush (machine-mem mac)))
-	(std:struct-copy machine mac [mem (foldl process-class mem-push classes)]))
+	(define mem-reserve-obj (cdr (memory-alloc mem-push vt-size)))
+	(std:struct-copy machine mac [mem (foldl process-class mem-reserve-obj classes)]))
 
 
 

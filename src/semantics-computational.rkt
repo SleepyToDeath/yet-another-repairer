@@ -6,6 +6,8 @@
 (require "map.rkt")
 (require "string-id.rkt")
 (require "jimple/jimple-parser.rkt")
+(require "memory-common.rkt")
+(require "match-define.rkt")
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
 (require racket/pretty)
@@ -17,11 +19,11 @@
 ;pc: int
 ;boot: boot function
 ;classes: list of classes
-(struct machine (boot classes cmap mem pc) #:transparent)
+;cmap: name to class
+;fmap: function vid/sid to function
+(struct machine (boot classes cmap fmap mem pc) #:transparent)
 
-;fields: list of var names
-;functs: list of functions
-;field-val-ast: init value of fields in ast, #f if no init value
+;
 (struct class (name extend implements sfuncs vfuncs sfields vfields) #:transparent)
 
 ;name: string
@@ -53,7 +55,7 @@
 (define delimiter-static (string-id "::"))
 (define delimiter-virtual (string-id "::::"))
 (define delimiter-minor (string-id ","))
-(define machine-empty (machine #f null imap-empty memory-empty pc-init))
+(define machine-empty (machine #f null imap-empty imap-empty memory-empty pc-init))
 
 (define class-name-main (string-id "dummy"))
 (define class-names-clinit null)
@@ -92,13 +94,13 @@
 					#f)))
 		#f))
 
-(define (vfunc-id mac cls func arg-types) (lookup-virtual-function mac cls func arg-types))
+(define (vfunc-id mac cls func arg-types) (string-id (lookup-virtual-function mac cls func arg-types)))
 
-(define (vfield-id mac cls field) (lookup-virtual-field mac cls field))
+(define (vfield-id mac cls field) (string-id (lookup-virtual-field mac cls field)))
 
-(define (sfunc-id cls func arg-types) (sfunc-sig->string cls func arg-types))
+(define (sfunc-id cls func arg-types) (string-id (sfunc-sig->string cls func arg-types)))
 
-(define (sfield-id cls field) (list cls delimiter-static field))
+(define (sfield-id cls field) (string-id (list cls delimiter-static field)))
 
 ;signature of a field is its name
 ;signature of a function is its name and arg types
@@ -238,7 +240,7 @@
 		(class-list-cl (program-rhs ast))))
 	(define cmap (foldl (lambda (cls cm) (imap-set cm (class-name cls) cls)) imap-empty classes))
 	(define boot (build-boot-func))
-	(define mac-init (machine boot classes cmap memory-empty pc-init))
+	(define mac-init (machine boot classes cmap imap-empty memory-empty pc-init))
 	mac-init)
 
 (define (ast->class ast)
@@ -294,10 +296,6 @@
 		[(stat s) (ast->instruction s lmap line-num)]
 		[(stat-ass target rvalue) 
 			(begin
-;			(println target)
-;			(display "\n")
-;			(println rvalue)
-;			(display "\n")
 			(cons (inst-ass target (ast->expression rvalue)) lmap))]
 		[(stat-jmp condition target) (cons (inst-jmp (ast->expression condition) (label-v target)) lmap)]
 		[(stat-label here) (cons #f (imap-set lmap (label-v here) line-num))]
@@ -361,10 +359,12 @@
 			(vfunc-id mac cls-name (function-name vf) (map cdr (function-args vf))))) mem-sfields vfuncs))
 		(define mem-vfields (foldl (lambda (vf mem) (memory-fdecl mem (vfield-id mac cls-name vf))) mem-vfuncs vfields))
 
+		(println string-id-table)
 		mem-vfields)
 
 	(define mem-push (memory-spush (machine-mem mac)))
-	(std:struct-copy machine mac [mem (foldl process-class mem-push classes)]))
+	(define mem-reserve-obj (cdr (memory-alloc mem-push vt-size)))
+	(std:struct-copy machine mac [mem (foldl process-class mem-reserve-obj classes)]))
 
 (define (variable-definitions->list ast)
 	(map 
@@ -468,12 +468,10 @@
 	[(define (inst-exec i m f)
 		(define mem-0 (machine-mem m))
 		(define v-name (inst-new-v-name i))
-		(define mem-alloc (memory-alloc mem-0 1))
-		(match mem-alloc
-			[(cons addr mem-alloc)
-				(letrec ([pc-next (+ 1 (machine-pc m))]
-						[mem-ass (memory-swrite mem-alloc v-name addr)])
-					(std:struct-copy machine m [pc pc-next][mem mem-ass]))]))])
+		(match-define (cons addr mem-alloc) (memory-new mem-0))
+		(define pc-next (+ 1 (machine-pc m)))
+		(define mem-ass (memory-swrite mem-alloc v-name addr))
+		(std:struct-copy machine m [pc pc-next][mem mem-ass]))])
 
 (struct inst-ret (v-expr) #:transparent
 	#:methods gen:instruction
@@ -488,7 +486,7 @@
 ;		(println i)
 		(define func (memory-sread (machine-mem m) (sfunc-id (inst-static-call-cls-name i) (inst-static-call-func-name i) (inst-static-call-arg-types i))))
 		(display "\n")
-		(pretty-print i)
+;		(pretty-print i)
 		(pretty-print func)
 		(define args (inst-static-call-args i))
 		(define ret (inst-static-call-ret i))
@@ -516,7 +514,7 @@
 		(define func (memory-fread mem0 (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i) (inst-virtual-call-arg-types i)) obj-addr))
 		(display "\n")
 		(pretty-print obj-addr)
-		(pretty-print i)
+;		(pretty-print i)
 		(pretty-print func)
 		(define args (inst-virtual-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
@@ -545,7 +543,7 @@
 		;never virtual
 		(define func (memory-sread mem0 (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-arg-types i))))
 		(display "\n")
-		(pretty-print i)
+;		(pretty-print i)
 		(pretty-print func)
 		(define args (inst-special-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope

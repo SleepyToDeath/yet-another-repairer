@@ -1,13 +1,14 @@
 #lang rosette/safe
 
 (require (prefix-in std: racket/base))
+(require racket/format)
 (require "map.rkt")
 (require "memory-common.rkt")
 
 (provide (all-defined-out))
 
 (define (stack-empty m)
-	(equal? (imap-get m stack-top) stack-bottom))
+	(equal? (imap-get m stack-top-addr) stack-bottom))
 
 ;read the first defined name in stack
 ;m: imap
@@ -16,6 +17,7 @@
 	(define (rec-read scope-base)
 		(define cur-addr (scope-abs-addr scope-base name))
 		(define cur-val (imap-get m cur-addr))
+		(std:println (~a "Reading " name " from " scope-base " ,get " cur-addr " : " cur-val))
 		(if (not (is-not-found? cur-val)) cur-val
 			(if (equal? scope-base stack-bottom) not-found
 				(rec-read (imap-get m scope-base)))))
@@ -30,6 +32,7 @@
 	(define (rec-write scope-base)
 		(define cur-addr (scope-abs-addr scope-base name))
 		(define cur-val (imap-get m cur-addr))
+		(std:println (~a "Writing " name " : " value " to " scope-base " ,replacing " cur-addr " : " cur-val))
 		(if (not (is-not-found? cur-val)) 
 			(imap-set m cur-addr value)
 			(if (equal? scope-base stack-bottom) m
@@ -44,7 +47,14 @@
 (define (stack-decl m name)
 	(define top-scope-base (imap-get m stack-pointer-addr))
 	(define addr (scope-abs-addr top-scope-base name))
-	(imap-set addr nullptr))
+	(display "Declaring ")
+	(print name)
+	(display " @ ")
+	(print addr)
+	(display " @ ")
+	(print top-scope-base)
+	(display "\n")
+	(imap-set m addr nullptr))
 
 ;push a scope to the top
 ;m: imap

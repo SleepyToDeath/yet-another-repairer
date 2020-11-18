@@ -3,8 +3,9 @@
 (require (prefix-in std: racket/base))
 (require "map.rkt")
 (require "stack.rkt")
-(require "heap.rkt")
 (require "string-id.rkt")
+(require "memory-common.rkt")
+(require "match-define.rkt")
 
 (provide (all-defined-out))
 
@@ -19,13 +20,12 @@
 
 ;write to stack
 (define (memory-swrite mem name value)
-	(std:struct-copy memory mem 
-		[imap (stack-write (memory-imap mem) name value)]))
+	(memory (stack-write (memory-imap mem) name value)))
 
 ;declare variable on current stack-top scope
 ;overwrites existing value
 (define (memory-sdecl mem name)
-	(std:struct-copy memory mem [imap (stack-decl (memory-imap mem) name)]))
+	(memory (stack-decl (memory-imap mem) name)))
 
 ;decl & write
 (define (memory-sforce-write mem name value)
@@ -33,11 +33,11 @@
 
 ;push a scope to stack
 (define (memory-spush mem)
-	(std:struct-copy memory mem [imap (stack-push (memory-imap mem))]))
+	(memory (stack-push (memory-imap mem))))
 
 ;pop a scope from stack
 (define (memory-spop mem)
-	(std:struct-copy memory mem [imap (stack-pop (memory-imap mem))]))
+	(memory (stack-pop (memory-imap mem))))
 	
 
 ;-----------------Heap Operations---------------
@@ -47,45 +47,45 @@
 
 ;write to heap
 (define (memory-hwrite mem addr value)
-	(std:struct-copy memory mem [imap (imap-set (memory-imap mem) addr value)]))
+	(memory (imap-set (memory-imap mem) addr value)))
 
 ;allocate memory on heap
 ;memory X size -> addr(allocated) X memory(new) 
 (define (memory-alloc mem size)
 	(define current-top (imap-get (memory-imap mem) heap-top-addr))
-	(cons current-top (std:struct-copy memory mem [imap (imap-set (memory-imap mem) heap-top-addr (+ current-top size))])))
+	(cons current-top (memory (imap-set (memory-imap mem) heap-top-addr (+ current-top size)))))
 
 ;must use this to new object
 (define (memory-new mem)
 	(define current-top (imap-get (memory-imap mem) obj-top-addr))
-	(cons current-top (std:struct-copy memory mem [imap (imap-set (memory-imap mem) ojb-top-addr (+ current-top 1))])))
+	(cons current-top (memory (imap-set (memory-imap mem) obj-top-addr (+ current-top 1)))))
 	
 ;-----------------Field Access---------------
 ;declare a new field (a field map is a map from obj-addr to field-addr)
 ;return (new memory)
 ;does not overwrite if exists
 (define (memory-fdecl mem name) 
-	(if (equal? (memory-vt-addr mem name) not-found)
+	(if (equal? (memory-vt-base mem name) not-found)
 		(begin
 			(match-define (cons addr mem-alloc) (memory-alloc mem vt-size))
-			(std:struct-copy memory mem-alloc 
-				[imap (imap-batch-set (memory-imap mem-alloc) 
+			(memory
+				(imap-batch-set (memory-imap mem-alloc) 
 					(list 
 					(cons (+ name vt-index-addr) addr)
 					(cons obj-butt-addr (memory-hread mem-alloc heap-top-addr))
-					(cons obj-top-addr (memory-hread mem-alloc heap-top-addr))))]))
+					(cons obj-top-addr (memory-hread mem-alloc heap-top-addr))))))
 		mem))
 
 ;read a field value of an object
 (define (memory-fread mem fname obj-addr)
 	(define vt-addr (memory-vt-base mem fname))
 	(define faddr (memory-vt-lookup mem vt-addr obj-addr))
-	(memory-hread mem entry-addr))
+	(memory-hread mem faddr))
 
 ;write to a field of an object
 (define (memory-fwrite mem fname obj-addr value) 
 	(define vt-addr (memory-vt-base mem fname))
-	(define faddr (memory-vt-get mem vt-addr obj-addr))
+	(define faddr (memory-vt-lookup mem vt-addr obj-addr))
 	(memory-hwrite mem faddr value))
 
 ;return baes address of a virtual table
@@ -110,12 +110,12 @@
 
 ;============= Default Values ===========
 (define memory-empty 
-	(imap-batch-set imap-empty (list 
+	(memory (imap-batch-set imap-empty (list 
 		(cons heap-top-addr vt-base-addr) 
 		(cons obj-top-addr vt-base-addr)
 		(cons obj-butt-addr vt-base-addr)
-		(cons stack-top-addr stack-bottom-addr) 
-		(cons stack-pointer-addr stack-bottom-addr))))
+		(cons stack-top-addr stack-bottom) 
+		(cons stack-pointer-addr stack-bottom)))))
 ;========================================
 
 ;======================= Symbolic Operations =========================

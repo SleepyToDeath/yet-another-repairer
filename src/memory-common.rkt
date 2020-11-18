@@ -23,8 +23,12 @@
 ;	stack pointer = beginning of the scope at current top of stack (logically, not `stack top`)
 ;	next scope = the scope at one level lower in the stack
 
-(define nullptr -1)
-(define not-found -666)
+;vt-num = max number of different member fields/functions
+(define vt-num 1024)
+;vt-size = max number of objects
+(define vt-size 1024)
+;scope-size = max number of different variable names
+(define scope-size 1024)
 
 (define heap-top-addr 1)
 (define obj-top-addr 4)
@@ -35,11 +39,5 @@
 
 (define stack-top-addr 2)
 (define stack-pointer-addr 3)
-(define stack-bottom-addr (* 1024 virtual-table-size))
+(define stack-bottom (* (* 2 vt-num) vt-size))
 
-;vt-num = max number of different member fields/functions
-(define vt-num 1024)
-;vt-size = max number of objects
-(define vt-size 1024)
-;scope-size = max number of different variable names
-(define scope-size 1024)

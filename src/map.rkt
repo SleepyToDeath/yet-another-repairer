@@ -1,7 +1,6 @@
 #lang rosette/safe
 
 (require (prefix-in std: racket/base))
-(require "memory-common.rkt")
 
 (provide (all-defined-out))
 
@@ -103,6 +102,9 @@
 (define (default-func x) not-found)
 
 (define imap-empty (imap-conc default-func))
+
+(define nullptr -1)
+(define not-found -666)
 ;========================================
 
 

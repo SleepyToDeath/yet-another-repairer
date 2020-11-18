@@ -45,8 +45,8 @@
 
 result
 
-(pretty-print string-id-map)
+;(pretty-print string-id-map)
 
-(match-define (cons soft hard) (ast->relation buggy))
+;(match-define (cons soft hard) (ast->relation buggy))
 
-(define tf1 (hard input1 output1))
+;(define tf1 (hard input1 output1))
