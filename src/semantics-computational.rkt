@@ -20,7 +20,7 @@
 ;boot: boot function
 ;classes: list of classes
 ;cmap: name to class
-;fmap: function vid/sid to function
+;fmap: function sid to function (function pointer in memory is sid)
 (struct machine (boot classes cmap fmap mem pc) #:transparent)
 
 ;
@@ -123,56 +123,6 @@
 	(append 
 		(list cls delimiter-static func)
 		(foldl (lambda (s l) (cons delimiter-minor (cons s l))) null arg-types)))
-
-(define (print-machine m)
-	(begin
-		(display "======================\n")
-		(display "Boot Function:\n")
-		(print-func (machine-boot m) "    ")
-		(display "Classes:\n")
-		(map (lambda (c) (print-class c "    ")) (machine-classes m))
-		(display "Class Name Map:\n")
-		(display "    ")
-		(println (machine-cmap m))
-		(display "Memory:\n")
-		(display "    ")
-		(println (machine-mem m))
-		(display "PC:\n")
-		(display "    ")
-		(println (machine-pc m))
-		(display "======================\n")))
-
-;(struct class (name extend implements sfuncs vfuncs sfields vfields) #:transparent)
-(define (print-class c indent)
-	(begin
-		(display indent)
-		(println (class-name c))
-		(display indent)
-		(println (class-extend c))
-		(display indent)
-		(println (class-implements c))
-		(map (lambda (f) (print-func f (std:string-append indent "    "))) (class-sfuncs c))
-		(map (lambda (f) (print-func f (std:string-append indent "    "))) (class-vfuncs c))
-		(map (lambda (v) (begin (display indent) (println v))) (class-sfields c))
-		(map (lambda (v) (begin (display indent) (println v))) (class-vfields c))))
-		
-
-;(struct function (name prog lmap args locals) #:transparent)
-(define (print-func f indent)
-	(if (function? f)
-		(begin
-			(display indent)
-			(println (function-name f))
-			(display indent)
-			(println (function-prog f))
-			(display indent)
-			(println (function-lmap f))
-			(display indent)
-			(println (function-args f))
-			(display indent)
-			(println (function-locals f)))
-		(println f)))
-
 
 ;======================== Execution Interface ===========================
 ;machine(init) X list of names -> machine(fin)
@@ -343,7 +293,7 @@
 
 (define (build-virtual-table mac) 
 	(define classes (machine-classes mac))
-	(define (process-class cls mem)
+	(define (process-class cls mac)
 		(define cls-name (class-name cls))
 
 		(define sfuncs (class-sfuncs cls))
@@ -351,20 +301,41 @@
 		(define sfields (class-sfields cls))
 		(define vfields (class-vfields cls))
 
-		(define mem-sfuncs (foldl (lambda (sf mem) (memory-sforce-write mem 
-			(sfunc-id cls-name (function-name sf) (map cdr (function-args sf))) sf)) mem sfuncs))
-		(define mem-sfields (foldl (lambda (sf mem) (memory-sdecl mem (sfield-id cls-name sf))) mem-sfuncs sfields))
+		(define mac-sfuncs (foldl 
+			(lambda (sf mac) 
+				(define sid (sfunc-id cls-name (function-name sf) (map cdr (function-args sf))))
+				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid))
+				(define fmap-1 (imap-set (machine-fmap mac) sid sf))
+				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
+			mac sfuncs))
 
-		(define mem-vfuncs (foldl (lambda (vf mem) (memory-fdecl mem 
-			(vfunc-id mac cls-name (function-name vf) (map cdr (function-args vf))))) mem-sfields vfuncs))
-		(define mem-vfields (foldl (lambda (vf mem) (memory-fdecl mem (vfield-id mac cls-name vf))) mem-vfuncs vfields))
+		(define mac-sfields (foldl 
+			(lambda (sf mac) 
+				(std:struct-copy machine mac 
+					[mem (memory-sdecl (machine-mem mac) (sfield-id cls-name sf))])) 
+			mac-sfuncs sfields))
+
+		(define mac-vfuncs (foldl 
+			(lambda (vf mac) 
+				(define vid (vfunc-id mac cls-name (function-name vf) (map cdr (function-args vf))))
+				(define sid (sfunc-id cls-name (function-name vf) (map cdr (function-args vf))))
+				(define mem-1 (memory-fdecl (machine-mem mac) vid)) 
+				(define fmap-1 (imap-set (machine-fmap mac) sid vf))
+				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
+			mac-sfields vfuncs))
+
+		(define mac-vfields (foldl 
+			(lambda (vf mac) 
+				(std:struct-copy machine mac 
+					[mem (memory-fdecl (machine-mem mac) (vfield-id mac cls-name vf))])) 
+			mac-vfuncs vfields))
 
 		(println string-id-table)
-		mem-vfields)
+		mac-vfields)
 
 	(define mem-push (memory-spush (machine-mem mac)))
 	(define mem-reserve-obj (cdr (memory-alloc mem-push vt-size)))
-	(std:struct-copy machine mac [mem (foldl process-class mem-reserve-obj classes)]))
+	(foldl process-class (std:struct-copy machine mac [mem mem-reserve-obj]) classes))
 
 (define (variable-definitions->list ast)
 	(map 
@@ -378,18 +349,6 @@
 
 
 ;======================== Instructions ===========================
-;globals: list of (cons var-name(string) value(ast))
-;(struct inst-boot (globals) #:transparent
-;	#:methods gen:instruction
-;	[(define (inst-exec i m f) 
-;		(define (init-var vi mem)
-;			(define name (car vi))
-;			(define value-ast (cdr vi))
-;			(define value (expr-eval (ast->expression value-ast) m))
-;			(memory-swrite mem name value))
-;		(foldl init-var (machine-mem m) (inst-boot-globals i))
-;	)])
-
 ;assign virtual function to "this" from class information
 ;"this" should be give by caller of special call
 (struct inst-init (classname) #:transparent
@@ -401,9 +360,10 @@
 
 		(define mem-bind-func (foldl
 			(lambda (func mem) 
-				(define func-id (vfunc-id m classname (function-name func) (map cdr (function-args func))))
-				(if (is-not-found? (memory-fread mem func-id addr))
-					(memory-fwrite mem func-id addr func) 
+				(define vid (vfunc-id m classname (function-name func) (map cdr (function-args func))))
+				(define sid (sfunc-id classname (function-name func) (map cdr (function-args func))))
+				(if (is-not-found? (memory-fread mem vid addr))
+					(memory-fwrite mem vid addr sid) 
 					mem))
 			mem-0
 			(class-vfuncs (imap-get (machine-cmap m) classname))))
@@ -484,7 +444,9 @@
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 ;		(println i)
-		(define func (memory-sread (machine-mem m) (sfunc-id (inst-static-call-cls-name i) (inst-static-call-func-name i) (inst-static-call-arg-types i))))
+		(define sid (sfunc-id (inst-static-call-cls-name i) (inst-static-call-func-name i) (inst-static-call-arg-types i)))
+		;no need to read from memory
+		(define func (imap-get (machine-fmap m) sid))
 		(display "\n")
 ;		(pretty-print i)
 		(pretty-print func)
@@ -511,7 +473,9 @@
 ;		(println (format "obj addr: ~a" obj-addr))
 ;		(println (format "vfunc id: ~a" (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i) (inst-virtual-call-arg-types i))))
 		;virtual
-		(define func (memory-fread mem0 (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i) (inst-virtual-call-arg-types i)) obj-addr))
+		(define vid (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i) (inst-virtual-call-arg-types i)))
+		(define sid (memory-fread mem0 vid obj-addr))
+		(define func (imap-get (machine-fmap m) sid))
 		(display "\n")
 		(pretty-print obj-addr)
 ;		(pretty-print i)
@@ -540,8 +504,9 @@
 
 ;		(println (format "obj addr: ~a" obj-addr))
 ;		(println (format "sfunc id: ~a" (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-args i))))
+		(define sid (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-arg-types i)))
 		;never virtual
-		(define func (memory-sread mem0 (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-arg-types i))))
+		(define func (imap-get (machine-fmap m) sid))
 		(display "\n")
 ;		(pretty-print i)
 		(pretty-print func)

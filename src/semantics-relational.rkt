@@ -20,16 +20,6 @@
 ;============================= Definition ====================================
 (struct function-formula (func lids pmarks ret-pmark fmls vid sid) #:transparent)
 
-(define (print-func-fml func-fml)
-	(match func-fml
-		[(function-formula func lids pmarks ret-pmark fmls vid sid)
-		 (begin
-		 	(println lids)
-		 	(println pmarks)
-		 	(println ret-pmark)
-		 	(println fmls)
-		 	(print-func func ""))]))
-
 ;============================= Top Level Interface ====================================
 ;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
 (define (ast->relation ast)
@@ -119,7 +109,7 @@
 		#f))
 
 
-(define (vfunc-id-alt mac cls func arg-types) (lookup-virtual-function-alt mac cls func arg-types))
+(define (vfunc-id-alt mac cls func arg-types) (string-id (lookup-virtual-function-alt mac cls func arg-types)))
 
 (define (build-virtual-table-alt mac) 
 	(define classes (machine-classes mac))
@@ -139,6 +129,7 @@
 			(vfunc-id-alt mac cls-name (function-name (function-formula-func vf-fml)) (map cdr (function-args (function-formula-func vf-fml)))))) mem-sfields vfuncs))
 		(define mem-vfields (foldl (lambda (vf mem) (memory-fdecl mem (vfield-id mac cls-name vf))) mem-vfuncs vfields))
 
+		(println string-id-table)
 		mem-vfields)
 
 	(define mem-push (memory-spush (machine-mem mac)))
@@ -173,14 +164,10 @@
 
 ;function-formula X int(pc) -> bool?
 (define (get-pmark func-fml pc)
-;	(display "\nget-pmark\n")
-;	(print-func-fml func-fml)
 	(list-ref (function-formula-pmarks func-fml) pc))
 
 ;function-formula X int(pc) -> bool?
 (define (get-lid func-fml pc)
-;	(display "\nget-lid\n")
-;	(print-func-fml func-fml)
 	(list-ref (function-formula-lids func-fml) pc))
 
 (define (all-functions mac)
