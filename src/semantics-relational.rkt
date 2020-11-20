@@ -58,8 +58,9 @@
 			)) #t output))
 
 		(match-define (cons mac-ass fml-ass) (assign-input mac input))
-		(define boot-pmark (alloc-lstate (machine-boot mac-ass)))
-		(match-define (cons all-invokes mac-done) (invoke->relation boot-pmark mac-ass null))
+		(define boot-lstate (alloc-lstate (machine-boot mac-ass)))
+		(define all-invokes (invoke->relation boot-lstate mac-ass))
+		(define mac-done (std:struct-copy machine mac-ass [mem (root-invoke-ret-mem all-invokes)]))
 		(define fml-out (compare-output mac-done output))
 		(define fml-code (andmap (lambda (func) (function-formula-fmls func)) all-invokes))
 ;		(display "\nfml-ass!\n")
@@ -68,10 +69,10 @@
 ;		(println fml-out)
 ;		(display "\nfml-code!\n")
 ;		(println fml-code)
-;		(println (get-lid boot-pmark 1))
-		(define fml-boot-is-correct (get-lid boot-pmark 1))
-		(and fml-boot-is-correct (starting-pmark boot-pmark) fml-ass fml-out fml-code))
-;		(and (starting-pmark boot-pmark) fml-code fml-ass))
+;		(println (get-lid boot-lstate 1))
+		(define fml-boot-is-correct (apply and (function-formula-lids func-fml)))
+		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code))
+;		(and (starting-pmark boot-lstate) fml-code fml-ass))
 
 	(cons soft-cons hard-cons))
 
@@ -229,17 +230,26 @@
 	(car (function-formula-lstates func-fml)))
 
 (define (ending-lstate func-fml)
-	(function-formula-ret-lstates func-fml))
+	(function-formula-ret-lstate func-fml))
 
 ;return a new func-fml
-(define (prepend-staring-mem-in func-fml pmark mem)
+(define (prepend-starting-mem-in func-fml pmark mem)
 	(prepend-mem-in func-fml pmark mem pc-init))
+
+;return a new func-fml
+(define (prepend-ending-mem-in func-fml pmark mem) 
+	(define st-old (ending-lstate func-fml))
+	(define st-new (std:struct-copy lstate st-old [mem-in-list (cons (cons pmark mem) (lstate-mem-in-list st-old))]))
+	(std:struct-copy function-formula func-fml [ret-lstates st-new]))
 
 ;return a new func-fml
 (define (prepend-mem-in func-fml pmark mem pc) 
 	(define st-old (get-lstate func-fml pc))
-	(define st-new (std:struct-copy lstate st-old [mem-in (cons (cons pmark mem) (lstate-mem-in st-old))]))
+	(define st-new (std:struct-copy lstate st-old [mem-in-list (cons (cons pmark mem) (lstate-mem-in-list st-old))]))
 	(std:struct-copy function-formula func-fml [lstates (list-set (function-formula-lstates func-fml) pc st-new)]))
+
+(define (get-mem-in-list func-fml pc)
+	(lstate-mem-in-list (get-lstate func-fml pc)))
 
 (define (ending-mem-out func-fml)
 	(lstate-mem-out (ending-lstate func-fml)))
@@ -259,8 +269,6 @@
 
 
 
-
-
 (define (get-lid func-fml pc)
 	(list-ref (function-formula-lids func-fml) pc))
 
@@ -273,40 +281,38 @@
 		(map (lambda (cls) (class-vfuncs cls)) (machine-classes mac))))
 
 
+
+;return a new func-fml
+(define (append-fml func-fml fml)
+	(std:struct-copy function-formula func-fml [fmls (and (function-formula-fmls func-fml) fml)]))
+
 ;============================= Encoder Implementation ====================================
-;[!] Starting from this point, mac is a constant. There is no "update". All formulae are relations between symbolic states.
-;function X machine -> list of function-formula from all functions in `mac` transitively invoked by `func`
-(define (invoke->relation func-fml mac pmark mem args)
-	(insts->relation (invoke-setup func-fml pmark mem args) mac))
-
-;basically a copy of `function-call`
-(define (invoke-setup func-fml pmark mem args)
-	(define func (function-formula-func func-fml))
-	(define mac-reset (std:struct-copy machine mac [pc pc-init][mem (memory-spush (machine-mem mac))]))
-	(define mac-decl (std:struct-copy machine mac-reset [mem 
-		(foldl 
-			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)))) 
-			(machine-mem mac-reset) 
-			(append (function-args func) (function-locals func)))]))
-	(define mac-input (std:struct-copy machine mac-decl [mem
-		(foldl 
-			(lambda (arg-src arg-dst mem) (memory-swrite mem (string-id (car arg-dst)) (expr-eval arg-src mac)))
-			(machine-mem mac-decl)
-			args 
-			(function-args func))]))
-	mac-input)
-
-
+;[!] Starting from this point, mac is a constant. 
+;	 There is no "update". All formulae are relations between symbolic states.
 
 ;relation building state
-(struct rbstate (funcs pc fml func-fml mac) #:transparent)
+;pc : not true pc, just the position when scanning through the program
+(struct rbstate (funcs pc func-fml mac) #:transparent)
 
+
+; function X machine -> list of function-formula from all functions in `mac` transitively invoked by `func`
+; "This function" is guaranteed to be at the beginning of the list.
+(define (invoke->relation func-fml mac)
+	(insts->relation func-fml mac))
+
+; "This function" is guaranteed to be at the beginning of the list.
+(define (root-invoke func-fmls)
+	(car func-fmls))
+
+(define (root-invoke-ret-mem func-fmls)
+	(ormap (lambda (p+m) (if (car p+m) (cdr p+m) #f)) (lstate-mem-in-list (get-ending-lstate (root-invoke func-fmls)))))
+	
 (define (insts->relation func-fml mac)
 	(match (foldl inst->relation
-					(rbstate null 0 #t func-fml mac) 
+					(rbstate null pc-init func-fml mac) 
 					(function-prog (function-formula-func func-fml)))
-		[(rbstate funcs pc fml func-fml mac) 
-				(cons (cons (std:struct-copy function-formula func-fml [fmls fml]) funcs) mac)]))
+		[(rbstate funcs pc func-fml mac) 
+				(cons func-fml funcs)]))
 
 
 
@@ -314,38 +320,39 @@
 (define (inst->relation inst st)
 
 
-	(match st [(rbstate funcs pc fml func-fml mac)
+	(match st [(rbstate funcs pc func-fml mac)
 		(begin
-		(define mem-sym (get-mem func-fml pc))
 		(define func (function-formula-func func-fml))
 		(define mark (get-pmark func-fml pc))
 		(define id (get-lid func-fml pc))
+
+		(define mem-in (ormap (lambda (p+m) (if (car p+m) (cdr p+m) #f)) (get-mem-in-list func-fml pc)))
+		(define mem-0 (memory-sym-reset (get-mem-out func-fml pc) mem-in))
+		;used only for expr-eval
+		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0]))
 
 	(display "\nInstruction:\n")
 	(println inst)
 	(println mark)
 	(println id)
 
-;	(display "\nAssert Num:\n")
-;	(println (length (asserts)))
 
-		(define (next-mark) (get-pmark func-fml (+ 1 pc)))
+		(define (next-mark) 
+			(get-pmark func-fml (+ 1 pc)))
+
 		(define (label-mark label) 
 			(define new-pc (imap-get (function-lmap func) label))
 			(get-pmark func-fml new-pc))
 
 		(define (select-fml? fml)
-;			(set! fml #t)
 			(implies id fml))
 
 		(define (iassert-pc-next fml-path fml-op)
-;			(set! fml-op #t)
 			(and 
 				fml-path
 				(equal? mark (and fml-op (next-mark)))))
 
 		(define (iassert-pc-ret fml-path fml-op)
-;			(set! fml-op #t)
 			(and
 				fml-path
 				(equal? mark (and fml-op (function-formula-ret-pmark func-fml)))))
@@ -359,7 +366,6 @@
 					fml-path))
 
 		(define (iassert-pc-invoke fml-path fml-ops func-fmls cnds)
-;			(set! fml-op #t)
 			(letrec	([fml-cnds (andmap 
 							(lambda (func-fml fml-op cnd)
 								(and 
@@ -371,184 +377,196 @@
 						fml-path
 						(equal? mark (and fml-cnds fml-brs (next-mark))))))
 
-		; (int -> any) X int -> any X formula
-		(define (maybe-happen old new)
-			(cons (if mark new old) #t))
+		(define (invoke-setup func-fml-callee mem args)
+			(define mem-0 (memory-sym-reset (memory-sym-new) mem))
+			(define func (function-formula-func func-fml-callee))
+			(define mem-push (memory-spush mem-0))
+			(define mem-decl
+				(foldl 
+					(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)))) 
+					mem-push
+					(append (function-args func) (function-locals func))))
+			(define mem-input 
+				(foldl 
+					(lambda (arg-src arg-dst mem) (memory-swrite mem (string-id (car arg-dst)) (expr-eval arg-src mac-eval-ctxt)))
+					mem-decl
+					args 
+					(function-args func)))
+			(define func-fml-in (prepend-starting-mem-in func-fml-callee mark mem-input))
+			(define fml-in (memory-sym-get-fml mem-input))
+			(cons func-fml-in fml-in))
+
+		; bool X memory X int(if with branch)/#f(if no branch) -> rbstate
+		(define (update-rbstate fml-new mem-out pc-opt-br)
+			(define pc-next (+ 1 pc))
+			(define func-fml-next (prepend-mem-in func-fml mark mem-out pc-next))
+			(define func-fml-br (if pc-opt-br (prepend-mem-in func-fml-next mark mem-out pc-opt-br) func-fml-next))
+			(define func-fml-new (append-fml func-fml-br fml-new))
+			(std:struct-copy rbstate st [pc pc-next] [func-fml func-fml-new]))
+
+		(define (update-mem-only mem-new)
+			(define fml-new (iassert-pc-next #t (select-fml? (memory-sym-get-fml mem-new))))
+			(update-rbstate fml-new mem-new #f))
+
+
 
 
 		(match inst 
 			[(inst-nop _) 
-				(letrec ([fml-switch (select-fml? #t)]
-						 [fml-path (iassert-pc-next #t fml-switch)])
-						(std:struct-copy rbstate st [pc (+ 1 pc)] [fml (and fml fml-path)]))]
+				(update-rbstate (iassert-pc-next #t #t) mem-0 #f)]
 
 			[(inst-init classname)
 				(begin
-				(define mem-0 (machine-mem mac))
 				(define addr (memory-sread mem-0 var-this-name))
-
-				(match-define (cons mem-bind-func fml-bind-func)
+				(define mem-bind-func
 					(foldl
-						(lambda (func-fml mem+fml) 
-							(define func-id (vfunc-id-alt mac classname 
-														(function-name (function-formula-func func-fml)) 
-														(map cdr (function-args (function-formula-func func-fml)))))
-							(if (is-not-found? (memory-fread (car mem+fml) func-id addr))
-								(match (maybe-happen (car mem+fml) (memory-fwrite (car mem+fml) func-id addr func-fml))
-									[(cons mem fml) (cons mem (and fml (cdr mem+fml)))])
-								mem+fml))
-						(cons mem-0 #t)
-						(class-vfuncs (imap-get (machine-cmap mac) classname))))
-
-				(define pc-next (+ 1 pc))
-				(std:struct-copy rbstate st 
-					[mac (std:struct-copy machine mac [mem mem-bind-func])] 
-					[pc pc-next]))]
+						(lambda (func-fml-cur mem) 
+							(begin
+							(define vid (function-formula-vid func-fml-cur))
+							(define sid (function-formula-sid func-fml-cur))
+							(if (is-not-found? (memory-fread mem vid addr))
+								(memory-fwrite mem vid addr sid)
+								mem))
+						mem-0
+						(class-vfuncs (imap-get (machine-cmap mac) classname)))))
+				(update-mem-only mem-bind-func))]
 
 			[(inst-new v-name) 
 				(begin
-				(define mem-0 (machine-mem mac))
-				(match-define (cons addr+mem fml-alloc) (maybe-happen mem-0 (memory-alloc mem-0 1)))
-				(match-define (cons addr mem-alloc) addr+mem)
-				(match-define (cons mem-ass fml-write) (maybe-happen mem-alloc (memory-swrite mem-alloc v-name addr)))
-				(define mac-new (std:struct-copy machine mac [mem mem-ass]))
-				(define fml-new (iassert-pc-next (and fml-alloc fml-write) #t))
-				(std:struct-copy rbstate st [mac mac-new] [pc (+ 1 pc)] [fml (and fml fml-new)]))]
-
+				(match-define (cons addr mem-alloc) (memory-new mem-0))
+				(define mem-ass (memory-swrite mem-alloc v-name addr))
+				(update-mem-only mem-ass))]
 
 			[(inst-ret v-expr) 
 				(begin
-				(define-symbolic* vs0 integer?)
-				(define ret-value (expr-eval v-expr mac))
-				(define fml-ret-val (equal? vs0 ret-value))
-;				(display "\ninst-ret\n")
-;				(println fml-ret-val)
-				(match-define (cons mem-ret fml-write) (maybe-happen (machine-mem mac) (memory-sforce-write (machine-mem mac) var-ret-name ret-value)))
-				(define mac-new (std:struct-copy machine mac [mem mem-ret]))
-				(define fml-new (select-fml? fml-ret-val))
+				(define ret-value (expr-eval v-expr mac-eval-ctxt))
+				(define mem-ret (memory-sforce-write mem-0 var-ret-name ret-value))
+				(define fml-ret (select-fml? (memory-sym-get-fml mem-ret)))
 				(define fml-path (iassert-pc-ret fml-write fml-new))
-				(std:struct-copy rbstate st [mac mac-new] [pc pc-ret] [fml (and fml fml-path)]))]
-
+				(define func-fml-ret (prepend-ending-mem-in func-fml mark mem-ret))
+				(define func-fml-new (append-fml func-fml-ret fml-path))
+				(std:struct-copy rbstate st [pc pc-ret] [func-fml func-fml-new]))]
 
 			[(inst-static-call ret cls-name func-name arg-types args) 
 				(begin
-				(define func-invoked (alloc-lstate (memory-sread (machine-mem mac) (sfunc-id cls-name func-name arg-types))))
-				(match-define (cons funcs-ret mac-ret) (invoke->relation func-invoked mac args))
+				(define sid (sfunc-id cls-name func-name arg-types))
+				(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))
+				(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-in args))
+				(define funcs-ret (invoke->relation func-fml-in mac))
 
-				(define mem-ret (machine-mem mac-ret))
-				(define-symbolic* ret-value0 integer?) 
-				(define fml-ret (equal? ret-value0 (memory-sread mem-ret var-ret-name)))
+				(define mem-ret (memory-sym-reset mem-0 (root-invoke-mem-ret funcs-ret)))
+				(define ret-val (memory-sread mem-ret var-ret-name))
 				(define mem-pop (memory-spop mem-ret))
-				(match-define (cons mem-ass fml-ass) (maybe-happen mem-pop (memory-swrite mem-pop ret ret-value0)))
+				(define mem-ass (memory-swrite mem-pop ret ret-val))
+				(define fml-ret (memory-sym-get-fml mem-ass))
 
-				(define pc-next (+ 1 pc))
-				(define mac-new (std:struct-copy machine mac [mem mem-ass]))
-				(define fml-new (iassert-pc-invoke fml-ass (list fml-ret) (list func-invoked) (list #t)))
-				
-				(std:struct-copy rbstate st [funcs (append funcs funcs-ret)] [mac mac-new] [pc pc-next] [fml (and fml fml-new)]))]
+				(define fml-op (select-fml? (and fml-in fml-ret)))
+				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
 
+				(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (append funcs funcs-ret)]))]
 
 			[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
 				(begin
-				(define mem0 (machine-mem mac))
-				(define obj-addr (memory-sread mem0 obj-name))
+				(define mem--1 (memory-sym-reset (memory-sym-new) mem-in))
+				(define obj-addr (memory-sread mem--1 obj-name))
 				(define vid (vfunc-id-alt mac cls-name func-name arg-types))
 				(define funcs-invoked (map alloc-lstate (filter (lambda (f) (equal? (function-formula-vid f) vid)) (all-vfunctions mac))))
-				(define true-func-invoked (memory-fread mem0 vid obj-addr))
+				(define true-func-invoked-sid (memory-fread mem--1 vid obj-addr))
+				(define func-invoked (car (filter 
+					(lambda (f) (equal? (function-formula-sid f) true-func-invoked-sid)))
+					funcs-invoked))
 
 				;push an extra scope to avoid overwriting "this" of the current scope
-				;callee's stack, no side effect on caller, no need to shadow write
-				(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
-				(define mac-this (std:struct-copy machine mac [mem mem-this]))
-				(define-symbolic* ret-value1 integer?) 
+				(define mem-this (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr))
+				(define fml-this (memory-sym-get-fml mem-this))
 
-				(define uncertain-rets (map (lambda (f) 
-						(match-define (cons funcs-ret mac-ret) (invoke->relation f mac-this args))
-						(define mem-ret (machine-mem mac-ret))
-						(define fml-ret (equal? ret-value1 (memory-sread mem-ret var-ret-name)))
-						(define mem-pop (memory-spop (memory-spop mem-ret)))
-						(match-define (cons mem-ass fml-ass) (maybe-happen mem-pop (memory-swrite mem-pop ret ret-value1)))
-						(list funcs-ret mem-ass fml-ret (equal? (function-formula-sid f) (function-formula-sid true-func-invoked))))
-					funcs-invoked))
-				
-				(match-define (list funcs-ret mem-ass fml-ret cnd) (car (filter cadddr uncertain-rets)))
-				(define fml-rets (map caddr uncertain-rets))
-				(define cnds (map cadddr uncertain-rets))
+				(define mem-ret (memory-sym-reset mem-0 (root-invoke-mem-ret funcs-ret)))
+				(define ret-val (memory-sread mem-ret var-ret-name))
+				(define mem-pop (memory-spop (memory-spop mem-ret)))
+				(define mem-ass (memory-swrite mem-pop ret ret-val))
+				(define fml-ret (memory-sym-get-fml mem-ass))
 
-				(define pc-next (+ 1 pc))
-				(define mac-new (std:struct-copy machine mac [mem mem-ass]))
-				(define fml-new (iassert-pc-invoke #t fml-rets funcs-invoked cnds))
+				(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
+				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
 
-				(std:struct-copy rbstate st [funcs (append funcs funcs-ret)] [mac mac-new] [pc pc-next] [fml (and fml fml-new)]))]
+				(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (append funcs funcs-ret)]))]
 
+;			(define uncertain-rets (map 
+;				(lambda (f) 
+;					(match-define (cons func-fml-in fml-in) (invoke-setup f mem-this args))
+;					(define funcs-ret (invoke->relation func-fml-in mac))
+;
+;					(define mem-ret (memory-sym-reset (memory-sym-new) (root-invoke-mem-ret funcs-ret)))
+;					(define ret-value (memory-sread mem-ret var-ret-name))
+;					(define mem-pop (memory-spop (memory-spop mem-ret)))
+;					(define mem-ass (memory-swrite mem-pop ret ret-value))
+;					(define fml-ret (memory-sym-get-fml mem-ass))
+;
+;					(list funcs-ret mem-ass (and fml-ret fml-in) (equal? (function-formula-sid f) true-func-invoked-sid)))
+;				funcs-invoked))
+;			
+;			(match-define (list funcs-ret mem-ass fml-ret cnd) (car (filter cadddr uncertain-rets)))
+;
+;			(define fml-rets (map caddr uncertain-rets))
+;			(define cnds (map cadddr uncertain-rets))
+;
+;			(define pc-next (+ 1 pc))
+;			(define mac-new (std:struct-copy machine mac [mem mem-ass]))
+;			(define fml-new (iassert-pc-invoke #t fml-rets funcs-invoked cnds))
+;
+;			(std:struct-copy rbstate st [funcs (append funcs funcs-ret)] [mac mac-new] [pc pc-next] [fml (and fml fml-new)]))]
 
 			[(inst-special-call ret obj-name cls-name func-name arg-types args)
 				(begin
-				(define mem0 (machine-mem mac))
-				(define obj-addr (memory-sread mem0 obj-name))
-				(define func-invoked (alloc-lstate (memory-sread mem0 (sfunc-id cls-name func-name arg-types))))
+				(define mem--1 (memory-sym-reset (memory-sym-new) mem-in))
+				(define obj-addr (memory-sread mem--1 obj-name))
+				(define sid (sfunc-id cls-name func-name arg-types))
+				(define func-invoked (alloc-lstate (imap-get (machine-fmap m) sid)))
 
 				;push an extra scope to avoid overwriting "this" of the current scope
-				;callee's stack, no side effect on caller, no need to shadow write
-				(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
-				(define mac-this (std:struct-copy machine mac [mem mem-this]))
+				(define mem-this (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr))
+				(define fml-this (memory-sym-get-fml mem-this))
 
-				(match-define (cons funcs-ret mac-ret) (invoke->relation func-invoked mac-this args))
-				(define mem-ret (machine-mem mac-ret))
-				(define-symbolic* ret-value2 integer?) 
-				(define fml-ret (equal? ret-value2 (memory-sread mem-ret var-ret-name)))
-				;pop callee and callee's "this"
+				(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
+				(define funcs-ret (invoke->relation func-fml-in mac))
+
+				(define mem-ret (memory-sym-reset mem-0 (root-invoke-mem-ret funcs-ret)))
+				(define ret-val (memory-sread mem-ret var-ret-name))
 				(define mem-pop (memory-spop (memory-spop mem-ret)))
-				(match-define (cons mem-ass fml-ass) (maybe-happen mem-pop (memory-swrite mem-pop ret ret-value2)))
+				(define mem-ass (memory-swrite mem-pop ret ret-val))
+				(define fml-ret (memory-sym-get-fml mem-ass))
 
-				(define pc-next (+ 1 pc))
-				(define mac-new (std:struct-copy machine mac [mem mem-ass]))
-				(define fml-new (iassert-pc-invoke fml-ass (list fml-ret) (list func-invoked) (list #t)))
+				(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
+				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
 
-				(std:struct-copy rbstate st [funcs (append funcs funcs-ret)] [mac mac-new] [pc pc-next] [fml (and fml fml-new)]))]
+				(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (append funcs funcs-ret)]))]
 
 			[(inst-ass vl vr) 
 				(begin
-				(define mem (machine-mem mac))
-				(define value (expr-eval vr mac))
-				(define-symbolic* vs1 integer?)
-;	(display "\nAssert Num #0:\n")
-;	(println (length (asserts)))
-
+				(define value (expr-eval vr mac-eval-ctxt))
 				(define rhs (lexpr-rhs vl))
-				(match-define (cons mem-new fml-key) (maybe-happen mem
+				(define mem-new 
 					(match rhs
-					[(expr-var v) (memory-swrite mem (string-id (variable-name v)) vs1)]
-					[(expr-array arr idx)
-						(letrec
-							([addr (memory-sread mem (string-id (variable-name arr)))]
-							[idx-e (ast->expression idx)]
-							[idx-v (expr-eval idx-e mac)])
-							(memory-awrite mem addr idx-v vs1))]
-					[(expr-field obj cls fname)
-						(if (equal? obj void-receiver)
-							(memory-swrite mem (sfield-id (string-id (type-name-name cls)) (string-id (field-name fname))) vs1)
+						[(expr-var v) (memory-swrite mem-0 (string-id (variable-name v)) value)]
+						[(expr-array arr idx)
 							(letrec
-								([addr (memory-sread mem (string-id (variable-name obj)))])
-								(memory-fwrite mem (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr vs1)))])))
-;				(match-define (cons mem-new fml-key) (maybe-happen mem (memory-swrite mem vl vs1)))
-;	(display "\nAssert Num #1:\n")
-;	(println (length (asserts)))
-
-				(define fml-value (equal? value vs1))
-				(define fml-switch (select-fml? fml-value))
-				(define fml-new (iassert-pc-next fml-key fml-switch))
-				(define mac-new (std:struct-copy machine mac [mem mem-new]))
-				(define pc-next (+ 1 pc))
-				
-				(std:struct-copy rbstate st [mac mac-new] [pc pc-next] [fml (and fml fml-new)]))]
+								([addr (memory-sread mem-0 (string-id (variable-name arr)))]
+								[idx-e (ast->expression idx)]
+								[idx-v (expr-eval idx-e mac-eval-ctxt)])
+								(memory-awrite mem-0 addr idx-v value))]
+						[(expr-field obj cls fname)
+							(if (equal? obj void-receiver)
+								(memory-swrite mem-0 (sfield-id (string-id (type-name-name cls)) (string-id (field-name fname))) value)
+								(letrec
+									([addr (memory-sread mem-0 (string-id (variable-name obj)))])
+									(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value)))]))
+				(update-mem-only mem-new))]
 
 			[(inst-jmp condition label)
-				(letrec
-					([mem (machine-mem mac)]
-					 [lmap (function-lmap func)]
-					 [value (expr-eval condition mac)]
-					 [fml-new (iassert-pc-branch (select-fml? value) (select-fml? (not value)) label)]
-					 [pc-next (+ 1 pc)])
-					(std:struct-copy rbstate st [pc pc-next] [fml (and fml fml-new)]))]))]))
+				(begin
+				(define lmap (function-lmap func))
+				(define value (expr-eval condition mac-eval-ctxt))
+				(define fml-new (iassert-pc-branch (select-fml? value) (select-fml? (not value)) label))
+				(define pc-br (imap-get (function-lmap func) label))
+				(update-rbstate fml-new mem-0 pc-br))]
 

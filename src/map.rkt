@@ -33,7 +33,7 @@
 (define (imap-batch-set imap kvlist)
 	(foldl (lambda (kv m) (imap-set m (car kv) (cdr kv))) imap kvlist))
 
-;compare only func, ignore pending updates
+;[!]compare only func, ignore pending updates
 (define (imap-is-update m-new m-base updates)
 	(define f-new (imap-get-func m-new))
 	(define f-base (imap-get-func m-base))
@@ -43,7 +43,7 @@
 		(equal? (f-new x) (f-base x))
 		updates)))
 
-;compare only func, ignore pending updates
+;[!]compare only func, ignore pending updates
 (define (imap-is-copy m-new m-base)
 	(define f-new (imap-get-func m-new))
 	(define f-base (imap-get-func m-base))
@@ -76,12 +76,12 @@
 		(define (imap-get-func m)
 			(imap-sym-func-sym m))
 
-		;need to consider pending updates
 		(define (imap-get m index)
-			(define pending	(ormap
-				(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
-				(imap-sym-updates m)))
-			(if pending pending (imap-sym-func-sym index)))
+			((imap-sym-func-sym m) index))
+;			(define pending	(ormap
+;				(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
+;				(imap-sym-updates m)))
+;			(if pending pending ((imap-sym-func-sym m) index)))
 
 		(define (imap-set m index value)
 			(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))]))
