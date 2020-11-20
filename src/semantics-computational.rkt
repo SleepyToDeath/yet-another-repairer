@@ -541,11 +541,8 @@
 (struct iexpr-binary (op expr1 expr2) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
-		(println++ "Binary Expr: " e)
 		(define v1 (expr-eval-dispatch (iexpr-binary-expr1 e) m))
 		(define v2 (expr-eval-dispatch (iexpr-binary-expr2 e) m))
-		(println++ "v1: " v1)
-		(println++ "v2: " v2)
 		((iexpr-binary-op e) v1 v2))])
 
 (struct iexpr-array (arr-name index) #:transparent

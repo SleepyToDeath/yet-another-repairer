@@ -45,8 +45,16 @@
 
 result
 
-;(pretty-print string-id-map)
+(pretty-print string-id-table)
+(display "===============================================================================================================\n")
+(display "================================================ Encoding ... =================================================\n")
+(display "===============================================================================================================\n")
 
-;(match-define (cons soft hard) (ast->relation buggy))
+(match-define (cons soft hard) (ast->relation buggy))
 
-;(define tf1 (hard input1 output1))
+(define tf1 (hard input1 output1))
+
+(define debug-sol (optimize #:maximize (list (apply + soft))
+          #:guarantee (assert (and tf1))))
+
+debug-sol

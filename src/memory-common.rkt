@@ -41,3 +41,4 @@
 (define stack-pointer-addr 3)
 (define stack-bottom (* (* 2 vt-num) vt-size))
 
+(define stack-depth-max 10)
