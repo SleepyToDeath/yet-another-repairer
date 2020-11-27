@@ -114,11 +114,12 @@
 		(cons heap-top-addr vt-base-addr) 
 		(cons obj-top-addr vt-base-addr)
 		(cons obj-butt-addr vt-base-addr)
+		(cons stack-bottom stack-bottom)
 		(cons stack-top-addr stack-bottom) 
 		(cons stack-pointer-addr stack-bottom)))))
 ;========================================
 
-;======================= Symbolic Operations =========================
+;======================= Symbolic Operations ========================
 ;Usage: 
 ;	See "map.rkt". Memory is just a wrapper for imap
 
@@ -134,3 +135,10 @@
 ;equivalent to (memory-sym-get-fml (memory-sym-reset m m-base))
 (define (memory-is-copy m m-base)
 	(imap-is-copy (memory-imap m) (memory-imap m-base)))
+;====================================================================
+
+;================================ Helper ============================
+(define (memory-print mem)
+	(define-symbolic* xx integer?)
+	(pretty-print (imap-get (memory-imap mem) xx)))
+;====================================================================

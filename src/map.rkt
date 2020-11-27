@@ -1,6 +1,7 @@
 #lang rosette/safe
 
 (require (prefix-in std: racket/base))
+(require racket/format)
 
 (provide (all-defined-out))
 
@@ -37,6 +38,11 @@
 (define (imap-is-update m-new m-base updates)
 	(define f-new (imap-get-func m-new))
 	(define f-base (imap-get-func m-base))
+;	(display "\n f-new: ")
+;	(print f-new)
+;	(display "\n f-base: ")
+;	(print f-base)
+;	(display "\n")
 	(define-symbolic* x integer?)
 	(forall (list x) (foldr
 		(lambda (kv fml) (if (equal? x (car kv)) (equal? (f-new x) (cdr kv)) fml)) 
@@ -50,6 +56,11 @@
 	(define-symbolic* x integer?)
 	(forall (list x) (equal? (f-new x) (f-base x))))
 
+(define (imap-get-dispatch m index)
+	(imap-get m index))
+
+(define (imap-get-func-dispatch m)
+	(imap-get-func m))
 ;----------------- Concrete --------------------
 (struct imap-conc (func) #:transparent
 	#:methods gen:imap
@@ -77,13 +88,15 @@
 			(imap-sym-func-sym m))
 
 		(define (imap-get m index)
-			((imap-sym-func-sym m) index))
-;			(define pending	(ormap
-;				(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
-;				(imap-sym-updates m)))
-;			(if pending pending ((imap-sym-func-sym m) index)))
+;			((imap-sym-func-sym m) index))
+			(define pending	(ormap
+				(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
+				(imap-sym-updates m)))
+;			(if pending pending (imap-get-dispatch (imap-sym-imap-base m) index)))
+			(if pending pending ((imap-get-func-dispatch (imap-sym-imap-base m)) index)))
 
 		(define (imap-set m index value)
+;			(pretty-print (~a "\n imap store: " index " : " value "\n"))
 			(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))]))
 	])
 

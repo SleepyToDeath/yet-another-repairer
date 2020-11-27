@@ -172,7 +172,7 @@
 			((lambda ()
 				(begin
 					(define ret-v (memory-sread mem0 (string-id (car kv))))
-					(println ret-v)
+;					(println ret-v)
 					ret-v
 					)))
 			))) #t output))
@@ -330,7 +330,7 @@
 					[mem (memory-fdecl (machine-mem mac) (vfield-id mac cls-name vf))])) 
 			mac-vfuncs vfields))
 
-		(println string-id-table)
+;		(println string-id-table)
 		mac-vfields)
 
 	(define mem-push (memory-spush (machine-mem mac)))
@@ -447,9 +447,9 @@
 		(define sid (sfunc-id (inst-static-call-cls-name i) (inst-static-call-func-name i) (inst-static-call-arg-types i)))
 		;no need to read from memory
 		(define func (imap-get (machine-fmap m) sid))
-		(display "\n")
+;		(display "\n")
 ;		(pretty-print i)
-		(pretty-print func)
+;		(pretty-print func)
 		(define args (inst-static-call-args i))
 		(define ret (inst-static-call-ret i))
 ;		(println++ "Ret Var: " ret)
@@ -476,10 +476,10 @@
 		(define vid (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i) (inst-virtual-call-arg-types i)))
 		(define sid (memory-fread mem0 vid obj-addr))
 		(define func (imap-get (machine-fmap m) sid))
-		(display "\n")
-		(pretty-print obj-addr)
+;		(display "\n")
+;		(pretty-print obj-addr)
 ;		(pretty-print i)
-		(pretty-print func)
+;		(pretty-print func)
 		(define args (inst-virtual-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
@@ -507,9 +507,9 @@
 		(define sid (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-arg-types i)))
 		;never virtual
 		(define func (imap-get (machine-fmap m) sid))
-		(display "\n")
+;		(display "\n")
 ;		(pretty-print i)
-		(pretty-print func)
+;		(pretty-print func)
 		(define args (inst-special-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))

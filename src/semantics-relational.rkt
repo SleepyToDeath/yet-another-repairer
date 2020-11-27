@@ -18,6 +18,12 @@
 
 ;============================= Debug ========================================
 (define eval-pending null)
+(define (defer-eval v)
+	(set! eval-pending (cons v eval-pending)))
+
+(define cons-pending null)
+(define (defer-cons v)
+	(set! cons-pending (cons v cons-pending)))
 
 ;============================= Definition ====================================
 (struct function-formula (func lids lstates ret-lstate fmls vid sid) #:transparent)
@@ -41,7 +47,7 @@
 	(define (hard-cons input output) 
 
 		(define (assign-input mac input)
-			(define mem0 (memory-spush (machine-mem mac)))
+			(define mem0 (machine-mem mac))
 			(match-define (cons mem-ass fml-ass)
 				(foldl 
 					(lambda (kv mem+fml) 
@@ -51,13 +57,16 @@
 							(memory-sforce-write (car mem+fml) (string-id (car kv)) vi) 
 							(and (cdr mem+fml) fml)))
 					(cons mem0 #t) input))
-			(cons (std:struct-copy machine mac [mem mem-ass]) fml-ass))
+			(define mem-ret (memory-sdecl mem-ass var-ret-name))
+			(cons (std:struct-copy machine mac [mem mem-ret]) fml-ass))
 
 		(define (compare-output mac output)
 			(define mem0 (machine-mem mac))
-			(foldl (lambda (kv fml-cur) (equal? (cdr kv) 
-				(memory-sread mem0 (string-id (car kv)))
-			)) #t output))
+;			(display "\n mem out: ")
+;			(pretty-print mem0)
+			(andmap 
+				(lambda (kv) (equal? (cdr kv) (memory-sread mem0 (string-id (car kv)))))
+				output))
 
 		(match-define (cons mac-ass fml-ass) (assign-input mac input))
 		(define boot-lstate (prepend-starting-mem-in (alloc-lstate (machine-boot mac-ass)) #t (machine-mem mac-ass)))
@@ -74,7 +83,7 @@
 ;		(println (get-lid boot-lstate 1))
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code))
-;		(and (starting-pmark boot-lstate) fml-code fml-ass))
+;		(and fml-out))
 
 	(cons soft-cons hard-cons))
 
@@ -315,10 +324,16 @@
 		[(rbstate funcs pc func-fml mac) 
 				(cons func-fml funcs)]))
 
-
+(define (inst->relation inst st)
+	(define ret (inst->relation.real inst st))
+;	(display "\n updated state:\n")
+;	(pretty-print (map function-formula-func (rbstate-funcs ret)))
+;	(pretty-print (rbstate-pc ret))
+;	(pretty-print (rbstate-func-fml ret))
+	ret)
 
 ;instruction X rbstate -> rbstate
-(define (inst->relation inst st)
+(define (inst->relation.real inst st)
 
 
 	(match st [(rbstate funcs pc func-fml mac)
@@ -335,7 +350,7 @@
 		(define mem-in (ormap (lambda (p+m) (if (car p+m) (cdr p+m) #f)) (get-mem-in-list func-fml pc)))
 		(define mem-0 (memory-sym-reset (get-mem-out func-fml pc) mem-in))
 		;used only for expr-eval
-		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0]))
+		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-in]))
 
 
 		(define (next-mark) 
@@ -379,6 +394,7 @@
 						(equal? mark (and fml-cnds fml-brs (next-mark))))))
 
 		(define (invoke-setup func-fml-callee mem args)
+;			(memory-print mem)
 			(define mem-0 (memory-sym-reset (memory-sym-new) mem))
 			(define func (function-formula-func func-fml-callee))
 			(define mem-push (memory-spush mem-0))
@@ -407,6 +423,7 @@
 
 		(define (update-mem-only mem-new)
 			(define fml-new (iassert-pc-next #t (select-fml? (memory-sym-get-fml mem-new))))
+;			(defer-cons fml-new)
 			(update-rbstate fml-new mem-new #f))
 
 
@@ -446,6 +463,13 @@
 				(define fml-path (iassert-pc-ret #t fml-ret))
 				(define func-fml-ret (prepend-ending-mem-in func-fml mark mem-ret))
 				(define func-fml-new (append-fml func-fml-ret fml-path))
+;				(display "\n ret-expr 0: ")
+;				(pretty-print v-expr)
+;				(display "\n ret-val 0: ")
+;				(pretty-print ret-value)
+;				(display "\n mem ret 0: ")
+;				(pretty-print mem-ret)
+;				(defer-cons fml-path)
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
 
 			[(inst-static-call ret cls-name func-name arg-types args) 
@@ -457,12 +481,23 @@
 
 				(define mem-ret (memory-sym-reset mem-0 (root-invoke-ret-mem funcs-ret)))
 				(define ret-val (memory-sread mem-ret var-ret-name))
+;				(display "\n ret-expr: ")
+;				(pretty-print ret)
+;				(display "\n ret-val: ")
+;				(pretty-print ret-val)
+;				(display "\n")
 				(define mem-pop (memory-spop mem-ret))
 				(define mem-ass (memory-swrite mem-pop ret ret-val))
+;				(display "\n mem pop: ")
+;				(pretty-print mem-pop)
+;				(display "\n mem ass: ")
+;				(pretty-print mem-ass)
 				(define fml-ret (memory-sym-get-fml mem-ass))
 
 				(define fml-op (select-fml? (and fml-in fml-ret)))
 				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
+;				(defer-cons fml-in)
+;				(defer-cons fml-ret)
 
 				(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (append funcs funcs-ret)]))]
 
@@ -548,6 +583,7 @@
 			[(inst-ass vl vr) 
 				(begin
 				(define value (expr-eval vr mac-eval-ctxt))
+;				(defer-cons (equal? value 6))
 				(define rhs (lexpr-rhs vl))
 				(define mem-new 
 					(match rhs

@@ -64,6 +64,10 @@
 	(define current-top (imap-get m stack-top-addr))
 	(define current-pointer (imap-get m stack-pointer-addr))
 	(define new-top (+ current-top scope-size))
+;	(display "\n Push stack \n")
+;	(pretty-print (~a " current-pointer: " current-pointer " top: " current-top " next top: " new-top))
+;	(display "\n")
+;	(imap-batch-set m (list  (cons stack-top-addr new-top))))
 	(imap-batch-set m (list (cons current-top current-pointer) (cons stack-pointer-addr current-top) (cons stack-top-addr new-top))))
 
 ;pop a scope from the top
@@ -71,6 +75,8 @@
 (define (stack-pop m)
 	(define current-pointer (imap-get m stack-pointer-addr))
 	(define next-pointer (imap-get m current-pointer))
+;	(display "\n Pop stack \n")
+;	(pretty-print (~a " current-pointer: " current-pointer " new pointer: " next-pointer))
 	(imap-set m stack-pointer-addr next-pointer))
 
 ;absolute address of a name in a scope
