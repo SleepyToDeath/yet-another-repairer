@@ -106,10 +106,10 @@
 	])
 
 (define (imap-sym-reset m m-base)
-	(define-symbolic* func-base (~> integer? integer?))
+;	(define-symbolic* func-base (~> integer? integer?))
 	;[!] Assert!
-	(assert (imap-is-copy func-base (imap-get-func m-base)))
-	(imap-sym (imap-get-func m) func-base null))
+;	(assert (imap-is-copy func-base (imap-get-func m-base)))
+	(imap-sym (imap-get-func m) (imap-get-func m-base) null))
 
 (define (imap-sym-get-fml m)
 	(imap-is-update (imap-get-func m) (imap-get-func m) (imap-sym-updates m)))
