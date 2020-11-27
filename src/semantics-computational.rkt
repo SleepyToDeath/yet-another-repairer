@@ -172,7 +172,7 @@
 			((lambda ()
 				(begin
 					(define ret-v (memory-sread mem0 (string-id (car kv))))
-;					(println ret-v)
+					(println ret-v)
 					ret-v
 					)))
 			))) #t output))

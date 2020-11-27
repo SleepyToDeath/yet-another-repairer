@@ -5,6 +5,11 @@
 
 (provide (all-defined-out))
 
+;(define global-fml #t)
+
+;(define (add-global-fml fml)
+;	(set! global-fml (and fml global-fml)))
+
 ;Usage:
 ;	1.The maps should be used in an immutable manner
 ;	2.Concrete map: use `imap-emtpy` to get a new empty map
@@ -35,9 +40,9 @@
 	(foldl (lambda (kv m) (imap-set m (car kv) (cdr kv))) imap kvlist))
 
 ;[!]compare only func, ignore pending updates
-(define (imap-is-update m-new m-base updates)
-	(define f-new (imap-get-func m-new))
-	(define f-base (imap-get-func m-base))
+(define (imap-is-update f-new f-base updates)
+;	(define f-new (imap-get-func m-new))
+;	(define f-base (imap-get-func m-base))
 ;	(display "\n f-new: ")
 ;	(print f-new)
 ;	(display "\n f-base: ")
@@ -50,9 +55,9 @@
 		updates)))
 
 ;[!]compare only func, ignore pending updates
-(define (imap-is-copy m-new m-base)
-	(define f-new (imap-get-func m-new))
-	(define f-base (imap-get-func m-base))
+(define (imap-is-copy f-new f-base)
+;	(define f-new (imap-get-func m-new))
+;	(define f-base (imap-get-func m-base))
 	(define-symbolic* x integer?)
 	(forall (list x) (equal? (f-new x) (f-base x))))
 
@@ -81,7 +86,7 @@
 	])
 
 ;----------------- Symbolic ---------------------
-(struct imap-sym (func-sym imap-base updates) #:transparent
+(struct imap-sym (func-sym func-base updates) #:transparent
 	#:methods gen:imap
 	[
 		(define (imap-get-func m)
@@ -93,7 +98,7 @@
 				(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
 				(imap-sym-updates m)))
 ;			(if pending pending (imap-get-dispatch (imap-sym-imap-base m) index)))
-			(if pending pending ((imap-get-func-dispatch (imap-sym-imap-base m)) index)))
+			(if pending pending ((imap-sym-func-base m) index)))
 
 		(define (imap-set m index value)
 ;			(pretty-print (~a "\n imap store: " index " : " value "\n"))
@@ -101,10 +106,13 @@
 	])
 
 (define (imap-sym-reset m m-base)
-	(imap-sym (imap-sym-func-sym m) m-base null))
+	(define-symbolic* func-base (~> integer? integer?))
+	;[!] Assert!
+	(assert (imap-is-copy func-base (imap-get-func m-base)))
+	(imap-sym (imap-get-func m) func-base null))
 
 (define (imap-sym-get-fml m)
-	(imap-is-update m (imap-sym-imap-base m) (imap-sym-updates m)))
+	(imap-is-update (imap-get-func m) (imap-get-func m) (imap-sym-updates m)))
 
 (define (imap-sym-new)
 	(define-symbolic* func-sym (~> integer? integer?))

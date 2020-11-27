@@ -70,10 +70,15 @@
 
 		(match-define (cons mac-ass fml-ass) (assign-input mac input))
 		(define boot-lstate (prepend-starting-mem-in (alloc-lstate (machine-boot mac-ass)) #t (machine-mem mac-ass)))
+		(display "\n ###############################################0 \n")
 		(define all-invokes (invoke->relation boot-lstate mac-ass))
+		(display "\n ###############################################1 \n")
 		(define mac-done (std:struct-copy machine mac-ass [mem (root-invoke-ret-mem all-invokes)]))
+		(display "\n ###############################################4 \n")
 		(define fml-out (compare-output mac-done output))
+		(display "\n ###############################################5 \n")
 		(define fml-code (andmap (lambda (func) (function-formula-fmls func)) all-invokes))
+		(display "\n ###############################################6 \n")
 ;		(display "\nfml-ass!\n")
 ;		(println fml-ass)
 ;		(display "\nfml-out!\n")
@@ -82,6 +87,7 @@
 ;		(println fml-code)
 ;		(println (get-lid boot-lstate 1))
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
+		(display "\n ###############################################7 \n")
 		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code))
 ;		(and fml-out))
 
@@ -308,7 +314,10 @@
 ; function X machine -> list of function-formula from all functions in `mac` transitively invoked by `func`
 ; "This function" is guaranteed to be at the beginning of the list.
 (define (invoke->relation func-fml mac)
-	(insts->relation func-fml mac))
+	(display "\n ###############################################2 \n")
+	(define ret (insts->relation func-fml mac))
+	(display "\n ###############################################3 \n")
+	ret)
 
 ; "This function" is guaranteed to be at the beginning of the list.
 (define (root-invoke func-fmls)
@@ -326,9 +335,9 @@
 
 (define (inst->relation inst st)
 	(define ret (inst->relation.real inst st))
-;	(display "\n updated state:\n")
+	(display "\n updated state:\n")
 ;	(pretty-print (map function-formula-func (rbstate-funcs ret)))
-;	(pretty-print (rbstate-pc ret))
+	(pretty-print (rbstate-pc ret))
 ;	(pretty-print (rbstate-func-fml ret))
 	ret)
 

@@ -54,6 +54,8 @@ result
 
 (define tf1 (hard input1 output1))
 
+(display "\n Solving: \n")
+
 (define debug-sol (optimize #:maximize (list (apply + soft))
           #:guarantee (assert (and tf1))))
 
