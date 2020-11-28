@@ -350,6 +350,7 @@
 		(define func (function-formula-func func-fml))
 		(define mark (get-pmark func-fml pc))
 		(define id (get-lid func-fml pc))
+		(imap-set-selector id)
 
 	(display "\nInstruction:\n")
 	(println inst)

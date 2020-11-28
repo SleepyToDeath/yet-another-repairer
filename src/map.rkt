@@ -2,13 +2,13 @@
 
 (require (prefix-in std: racket/base))
 (require racket/format)
+(require "match-define.rkt")
 
 (provide (all-defined-out))
 
-;(define global-fml #t)
-
-;(define (add-global-fml fml)
-;	(set! global-fml (and fml global-fml)))
+(define imap-current-selector #t)
+(define (imap-set-selector i)
+	(set! imap-current-selector i))
 
 ;Usage:
 ;	1.The maps should be used in an immutable manner
@@ -40,32 +40,25 @@
 	(foldl (lambda (kv m) (imap-set m (car kv) (cdr kv))) imap kvlist))
 
 ;[!]compare only func, ignore pending updates
-(define (imap-is-update f-new f-base updates)
-;	(define f-new (imap-get-func m-new))
-;	(define f-base (imap-get-func m-base))
-;	(display "\n f-new: ")
-;	(print f-new)
-;	(display "\n f-base: ")
-;	(print f-base)
-;	(display "\n")
-	(define-symbolic* x integer?)
-	(forall (list x) (foldr
-		(lambda (kv fml) (if (equal? x (car kv)) (equal? (f-new x) (cdr kv)) fml)) 
-		(equal? (f-new x) (f-base x))
-		updates)))
+;(define (imap-is-update f-new f-base updates)
+;	(define-symbolic* x integer?)
+;	(forall (list x) (foldr
+;		(lambda (kv fml) (if (equal? x (car kv)) (equal? (f-new x) (cdr kv)) fml)) 
+;		(equal? (f-new x) (f-base x))
+;		updates)))
 
 ;[!]compare only func, ignore pending updates
-(define (imap-is-copy f-new f-base)
+;(define (imap-is-copy f-new f-base)
 ;	(define f-new (imap-get-func m-new))
 ;	(define f-base (imap-get-func m-base))
-	(define-symbolic* x integer?)
-	(forall (list x) (equal? (f-new x) (f-base x))))
+;	(define-symbolic* x integer?)
+;	(forall (list x) (equal? (f-new x) (f-base x))))
 
-(define (imap-get-dispatch m index)
-	(imap-get m index))
+;(define (imap-get-dispatch m index)
+;	(imap-get m index))
 
-(define (imap-get-func-dispatch m)
-	(imap-get-func m))
+;(define (imap-get-func-dispatch m)
+;	(imap-get-func m))
 ;----------------- Concrete --------------------
 (struct imap-conc (func) #:transparent
 	#:methods gen:imap
@@ -74,6 +67,7 @@
 			(imap-conc-func m))
 
 		(define (imap-get m index)
+;			(imap-add-key index)
 			(define f (imap-conc-func m))
 			(f index))
 
@@ -86,37 +80,49 @@
 	])
 
 ;----------------- Symbolic ---------------------
-(struct imap-sym (func-sym func-base updates) #:transparent
+(struct imap-sym (func-dummy func-base updates) #:transparent
 	#:methods gen:imap
 	[
 		(define (imap-get-func m)
-			(imap-sym-func-sym m))
+			(imap-sym-func-dummy m))
 
 		(define (imap-get m index)
-;			((imap-sym-func-sym m) index))
-			(define pending	(ormap
-				(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
-				(imap-sym-updates m)))
-;			(if pending pending (imap-get-dispatch (imap-sym-imap-base m) index)))
-			(if pending pending ((imap-sym-func-base m) index)))
+			(define-symbolic* v-dummy integer?)
+;			(imap-add-key index)
+;			(imap-add-fml (imap-sym-func-dummy m) (equal? v-dummy (imap-sym-real-get m index)))
+			(assert (implies imap-current-selector (equal? v-dummy (imap-sym-real-get m index))))
+			v-dummy)
 
 		(define (imap-set m index value)
 ;			(pretty-print (~a "\n imap store: " index " : " value "\n"))
 			(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))]))
 	])
 
+(define (imap-sym-real-get m index)
+	(define pending	(ormap
+		(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
+		(imap-sym-updates m)))
+	(define func-base (imap-sym-func-base m))
+;	(pretty-print func-base)
+	(if pending pending 
+		(if (imap-func-is-dummy func-base)
+			(imap-get (imap-get imap-dummy2map func-base) index)
+			(func-base index))))
+
 (define (imap-sym-reset m m-base)
-;	(define-symbolic* func-base (~> integer? integer?))
-	;[!] Assert!
-;	(assert (imap-is-copy func-base (imap-get-func m-base)))
 	(imap-sym (imap-get-func m) (imap-get-func m-base) null))
 
+;should only be called once, otherwise only the last one will work
 (define (imap-sym-get-fml m)
-	(imap-is-update (imap-get-func m) (imap-get-func m) (imap-sym-updates m)))
+	(define-symbolic* fml-deferred boolean?)
+	(imap-add-sym-map (imap-sym-func-dummy m) m)
+	(imap-add-deferred-fml (imap-sym-func-dummy m) fml-deferred)
+	fml-deferred)
 
 (define (imap-sym-new)
-	(define-symbolic* func-sym (~> integer? integer?))
-	(imap-sym func-sym imap-empty null))
+	(define func-dummy (imap-new-dummy))
+	(imap-add-dummy func-dummy)
+	(imap-sym func-dummy imap-empty null))
 ;==================================================
 
 ;============= Default Values ===========
@@ -128,4 +134,38 @@
 (define not-found -666)
 ;========================================
 
+;================== Generate Deferred Formulae ====================
+;To avoid `forall`, which is very slow to solve, we explicitly list
+;the formula for all keys, which hopefully will be faster to solve......
+;This must happen after all keys are accessed at the end of encoding.
+(define imap-dummy2map imap-empty)
+(define imap-dummy2deferred imap-empty)
+(define imap-dummy2fml imap-empty)
+(define imap-dummy-list null)
+(define imap-dummy-counter 0)
 
+(define (imap-add-sym-map func-dummy m)
+	(set! imap-dummy2map (imap-set imap-dummy2map func-dummy m)))
+
+(define (imap-add-deferred-fml func-dummy fml)
+	(set! imap-dummy2deferred (imap-set imap-dummy2deferred func-dummy fml)))
+
+(define (imap-add-dummy func-dummy)
+	(set! imap-dummy2fml (imap-set imap-dummy2fml func-dummy #t))
+	(set! imap-dummy-list (cons func-dummy imap-dummy-list)))
+
+(define (imap-new-dummy)
+	(set! imap-dummy-counter (+ 1 imap-dummy-counter))
+	imap-dummy-counter)
+
+(define imap-func-is-dummy number?)
+
+(define (imap-gen-deferred)
+	(andmap 
+		(lambda (func-dummy) 
+			(define m (imap-get imap-dummy2map func-dummy))
+			(define fml-deferred (imap-get imap-dummy2deferred func-dummy))
+			(define fml-true (imap-get imap-dummy2fml func-dummy))
+			(equal? fml-true fml-deferred))
+		imap-dummy-list))
+	
