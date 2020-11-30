@@ -6,7 +6,7 @@
 
 (provide (all-defined-out))
 
-(define imap-current-selector #t)
+(define imap-current-selector #f)
 (define (imap-set-selector i)
 	(set! imap-current-selector i))
 
@@ -80,18 +80,19 @@
 	])
 
 ;----------------- Symbolic ---------------------
-(struct imap-sym (func-dummy func-base updates) #:transparent
+(struct imap-sym (func-dummy func-base func-true updates selector) #:transparent
 	#:methods gen:imap
 	[
 		(define (imap-get-func m)
 			(imap-sym-func-dummy m))
 
 		(define (imap-get m index)
-			(define-symbolic* v-dummy integer?)
+			(define func (imap-sym-func-true m))
+;			(define-symbolic* v-dummy integer?)
 ;			(imap-add-key index)
 ;			(imap-add-fml (imap-sym-func-dummy m) (equal? v-dummy (imap-sym-real-get m index)))
-			(assert (implies imap-current-selector (equal? v-dummy (imap-sym-real-get m index))))
-			v-dummy)
+			(assert (implies (imap-sym-selector m) (equal? (func index) (imap-sym-real-get m index))))
+			(func index))
 
 		(define (imap-set m index value)
 ;			(pretty-print (~a "\n imap store: " index " : " value "\n"))
@@ -110,19 +111,20 @@
 			(func-base index))))
 
 (define (imap-sym-reset m m-base)
-	(imap-sym (imap-get-func m) (imap-get-func m-base) null))
+	(imap-sym (imap-get-func m) (imap-get-func m-base) (imap-sym-func-true m) null imap-current-selector))
 
-;should only be called once, otherwise only the last one will work
+;should only be called once for each section, otherwise only the last one will work
 (define (imap-sym-get-fml m)
 	(define-symbolic* fml-deferred boolean?)
 	(imap-add-sym-map (imap-sym-func-dummy m) m)
-	(imap-add-deferred-fml (imap-sym-func-dummy m) fml-deferred)
+;	(imap-add-deferred-fml (imap-sym-func-dummy m) fml-deferred)
 	fml-deferred)
 
 (define (imap-sym-new)
+	(define-symbolic* func-true (~> integer? integer?))
 	(define func-dummy (imap-new-dummy))
 	(imap-add-dummy func-dummy)
-	(imap-sym func-dummy imap-empty null))
+	(imap-sym func-dummy imap-empty func-true null imap-current-selector))
 ;==================================================
 
 ;============= Default Values ===========
@@ -139,33 +141,39 @@
 ;the formula for all keys, which hopefully will be faster to solve......
 ;This must happen after all keys are accessed at the end of encoding.
 (define imap-dummy2map imap-empty)
-(define imap-dummy2deferred imap-empty)
-(define imap-dummy2fml imap-empty)
+;(define imap-dummy2deferred imap-empty)
+;(define imap-dummy2fml imap-empty)
 (define imap-dummy-list null)
 (define imap-dummy-counter 0)
+;(define imap-dummyv-counter 0)
 
 (define (imap-add-sym-map func-dummy m)
 	(set! imap-dummy2map (imap-set imap-dummy2map func-dummy m)))
 
-(define (imap-add-deferred-fml func-dummy fml)
-	(set! imap-dummy2deferred (imap-set imap-dummy2deferred func-dummy fml)))
+;(define (imap-add-deferred-fml func-dummy fml)
+;	(set! imap-dummy2deferred (imap-set imap-dummy2deferred func-dummy fml)))
 
 (define (imap-add-dummy func-dummy)
-	(set! imap-dummy2fml (imap-set imap-dummy2fml func-dummy #t))
+;	(set! imap-dummy2fml (imap-set imap-dummy2fml func-dummy #t))
 	(set! imap-dummy-list (cons func-dummy imap-dummy-list)))
 
 (define (imap-new-dummy)
 	(set! imap-dummy-counter (+ 1 imap-dummy-counter))
 	imap-dummy-counter)
 
+;(define (imap-new-dummyv)
+;	(set! imap-dummyv-counter (+ 1 imap-dummyv-counter))
+;	imap-dummyv-counter)
+
 (define imap-func-is-dummy number?)
 
-(define (imap-gen-deferred)
-	(andmap 
-		(lambda (func-dummy) 
-			(define m (imap-get imap-dummy2map func-dummy))
-			(define fml-deferred (imap-get imap-dummy2deferred func-dummy))
-			(define fml-true (imap-get imap-dummy2fml func-dummy))
-			(equal? fml-true fml-deferred))
-		imap-dummy-list))
+;(define (imap-gen-deferred)
+;	(andmap 
+;		(lambda (func-dummy) 
+;			(define m (imap-get imap-dummy2map func-dummy))
+;			(define fml-deferred (imap-get imap-dummy2deferred func-dummy))
+;			(define fml-true (imap-get imap-dummy2fml func-dummy))
+;			(equal? fml-true fml-deferred))
+;		imap-dummy-list))
 	
+

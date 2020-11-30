@@ -38,7 +38,7 @@
 ;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
 (define (ast->relation ast)
 	(define mac-raw (ast->machine ast))
-	(define mac (build-virtual-table-alt (initialize-machine-encoding mac-raw)))
+	(define mac (initialize-machine-encoding mac-raw))
 
 	(define soft-cons 
 		(map (lambda (b) (if b 1 0)) 
@@ -48,6 +48,7 @@
 
 		(define (assign-input mac input)
 			(define mem0 (machine-mem mac))
+			(define mem-push (memory-spush mem0))
 			(match-define (cons mem-ass fml-ass)
 				(foldl 
 					(lambda (kv mem+fml) 
@@ -56,7 +57,7 @@
 						(cons 
 							(memory-sforce-write (car mem+fml) (string-id (car kv)) vi) 
 							(and (cdr mem+fml) fml)))
-					(cons mem0 #t) input))
+					(cons mem-push #t) input))
 			(define mem-ret (memory-sdecl mem-ass var-ret-name))
 			(cons (std:struct-copy machine mac [mem mem-ret]) fml-ass))
 
@@ -68,7 +69,8 @@
 				(lambda (kv) (equal? (cdr kv) (memory-sread mem0 (string-id (car kv)))))
 				output))
 
-		(match-define (cons mac-ass fml-ass) (assign-input mac input))
+		(match-define (cons mac-ass0 fml-ass) (assign-input mac input))
+		(define mac-ass (build-virtual-table-alt mac-ass0))
 		(define boot-lstate (prepend-starting-mem-in (alloc-lstate (machine-boot mac-ass)) #t (machine-mem mac-ass)))
 		(display "\n ###############################################0 \n")
 		(define all-invokes (invoke->relation boot-lstate mac-ass))
@@ -88,6 +90,7 @@
 ;		(println (get-lid boot-lstate 1))
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(display "\n ###############################################7 \n")
+;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code))
 		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code))
 ;		(and fml-out))
 
@@ -175,6 +178,7 @@
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 
 				(define sid (sfunc-id cls-name (function-name (function-formula-func sf)) (map cdr (function-args (function-formula-func sf)))))
+				(pretty-print (machine-mem mac))
 				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid))
 				(define fmap-1 (imap-set (machine-fmap mac) sid sf))
 				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
@@ -357,7 +361,7 @@
 	(println mark)
 	(println id)
 
-		(define mem-in (ormap (lambda (p+m) (if (car p+m) (cdr p+m) #f)) (get-mem-in-list func-fml pc)))
+		(define mem-in (memory-select (get-mem-in-list func-fml pc)))
 		(define mem-0 (memory-sym-reset (get-mem-out func-fml pc) mem-in))
 		;used only for expr-eval
 		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-in]))
