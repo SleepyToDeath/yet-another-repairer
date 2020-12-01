@@ -18,9 +18,9 @@
 		(begin
 		(define bases (stack-meta-bases (memory-s-meta mem)))
 		(define top0 (car bases))
-		(define top1 (cadr bases))
+		(define top1 (if (null? (cdr bases)) top0 (cadr bases)))
 		(define butt0 (car (reverse bases)))
-		(define butt1 (cadr (reverse bases)))
+		(define butt1 (if (null? (cdr bases)) butt0 (cadr (reverse bases))))
 		(ormap identity
 			(map 
 				(lambda (scope-base)
@@ -37,9 +37,9 @@
 		(begin
 		(define bases (stack-meta-bases (memory-s-meta mem)))
 		(define top0 (car bases))
-		(define top1 (cadr bases))
+		(define top1 (if (null? (cdr bases)) top0 (cadr bases)))
 		(define butt0 (car (reverse bases)))
-		(define butt1 (cadr (reverse bases)))
+		(define butt1 (if (null? (cdr bases)) butt0 (cadr (reverse bases))))
 		(define maybe-updated 
 			(ormap identity
 				(map 

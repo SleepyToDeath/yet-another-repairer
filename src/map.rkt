@@ -72,22 +72,25 @@
 
 		(define (imap-get m index)
 			(imap-add-section-key index)
-			(define pending	(ormap
-				(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
-				(imap-sym-updates m)))
-			(define func-base (imap-sym-func-base m))
-			(if pending pending 
-				(if (imap-func-is-dummy func-base)
-					((imap-sym-func-true (imap-get-dispatch imap-dummy2map func-base)) index)
-					(func-base index))))
+			(imap-sym-real-get m index))
 
 		(define (imap-set m index value)
 ;			(pretty-print (~a "\n imap store: " index " : " value "\n"))
 			(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))]))
 	])
 
+(define (imap-sym-real-get m index)
+	(define pending	(ormap
+		(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
+		(imap-sym-updates m)))
+	(define func-base (imap-sym-func-base m))
+	(if pending pending 
+		(if (imap-func-is-dummy func-base)
+			((imap-sym-func-true (imap-get-dispatch imap-dummy2map func-base)) index)
+			(func-base index))))
+
 (define (imap-sym-key-fml m index)
-	(equal? ((imap-sym-func-true m) index) (imap-get m index)))
+	(equal? ((imap-sym-func-true m) index) (imap-sym-real-get m index)))
 
 (define (imap-sym-reset m m-base)
 	(set! imap-section-keys null)
