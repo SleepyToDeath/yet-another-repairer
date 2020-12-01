@@ -21,13 +21,13 @@
 		(define top1 (cadr bases))
 		(define butt0 (car (reverse bases)))
 		(define butt1 (cadr (reverse bases)))
-		(ormap 
-			(lambda (scope-base)
-				(define cur-addr (+ scope-base name))
-				(define cur-val (imap-get (memory-addr-space mem) cur-addr))
-;				(std:println (~a "Reading " name " from " scope-base " ,get " cur-addr " : " cur-val))
-				(if (is-not-found? cur-val) #f cur-val))
-			(list top0 top1 butt1 butt0)))))
+		(ormap identity
+			(map 
+				(lambda (scope-base)
+					(define cur-addr (+ scope-base name))
+					(define cur-val (imap-get (memory-addr-space mem) cur-addr))
+					(if (is-not-found? cur-val) #f cur-val))
+				(list top0 top1 butt1 butt0))))))
 
 ;write to the first defined name in stack
 ;m: imap
@@ -41,14 +41,14 @@
 		(define butt0 (car (reverse bases)))
 		(define butt1 (cadr (reverse bases)))
 		(define maybe-updated 
-			(ormap 
-				(lambda (scope-base)
-					(define cur-addr (+ scope-base name))
-					(define cur-val (imap-get (memory-addr-space mem) cur-addr))
-;					(std:println (~a "Writing " name " : " value " to " scope-base " ,replacing " cur-addr " : " cur-val))
-					(if (is-not-found? cur-val) #f
-						(std:struct-copy memory mem [addr-space (imap-set (memory-addr-space mem) cur-addr value)])))
-			(list top0 top1 butt1 butt0)))
+			(ormap identity
+				(map 
+					(lambda (scope-base)
+						(define cur-addr (+ scope-base name))
+						(define cur-val (imap-get (memory-addr-space mem) cur-addr))
+						(if (is-not-found? cur-val) #f
+							(std:struct-copy memory mem [addr-space (imap-set (memory-addr-space mem) cur-addr value)])))
+				(list top0 top1 butt1 butt0))))
 		(if maybe-updated maybe-updated mem))))
 	
 ;declare at the current top level scope
