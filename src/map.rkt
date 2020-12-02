@@ -98,11 +98,11 @@
 	(imap-sym (imap-get-func m) (imap-get-func m-base) (imap-sym-func-true m) null fml-deferred))
 
 ;should only be called once for each section, otherwise only the last one will work
-;imap-sym -> boolean(placeholder symbol for deferred fml)
+;imap-sym -> (boolean(placeholder symbol for deferred fml) X mem-id)
 (define (imap-sym-get-fml m)
 	(imap-add-sym-map (imap-sym-func-dummy m) m)
 	(imap-add-dummy (imap-sym-func-dummy m))
-	(cons (imap-sym-fml-deferred m) imap-section-keys))
+	(cons (imap-sym-fml-deferred m) (map (lambda (key) (cons key (imap-sym-func-dummy m))) imap-section-keys)))
 
 (define (imap-sym-new)
 	(define-symbolic* func-true (~> integer? integer?))

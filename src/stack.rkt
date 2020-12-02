@@ -21,13 +21,18 @@
 		(define top1 (if (null? (cdr bases)) top0 (cadr bases)))
 		(define butt0 (car (reverse bases)))
 		(define butt1 (if (null? (cdr bases)) butt0 (cadr (reverse bases))))
-		(ormap identity
+		(define maybe-ret (ormap identity
 			(map 
 				(lambda (scope-base)
 					(define cur-addr (+ scope-base name))
 					(define cur-val (imap-get (memory-addr-space mem) cur-addr))
 					(if (is-not-found? cur-val) #f cur-val))
-				(list top0 top1 butt1 butt0))))))
+				(list top0 top1 butt1 butt0))))
+		(if maybe-ret maybe-ret
+			(begin
+			(pretty-print (~a "not found: " name))
+			(pretty-print mem)
+			not-found)))))
 
 ;write to the first defined name in stack
 ;m: imap

@@ -4,13 +4,14 @@
 
 ; Dynamic Memory Layout:
 ;       ============================================================================
-; name: | obj-top | heap-top | virtual tables | objects | arraies | scopes         |
+; name: | virtual tables | objects | arraies | stack          |
 ;       ----------------------------------------------------------------------------
-; size: | 1       | 1        | vt-size * n    | vt-size | n * n   | scope-size * n |
+; size: | vt-size * n    | vt-size | n * n   | scope-size * n |
 ;       ============================================================================
 
 ;Tips:
-;	No memory is reused to avoid GC!!!
+;	1.No memory is reused to avoid GC
+;	2.All tops take the maximum input at branches to avoid uncertainty
 
 ;vt-num = max number of different member fields/functions
 (define vt-num 1024)
@@ -19,9 +20,7 @@
 ;scope-size = max number of different variable names
 (define scope-size 1024)
 
-(define obj-top-addr 0)
-(define heap-top-addr 1)
-(define vt-base-addr 2)
+(define vt-base-addr 0)
 ;no need to know beginning of arraies
 
 (define stack-bottom (* (* 2 vt-num) vt-size))
@@ -29,7 +28,7 @@
 ;v-meta: vtab-meta
 ;s-meta: stack-meta
 ;addr-space: int -> int, the dynamic part of memory
-(struct memory (v-meta s-meta addr-space) #:transparent)
+(struct memory (v-meta s-meta h-meta addr-space) #:transparent)
 
 ;name2tab: int(field name) -> int(addr of virtual table)
 ;top: the end of virtual table region, also beginning of object region, become fixed after machine initialization
@@ -38,3 +37,8 @@
 ;bases: a list of stack base address, first element is stack top scope
 ;top: allocation top of stack area
 (struct stack-meta (bases top) #:transparent)
+
+;a-top: top of array area
+;o-top: top of object area
+(struct heap-meta (o-top a-top) #:transparent)
+

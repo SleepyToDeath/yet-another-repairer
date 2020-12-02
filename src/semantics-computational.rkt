@@ -335,8 +335,9 @@
 		mac-vfields)
 
 	(define mem-push (memory-spush (machine-mem mac)))
-	(define mem-reserve-obj (cdr (memory-alloc mem-push vt-size)))
-	(foldl process-class (std:struct-copy machine mac [mem mem-reserve-obj]) classes))
+	(define mac-cls (foldl process-class (std:struct-copy machine mac [mem mem-push]) classes))
+	(define mem-reserve-obj (cdr (memory-alloc (machine-mem mac-cls) vt-size)))
+	(std:struct-copy machine mac-cls [mem mem-reserve-obj]))
 
 (define (variable-definitions->list ast)
 	(map 

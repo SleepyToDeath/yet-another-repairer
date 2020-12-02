@@ -52,13 +52,15 @@
 ;allocate memory on heap
 ;memory X size -> addr(allocated) X memory(new) 
 (define (memory-alloc mem size)
-	(define current-top (imap-get (memory-addr-space mem) heap-top-addr))
-	(cons current-top (std:struct-copy memory mem [addr-space (imap-set (memory-addr-space mem) heap-top-addr (+ current-top size))])))
+	(define current-o-top (heap-meta-o-top (memory-h-meta mem)))
+	(define current-a-top (heap-meta-a-top (memory-h-meta mem)))
+	(cons current-a-top (std:struct-copy memory mem [h-meta (heap-meta current-o-top (+ current-a-top size))])))
 
 ;must use this to new object
 (define (memory-new mem)
-	(define current-top (imap-get (memory-addr-space mem) obj-top-addr))
-	(cons current-top (std:struct-copy memory mem [addr-space (imap-set (memory-addr-space mem) obj-top-addr (+ current-top 1))])))
+	(define current-o-top (heap-meta-o-top (memory-h-meta mem)))
+	(define current-a-top (heap-meta-a-top (memory-h-meta mem)))
+	(cons current-o-top (std:struct-copy memory mem [h-meta (heap-meta (+ current-o-top 1) current-a-top)])))
 	
 ;-----------------Field Access---------------
 ;declare a new field (a field map is a map from obj-addr to field-addr)
@@ -74,10 +76,8 @@
 				(memory
 					(vtab-meta n2t+ vtop+)
 					(memory-s-meta mem)
-					(imap-batch-set (memory-addr-space mem) 
-						(list 
-						(cons heap-top-addr vtop+)
-						(cons obj-top-addr vtop+)))))])
+					(heap-meta vtop+ vtop+)
+					(memory-addr-space mem)))])
 		mem))
 
 ;read a field value of an object
@@ -118,9 +118,8 @@
 	(memory 
 		(vtab-meta imap-empty vt-base-addr)
 		(stack-meta null stack-bottom)
-		(imap-batch-set imap-empty (list 
-			(cons heap-top-addr vt-base-addr) 
-			(cons obj-top-addr vt-base-addr)))))
+		(heap-meta vt-base-addr vt-base-addr)
+		imap-empty))
 ;========================================
 
 ;======================= Symbolic Operations ========================
@@ -139,7 +138,12 @@
 ;candidates: list of (condition X memory)
 ;only select address space, others are static
 (define (memory-select candidates)
+	(define stack-top-new (apply max (map (lambda (p+m) (stack-meta-top (memory-s-meta (cdr p+m)))) candidates)))
+	(define obj-top-new (apply max (map (lambda (p+m) (heap-meta-o-top (memory-h-meta (cdr p+m)))) candidates)))
+	(define heap-top-new (apply max (map (lambda (p+m) (heap-meta-a-top (memory-h-meta (cdr p+m)))) candidates))) 
 	(std:struct-copy memory (cdr (car candidates)) 
+		[s-meta (std:struct-copy stack-meta (memory-s-meta (cdar candidates)) [top stack-top-new])]
+		[h-meta (heap-meta obj-top-new heap-top-new)]
 		[addr-space (ormap (lambda (p+m) (if (car p+m) (memory-addr-space (cdr p+m)) #f)) candidates)]))
 	
 

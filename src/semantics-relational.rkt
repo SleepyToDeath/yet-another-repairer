@@ -46,6 +46,8 @@
 
 	(define (hard-cons input output) 
 
+		(set! imap-dummy-list null)
+
 		(define (assign-input mac input)
 			(define mem0 (machine-mem mac))
 			(define mem-push (memory-spush mem0))
@@ -63,8 +65,6 @@
 
 		(define (compare-output mac output)
 			(define mem0 (machine-mem mac))
-;			(display "\n mem out: ")
-;			(pretty-print mem0)
 			(andmap 
 				(lambda (kv) (equal? (cdr kv) (memory-sread mem0 (string-id (car kv)))))
 				output))
@@ -81,35 +81,58 @@
 		(display "\n ###############################################5 \n")
 		(define fml-code (andmap (lambda (func) (function-formula-fmls func)) all-invokes))
 		(display "\n ###############################################6 \n")
-;		(display "\nfml-ass!\n")
-;		(println fml-ass)
-;		(display "\nfml-out!\n")
-;		(println fml-out)
-;		(display "\nfml-code!\n")
-;		(println fml-code)
-;		(println (get-lid boot-lstate 1))
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(display "\n ###############################################7 \n")
-;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code))
-		(define fml-code-bind
+
+		(define id2keys imap-empty)
+		(define (add-key id key)
+			(define keys-old (imap-get id2keys id))
+			(define keys-new (if (is-not-found? keys-old) (list key) (cons key keys-old)))
+			(set! id2keys (imap-set id2keys id keys-new)))
+		(define (contain-key? id key)
+			(define keys (imap-get id2keys id))
+			(if (null? keys) #f (ormap (lambda (key0) (equal? key key0)) keys)))
+
+		(define fml-maybe-wrong
 			(andmap (lambda (mem-id)
-				(display "mem-id:")
-				(pretty-print mem-id)
+				(define mem (imap-get imap-dummy2map mem-id))
+				(define fml-true (andmap (lambda (func-fml)
+					(andmap (lambda (key+id) 
+						(if (not (equal? (cdr key+id) mem-id)) #t
+							(begin
+							(add-key mem-id (car key+id))
+							(imap-sym-key-fml mem (car key+id)))))
+						(function-formula-mem-keys func-fml)))
+					all-invokes))
+				(define fml-deferred (imap-sym-fml-deferred mem))
+				(equal? fml-deferred fml-true))
+				imap-dummy-list))
+
+		(define fml-always-right
+			(andmap (lambda (mem-id)
+				(define mem (imap-get imap-dummy2map mem-id))
 				(andmap (lambda (func-fml)
-						(display "keys:")
-						(pretty-print 
-							(length (function-formula-mem-keys func-fml)))
-						(define mem (imap-get imap-dummy2map mem-id))
-						(define fml-true (andmap (lambda (key) 
-								(imap-sym-key-fml mem key))
-							(function-formula-mem-keys func-fml)))
-						(define fml-deferred (imap-sym-fml-deferred mem))
-						(equal? fml-deferred fml-true))
+					(andmap (lambda (key+id) 
+							(if (contain-key? mem-id (car key+id)) #t
+								(imap-sym-key-fml mem (car key+id))))
+						(function-formula-mem-keys func-fml)))
 					all-invokes))
 				imap-dummy-list))
+
+		(define sum-fml (apply + (map (lambda (mem-id)
+			(apply + (map (lambda (func-fml)
+				(length (function-formula-mem-keys func-fml)))
+				all-invokes)))
+			imap-dummy-list)))
+		(pretty-print (~a "Total symbols: " sum-fml))
+		
+;		(pretty-print fml-maybe-wrong)
+;		(pretty-print fml-always-right)
+		(define fml-code-bind (and fml-maybe-wrong fml-always-right))
+
 		(display "\n ###############################################8 \n")
 		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
-;		(and fml-out))
+;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-code fml-code-bind))
 
 	(cons soft-cons hard-cons))
 
@@ -225,8 +248,9 @@
 		mac-vfields)
 
 	(define mem-push (memory-spush (machine-mem mac)))
-	(define mem-reserve-obj (cdr (memory-alloc mem-push vt-size)))
-	(foldl process-class (std:struct-copy machine mac [mem mem-reserve-obj]) classes))
+	(define mac-cls (foldl process-class (std:struct-copy machine mac [mem mem-push]) classes))
+	(define mem-reserve-obj (cdr (memory-alloc (machine-mem mac-cls) vt-size)))
+	(std:struct-copy machine mac-cls [mem mem-reserve-obj]))
 
 
 
@@ -544,7 +568,7 @@
 
 				;push an extra scope to avoid overwriting "this" of the current scope
 				(define mem-this (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr))
-				(define fml-this (memory-sym-get-fml mem-this))
+				(match-define (cons fml-this keys-this) (memory-sym-get-fml mem-this))
 
 				(match-define (list func-fml-in fml-in keys-in) (invoke-setup func-invoked mem-this args))
 				(define funcs-ret (invoke->relation func-fml-in mac))
@@ -558,7 +582,7 @@
 				(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
 				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
 
-				(define keys-new (append keys-in keys-ret))
+				(define keys-new (append keys-in keys-this keys-ret))
 
 				(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f keys-new) [funcs (append funcs funcs-ret)]))]
 
@@ -571,7 +595,7 @@
 
 				;push an extra scope to avoid overwriting "this" of the current scope
 				(define mem-this (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr))
-				(define fml-this (memory-sym-get-fml mem-this))
+				(match-define (cons fml-this keys-this) (memory-sym-get-fml mem-this))
 
 				(match-define (list func-fml-in fml-in keys-in) (invoke-setup func-invoked mem-this args))
 				(define funcs-ret (invoke->relation func-fml-in mac))
@@ -585,7 +609,7 @@
 				(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
 				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
 
-				(define keys-new (append keys-in keys-ret))
+				(define keys-new (append keys-in keys-this keys-ret))
 
 				(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f keys-new) [funcs (append funcs funcs-ret)]))]
 
