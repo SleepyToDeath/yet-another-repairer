@@ -84,30 +84,42 @@
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(display "\n ###############################################7 \n")
 
-		(define id2keys imap-empty)
-		(define (add-key id key)
-			(define keys-old (imap-get id2keys id))
+		(define (add-key i2k id key)
+			(define keys-old (imap-get i2k id))
 			(define keys-new (if (is-not-found? keys-old) (list key) (cons key keys-old)))
-			(set! id2keys (imap-set id2keys id keys-new)))
+			(imap-set i2k id keys-new))
+
+		(define id2keys (foldl (lambda (mem-id i2k)
+			(foldl (lambda (func-fml i2k)
+				(foldl (lambda (key+id i2k)
+					(if (equal? (cdr key+id) mem-id) (add-key i2k mem-id (car key+id)) i2k))
+					i2k
+					(function-formula-mem-keys func-fml)))
+				i2k
+				all-invokes))
+			imap-empty
+			imap-dummy-list))
+
 		(define (contain-key? id key)
 			(define keys (imap-get id2keys id))
-			(if (null? keys) #f (ormap (lambda (key0) (equal? key key0)) keys)))
+			(if (is-not-found? keys) #f (ormap (lambda (key0) (equal? key key0)) keys)))
 
+		(display "\n ###############################################7.1 \n")
 		(define fml-maybe-wrong
 			(andmap (lambda (mem-id)
 				(define mem (imap-get imap-dummy2map mem-id))
 				(define fml-true (andmap (lambda (func-fml)
 					(andmap (lambda (key+id) 
 						(if (not (equal? (cdr key+id) mem-id)) #t
-							(begin
-							(add-key mem-id (car key+id))
-							(imap-sym-key-fml mem (car key+id)))))
+							(imap-sym-key-fml mem (car key+id))))
 						(function-formula-mem-keys func-fml)))
 					all-invokes))
 				(define fml-deferred (imap-sym-fml-deferred mem))
 				(equal? fml-deferred fml-true))
 				imap-dummy-list))
 
+
+		(display "\n ###############################################7.2 \n")
 		(define fml-always-right
 			(andmap (lambda (mem-id)
 				(define mem (imap-get imap-dummy2map mem-id))
@@ -119,6 +131,7 @@
 					all-invokes))
 				imap-dummy-list))
 
+		(display "\n ###############################################7.3 \n")
 		(define sum-fml (apply + (map (lambda (mem-id)
 			(apply + (map (lambda (func-fml)
 				(length (function-formula-mem-keys func-fml)))
@@ -548,7 +561,8 @@
 ;				(pretty-print mem-ass)
 				(match-define (cons fml-ret keys-ret) (memory-sym-get-fml mem-ass))
 
-				(define fml-op (select-fml? (and fml-in fml-ret)))
+				;(define fml-op (select-fml? (and fml-in fml-ret)))
+				(define fml-op (and fml-in fml-ret))
 				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
 
 				(define keys-new (append keys-in keys-ret))
@@ -579,7 +593,8 @@
 				(define mem-ass (memory-swrite mem-pop ret ret-val))
 				(match-define (cons fml-ret keys-ret) (memory-sym-get-fml mem-ass))
 
-				(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
+				;(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
+				(define fml-op (and fml-this fml-in fml-ret))
 				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
 
 				(define keys-new (append keys-in keys-this keys-ret))
@@ -606,7 +621,8 @@
 				(define mem-ass (memory-swrite mem-pop ret ret-val))
 				(match-define (cons fml-ret keys-ret) (memory-sym-get-fml mem-ass))
 
-				(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
+;				(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
+				(define fml-op (and fml-this fml-in fml-ret))
 				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
 
 				(define keys-new (append keys-in keys-this keys-ret))

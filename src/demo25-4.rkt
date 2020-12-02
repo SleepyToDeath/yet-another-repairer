@@ -54,7 +54,7 @@ public class Test
 		r6 = new A;
 		specialinvoke r6.<A: void <init>(int)>(r1);
 		r4 = virtualinvoke r6.<A: int add(int)>(r2);
-		r5 = r4 - r3;
+		r5 = r4 + r3;
 		return r5;
 	}
 }
@@ -72,16 +72,20 @@ public class Test
 ")))
 
 (define buggy (program
-	(class-list (list class-0))))
+	(class-list (list class-A class-B))))
 
 (pretty-print buggy)
 
-;(define input1 (list (cons "r1" 4) (cons "r2" 5) (cons "r3" 6)))
-;(define output1 (list (cons var-ret-name 15)))
+(define input1 (list (cons "r1" 4) (cons "r2" 5) (cons "r3" 6)))
+(define output1 (list (cons var-ret-name 15)))
 
 (define input2 (list (cons "r1" 1) (cons "r2" 2) (cons "r3" 3)))
 (define output2 (list (cons var-ret-name 6)))
 
+(define-symbolic* $r1 $r2 $r3 integer?)
+
+(define input3 (list (cons "r1" $r1) (cons "r2" $r2) (cons "r3" $r3)))
+(define output3 (list (cons var-ret-name (+ $r1 $r2 $r3))))
 
 
 
@@ -109,12 +113,22 @@ result
 (println string-id-map)
 
 ;(define tf1 (hard input1 output1))
-(define tf2 (hard input2 output2))
+;(define tf2 (hard input2 output2))
+(define tf3 (forall (list $r1 $r2 $r3) 
+;	(implies
+;		(and 
+;			(> $r1 0)
+;			(< $r1 2)
+;			(> $r2 1)
+;			(< $r2 3)
+;			(> $r3 2)
+;			(< $r3 4))
+		(hard input3 output3)))
 
 (display "\n")
 
 (display "Top Formula:\n")
-(pretty-print tf2)
+(pretty-print tf3)
 
 (display "\nAsserts\n")
 ;(pretty-print (asserts))
@@ -128,9 +142,10 @@ debug-tf
 
 (display "\nSolution:\n")
 (define debug-sol (optimize #:maximize (list (apply + soft))
-          #:guarantee (assert (and tf2 debug-tf))))
+          #:guarantee (assert (and tf3 debug-tf))))
 
 debug-sol
+(core debug-sol)
 
 soft
 
