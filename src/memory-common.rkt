@@ -25,6 +25,8 @@
 
 (define stack-bottom (* (* 2 vt-num) vt-size))
 
+(define max-program-length 1000)
+
 ;v-meta: vtab-meta
 ;s-meta: stack-meta
 ;addr-space: int -> int, the dynamic part of memory
@@ -41,4 +43,5 @@
 ;a-top: top of array area
 ;o-top: top of object area
 (struct heap-meta (o-top a-top) #:transparent)
+
 

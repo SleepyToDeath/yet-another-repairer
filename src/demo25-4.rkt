@@ -54,7 +54,7 @@ public class Test
 		r6 = new A;
 		specialinvoke r6.<A: void <init>(int)>(r1);
 		r4 = virtualinvoke r6.<A: int add(int)>(r2);
-		r5 = r4 + r3;
+		r5 = r4 - r3;
 		return r5;
 	}
 }
@@ -82,10 +82,10 @@ public class Test
 (define input2 (list (cons "r1" 1) (cons "r2" 2) (cons "r3" 3)))
 (define output2 (list (cons var-ret-name 6)))
 
-(define-symbolic* $r1 $r2 $r3 integer?)
+(define-symbolic* $r1 $r2 $r3 $ret integer?)
 
 (define input3 (list (cons "r1" $r1) (cons "r2" $r2) (cons "r3" $r3)))
-(define output3 (list (cons var-ret-name (+ $r1 $r2 $r3))))
+(define output3 (list (cons var-ret-name $ret)))
 
 
 
@@ -114,16 +114,18 @@ result
 
 ;(define tf1 (hard input1 output1))
 ;(define tf2 (hard input2 output2))
-(define tf3 (forall (list $r1 $r2 $r3) 
-;	(implies
-;		(and 
-;			(> $r1 0)
-;			(< $r1 2)
-;			(> $r2 1)
-;			(< $r2 3)
-;			(> $r3 2)
-;			(< $r3 4))
-		(hard input3 output3)))
+(define tf3 (hard input2 output2))
+
+(define tf3++ (forall (append (list $r1 $r2 $r3 $ret) all-symbols)
+	(implies 
+		(and 
+			(> $ret 0)
+			(> $r1 0)
+			(> $r2 0)
+			(> $r3 0))
+		(implies 
+			tf3
+			(equal? $ret (+ $r1 $r2 $r3))))))
 
 (display "\n")
 
@@ -140,12 +142,19 @@ result
 (display "\nDebug-tf\n")
 debug-tf
 
+all-symbols
+
+;(define fml-no-bug (equal? (apply + soft) (length soft)))
+
 (display "\nSolution:\n")
 (define debug-sol (optimize #:maximize (list (apply + soft))
           #:guarantee (assert (and tf3 debug-tf))))
+;(define nobug-sol (solve (assert tf3)))
+
+;nobug-sol
 
 debug-sol
-(core debug-sol)
+;(core debug-sol)
 
 soft
 

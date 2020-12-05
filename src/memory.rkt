@@ -132,6 +132,9 @@
 (define (memory-sym-reset m m-base)
 	(std:struct-copy memory m-base [addr-space (imap-sym-reset (memory-addr-space m) (memory-addr-space m-base))]))
 
+(define (memory-sym-commit m)
+	(std:struct-copy memory m [addr-space (imap-sym-commit (memory-addr-space m))]))
+
 (define (memory-sym-get-fml m)
 	(imap-sym-get-fml (memory-addr-space m)))
 

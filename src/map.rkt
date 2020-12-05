@@ -2,6 +2,8 @@
 
 (require (prefix-in std: racket/base))
 (require racket/format)
+(require "formula.rkt")
+(require "memory-common.rkt")
 (require "match-define.rkt")
 
 (provide (all-defined-out))
@@ -40,7 +42,9 @@
 	(foldl (lambda (kv m) (imap-set m (car kv) (cdr kv))) imap kvlist))
 
 (define (imap-get-dispatch m index)
-	(imap-get m index))
+	(define ret (imap-get m index))
+	ret)
+
 
 ;(define (imap-get-func-dispatch m)
 ;	(imap-get-func m))
@@ -64,7 +68,7 @@
 	])
 
 ;----------------- Symbolic ---------------------
-(struct imap-sym (func-dummy func-base func-true updates fml-deferred) #:transparent
+(struct imap-sym (func-dummy func-base func-true func-base-true updates committed-updates fml-deferred) #:transparent
 	#:methods gen:imap
 	[
 		(define (imap-get-func m)
@@ -82,20 +86,41 @@
 (define (imap-sym-real-get m index)
 	(define pending	(ormap
 		(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
-		(imap-sym-updates m)))
-	(define func-base (imap-sym-func-base m))
-	(if pending pending 
-		(if (imap-func-is-dummy func-base)
-			((imap-sym-func-true (imap-get-dispatch imap-dummy2map func-base)) index)
-			(func-base index))))
+		(cons (cons nullptr nullptr) (imap-sym-committed-updates m))))
+	(define func-base-true (imap-sym-func-base-true m))
+	(if pending pending (func-base-true index)))
+;		(if (imap-func-is-dummy func-base)
+;			((imap-sym-func-true (vector-ref imap-dummy2map func-base)) index)
+;			(func-base index))))
 
 (define (imap-sym-key-fml m index)
-	(equal? ((imap-sym-func-true m) index) (imap-sym-real-get m index)))
+;	(define t0 (std:current-inexact-milliseconds))
+	(define ret (equal? ((imap-sym-func-true m) index) (imap-sym-real-get (imap-sym-commit m) index)))
+;	(define t2 (std:current-inexact-milliseconds))
+;	(define interval (- t2 t0))
+;	(if (> interval 1.0)
+;		(begin
+;		(pretty-print (~a "interval: " interval))
+;		(pretty-print index)
+;		(pretty-print (size-of-limited ret 5000))
+;		(display "\n"))
+;		#f)
+	ret)
 
 (define (imap-sym-reset m m-base)
 	(set! imap-section-keys null)
 	(define-symbolic* fml-deferred boolean?)
-	(imap-sym (imap-get-func m) (imap-get-func m-base) (imap-sym-func-true m) null fml-deferred))
+	(global-add-symbol fml-deferred)
+	(define func-base (imap-get-func m-base))
+	(imap-sym (imap-get-func m) func-base (imap-sym-func-true m) 
+		(if (imap-func-is-dummy func-base)
+			(imap-sym-func-true (vector-ref imap-dummy2map func-base))
+			func-base)
+		null null fml-deferred))
+
+;make updates so far visible to new reads
+(define (imap-sym-commit m)
+	(std:struct-copy imap-sym m [updates null] [committed-updates (imap-sym-updates m)]))
 
 ;should only be called once for each section, otherwise only the last one will work
 ;imap-sym -> (boolean(placeholder symbol for deferred fml) X mem-id)
@@ -106,8 +131,9 @@
 
 (define (imap-sym-new)
 	(define-symbolic* func-true (~> integer? integer?))
+;	(global-add-symbol func-true)
 	(define func-dummy (imap-new-dummy))
-	(imap-sym func-dummy default-func func-true null #f))
+	(imap-sym func-dummy default-func func-true default-func null null #f))
 ;==================================================
 
 ;============= Default Values ===========
@@ -133,9 +159,13 @@
 (define (imap-add-section-key key)
 	(set! imap-section-keys (cons key imap-section-keys)))
 
-(define imap-dummy2map imap-empty)
+(define imap-dummy2map (list->vector (std:build-list max-program-length (lambda (x) not-found))))
 (define (imap-add-sym-map func-dummy m)
-	(set! imap-dummy2map (imap-set imap-dummy2map func-dummy m)))
+	(display "update maps:\n")
+	(pretty-print func-dummy)
+	(pretty-print m)
+	(display "\n")
+	(vector-set! imap-dummy2map func-dummy m))
 
 (define imap-dummy-list null)
 (define (imap-add-dummy func-dummy)
@@ -148,3 +178,6 @@
 
 (define imap-func-is-dummy number?)
 
+(define all-symbols null)
+(define (global-add-symbol sym)
+	(set! all-symbols (cons sym all-symbols)))

@@ -30,8 +30,8 @@
 				(list top0 top1 butt1 butt0))))
 		(if maybe-ret maybe-ret
 			(begin
-			(pretty-print (~a "not found: " name))
-			(pretty-print mem)
+;			(pretty-print (~a "not found: " name))
+;			(pretty-print mem)
 			not-found)))))
 
 ;write to the first defined name in stack
@@ -45,16 +45,14 @@
 		(define top1 (if (null? (cdr bases)) top0 (cadr bases)))
 		(define butt0 (car (reverse bases)))
 		(define butt1 (if (null? (cdr bases)) butt0 (cadr (reverse bases))))
-		(define maybe-updated 
-			(ormap identity
-				(map 
-					(lambda (scope-base)
-						(define cur-addr (+ scope-base name))
-						(define cur-val (imap-get (memory-addr-space mem) cur-addr))
-						(if (is-not-found? cur-val) #f
-							(std:struct-copy memory mem [addr-space (imap-set (memory-addr-space mem) cur-addr value)])))
-				(list top0 top1 butt1 butt0))))
-		(if maybe-updated maybe-updated mem))))
+		(define maybe-updated (ormap identity (map 
+			(lambda (scope-base)
+				(define cur-addr (+ scope-base name))
+				(define cur-val (imap-get (memory-addr-space mem) cur-addr))
+				(if (is-not-found? cur-val) #f cur-addr))
+			(list top0 top1 butt1 butt0))))
+		(define maybe-addr (if maybe-updated maybe-updated nullptr))
+		(std:struct-copy memory mem [addr-space (imap-set (memory-addr-space mem) maybe-addr value)]))))
 	
 ;declare at the current top level scope
 ;default value is nullptr

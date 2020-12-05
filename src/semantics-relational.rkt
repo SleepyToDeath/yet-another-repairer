@@ -9,6 +9,7 @@
 (require "semantics-computational.rkt")
 (require "jimple/jimple-parser.rkt")
 (require "memory-common.rkt")
+(require "formula.rkt")
 (require (prefix-in std: racket/base))
 (require (prefix-in std: racket/list))
 (require racket/format)
@@ -55,6 +56,7 @@
 				(foldl 
 					(lambda (kv mem+fml) 
 						(define-symbolic* vi integer?)
+						(global-add-symbol vi)
 						(define fml (equal? vi (cdr kv)))
 						(cons 
 							(memory-sforce-write (car mem+fml) (string-id (car kv)) vi) 
@@ -84,7 +86,12 @@
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(display "\n ###############################################7 \n")
 
+		(define key-counter 0)
+		
 		(define (add-key i2k id key)
+;			(pretty-print (~a "key: " key))
+;			(pretty-print (~a "size: " (size-of key)))
+			(set! key-counter (+ 1 key-counter))
 			(define keys-old (imap-get i2k id))
 			(define keys-new (if (is-not-found? keys-old) (list key) (cons key keys-old)))
 			(imap-set i2k id keys-new))
@@ -104,11 +111,20 @@
 			(define keys (imap-get id2keys id))
 			(if (is-not-found? keys) #f (ormap (lambda (key0) (equal? key key0)) keys)))
 
+		(pretty-print (~a "totally " key-counter " keys!"))
+
 		(display "\n ###############################################7.1 \n")
+
+		(set! key-counter 0)
+
+		(pretty-print (~a (length imap-dummy-list) " states"))
+		(pretty-print (~a (length all-invokes) " functions"))
+
 		(define fml-maybe-wrong
 			(andmap (lambda (mem-id)
-				(define mem (imap-get imap-dummy2map mem-id))
+				(define mem (vector-ref imap-dummy2map mem-id))
 				(define fml-true (andmap (lambda (func-fml)
+;					(pretty-print (~a (length (function-formula-mem-keys func-fml)) " keys"))
 					(andmap (lambda (key+id) 
 						(if (not (equal? (cdr key+id) mem-id)) #t
 							(imap-sym-key-fml mem (car key+id))))
@@ -118,18 +134,29 @@
 				(equal? fml-deferred fml-true))
 				imap-dummy-list))
 
+;		(pretty-print (~a "totally " key-counter " maybe-wrong keys!"))
 
 		(display "\n ###############################################7.2 \n")
+
+		(set! key-counter 0)
+
+
 		(define fml-always-right
 			(andmap (lambda (mem-id)
-				(define mem (imap-get imap-dummy2map mem-id))
+				(define mem (vector-ref imap-dummy2map mem-id))
+				(pretty-print (~a "mem: " mem-id))
 				(andmap (lambda (func-fml)
+					(pretty-print (~a "adding keys: " (length (function-formula-mem-keys func-fml))))
 					(andmap (lambda (key+id) 
 							(if (contain-key? mem-id (car key+id)) #t
-								(imap-sym-key-fml mem (car key+id))))
+								(begin
+								(set! key-counter (+ 1 key-counter))
+								(imap-sym-key-fml mem (car key+id)))))
 						(function-formula-mem-keys func-fml)))
 					all-invokes))
 				imap-dummy-list))
+
+		(pretty-print (~a "totally " key-counter "always-correct keys!"))
 
 		(display "\n ###############################################7.3 \n")
 		(define sum-fml (apply + (map (lambda (mem-id)
@@ -289,7 +316,7 @@
 
 (define (lstate-new)
 	(lstate 
-		((lambda () (define-symbolic* path-mark-ret boolean?) path-mark-ret))
+		((lambda () (define-symbolic* path-mark-ret boolean?) (global-add-symbol path-mark-ret) path-mark-ret))
 		null
 		(memory-sym-new)))
 
@@ -385,7 +412,7 @@
 	(car func-fmls))
 
 (define (root-invoke-ret-mem func-fmls)
-	(ormap (lambda (p+m) (if (car p+m) (cdr p+m) #f)) (lstate-mem-in-list (ending-lstate (root-invoke func-fmls)))))
+	(memory-select (lstate-mem-in-list (ending-lstate (root-invoke func-fmls)))))
 	
 (define (insts->relation func-fml mac)
 	(match (foldl inst->relation
@@ -397,9 +424,7 @@
 (define (inst->relation inst st)
 	(define ret (inst->relation.real inst st))
 	(display "\n updated pc:\n")
-;	(pretty-print (map function-formula-func (rbstate-funcs ret)))
 	(pretty-print (rbstate-pc ret))
-;	(pretty-print (rbstate-func-fml ret))
 	ret)
 
 ;instruction X rbstate -> rbstate
@@ -422,6 +447,8 @@
 		(define mem-0 (memory-sym-reset (get-mem-out func-fml pc) mem-in))
 		;used only for expr-eval
 		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0]))
+
+;	(pretty-print mem-0)
 
 
 		(define (next-mark) 
@@ -548,21 +575,12 @@
 
 				(define mem-ret (memory-sym-reset mem-0 (root-invoke-ret-mem funcs-ret)))
 				(define ret-val (memory-sread mem-ret var-ret-name))
-;				(display "\n ret-expr: ")
-;				(pretty-print ret)
-;				(display "\n ret-val: ")
-;				(pretty-print ret-val)
-;				(display "\n")
 				(define mem-pop (memory-spop mem-ret))
 				(define mem-ass (memory-swrite mem-pop ret ret-val))
-;				(display "\n mem pop: ")
-;				(pretty-print mem-pop)
-;				(display "\n mem ass: ")
-;				(pretty-print mem-ass)
 				(match-define (cons fml-ret keys-ret) (memory-sym-get-fml mem-ass))
 
-				;(define fml-op (select-fml? (and fml-in fml-ret)))
-				(define fml-op (and fml-in fml-ret))
+				(define fml-op (select-fml? (and fml-in fml-ret)))
+				;(define fml-op (and fml-in fml-ret))
 				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
 
 				(define keys-new (append keys-in keys-ret))
@@ -593,8 +611,8 @@
 				(define mem-ass (memory-swrite mem-pop ret ret-val))
 				(match-define (cons fml-ret keys-ret) (memory-sym-get-fml mem-ass))
 
-				;(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
-				(define fml-op (and fml-this fml-in fml-ret))
+				(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
+				;(define fml-op (and fml-this fml-in fml-ret))
 				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
 
 				(define keys-new (append keys-in keys-this keys-ret))
@@ -621,8 +639,8 @@
 				(define mem-ass (memory-swrite mem-pop ret ret-val))
 				(match-define (cons fml-ret keys-ret) (memory-sym-get-fml mem-ass))
 
-;				(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
-				(define fml-op (and fml-this fml-in fml-ret))
+				(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
+				;(define fml-op (and fml-this fml-in fml-ret))
 				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
 
 				(define keys-new (append keys-in keys-this keys-ret))
