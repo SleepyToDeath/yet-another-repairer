@@ -127,7 +127,13 @@
 ;					(pretty-print (~a (length (function-formula-mem-keys func-fml)) " keys"))
 					(andmap (lambda (key+id) 
 						(if (not (equal? (cdr key+id) mem-id)) #t
-							(imap-sym-key-fml mem (car key+id))))
+							(if (is-concrete-value (car key+id))
+								(imap-sym-key-fml mem (car key+id))
+								((lambda () 
+									(define-symbolic* key-sym integer?)
+									(and 
+										(equal? key-sym (car key+id))
+										(imap-sym-key-fml mem key-sym)))))))
 						(function-formula-mem-keys func-fml)))
 					all-invokes))
 				(define fml-deferred (imap-sym-fml-deferred mem))
@@ -149,9 +155,13 @@
 					(pretty-print (~a "adding keys: " (length (function-formula-mem-keys func-fml))))
 					(andmap (lambda (key+id) 
 							(if (contain-key? mem-id (car key+id)) #t
-								(begin
-								(set! key-counter (+ 1 key-counter))
-								(imap-sym-key-fml mem (car key+id)))))
+								(if (is-concrete-value (car key+id))
+									(imap-sym-key-fml mem (car key+id))
+									((lambda () 
+										(define-symbolic* key-sym integer?)
+										(and 
+											(equal? key-sym (car key+id))
+											(imap-sym-key-fml mem key-sym)))))))
 						(function-formula-mem-keys func-fml)))
 					all-invokes))
 				imap-dummy-list))
@@ -533,6 +543,7 @@
 				(update-rbstate (iassert-pc-next #t #t) mem-0 #f null)]
 
 			[(inst-init classname)
+				;[TODO] make more static
 				(begin
 				(define addr (memory-sread mem-0 var-this-name))
 				(define mem-bind-func

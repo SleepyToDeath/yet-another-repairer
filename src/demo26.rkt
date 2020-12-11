@@ -56,6 +56,8 @@ result
 
 (display "\n Solving: \n")
 
+(output-smt #t)
+
 (define debug-sol (optimize #:maximize (list (apply + soft))
           #:guarantee (assert (and tf1))))
 

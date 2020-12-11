@@ -21,18 +21,19 @@
 		(define top1 (if (null? (cdr bases)) top0 (cadr bases)))
 		(define butt0 (car (reverse bases)))
 		(define butt1 (if (null? (cdr bases)) butt0 (cadr (reverse bases))))
-		(define maybe-ret (ormap identity
+		(define maybe-ret
 			(map 
 				(lambda (scope-base)
 					(define cur-addr (+ scope-base name))
 					(define cur-val (imap-get (memory-addr-space mem) cur-addr))
 					(if (is-not-found? cur-val) #f cur-val))
-				(list top0 top1 butt1 butt0))))
-		(if maybe-ret maybe-ret
-			(begin
-;			(pretty-print (~a "not found: " name))
-;			(pretty-print mem)
-			not-found)))))
+				(list top0 top1 butt1 butt0)))
+		(if (first maybe-ret) (first maybe-ret) 
+			(if (second maybe-ret) (second maybe-ret)
+				(if (third maybe-ret) (third maybe-ret)
+					(if (fourth maybe-ret) (fourth maybe-ret)
+						not-found)))))))
+
 
 ;write to the first defined name in stack
 ;m: imap
@@ -45,13 +46,19 @@
 		(define top1 (if (null? (cdr bases)) top0 (cadr bases)))
 		(define butt0 (car (reverse bases)))
 		(define butt1 (if (null? (cdr bases)) butt0 (cadr (reverse bases))))
-		(define maybe-updated (ormap identity (map 
-			(lambda (scope-base)
-				(define cur-addr (+ scope-base name))
-				(define cur-val (imap-get (memory-addr-space mem) cur-addr))
-				(if (is-not-found? cur-val) #f cur-addr))
-			(list top0 top1 butt1 butt0))))
-		(define maybe-addr (if maybe-updated maybe-updated nullptr))
+		(define maybe-updated 
+			(map 
+				(lambda (scope-base)
+					(define cur-addr (+ scope-base name))
+					(define cur-val (imap-get (memory-addr-space mem) cur-addr))
+					(if (is-not-found? cur-val) #f cur-addr))
+				(list top0 top1 butt1 butt0)))
+		(define maybe-addr 
+			(if (first maybe-updated) (first maybe-updated) 
+				(if (second maybe-updated) (second maybe-updated)
+					(if (third maybe-updated) (third maybe-updated)
+						(if (fourth maybe-updated) (fourth maybe-updated)
+							nullptr)))))
 		(std:struct-copy memory mem [addr-space (imap-set (memory-addr-space mem) maybe-addr value)]))))
 	
 ;declare at the current top level scope
