@@ -146,7 +146,7 @@
 	(define (imap-sym-tracked-commit m)
 		(imap-sym-tracked
 			(imap-sym-commit (imap-sym-tracked-imap m))
-			(imap-sym-get-keys (imap-sym-tracked-imap m))))
+			(append (imap-sym-tracked-keys m) (imap-sym-get-keys (imap-sym-tracked-imap m)))))
 
 	(define (imap-sym-tracked-get-fml m)
 		(imap-sym-get-fml (imap-sym-tracked-imap m)))

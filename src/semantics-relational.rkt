@@ -508,12 +508,12 @@
 					(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)))) 
 					mem-push
 					(append (function-args func) (function-locals func))))
-			(define mem-input 
+			(define mem-input (memory-sym-commit
 				(foldl 
 					(lambda (arg-src arg-dst mem) (memory-swrite mem (string-id (car arg-dst)) (expr-eval arg-src mac-eval-ctxt)))
 					mem-decl
 					args 
-					(function-args func)))
+					(function-args func))))
 			(define func-fml-in (prepend-starting-mem-in func-fml-callee mark mem-input))
 			(define fml-in (memory-sym-get-fml mem-input))
 			(cons func-fml-in fml-in))
@@ -527,9 +527,10 @@
 			(std:struct-copy rbstate st [pc pc-next] [func-fml func-fml-new]))
 
 		(define (update-mem-only mem-new)
-			(define fml-update (memory-sym-get-fml mem-new))
+			(define mem-commit (memory-sym-commit mem-new))
+			(define fml-update (memory-sym-get-fml mem-commit))
 			(define fml-new (iassert-pc-next #t (select-fml? fml-update)))
-			(update-rbstate fml-new mem-new #f))
+			(update-rbstate fml-new mem-commit #f))
 
 		(define (add-invoke-condition itree cnd)
 			(std:struct-copy invoke-tree itree [cnd cnd]))
@@ -553,7 +554,7 @@
 
 		(match inst 
 			[(inst-nop _) 
-				(update-rbstate (iassert-pc-next #t #t) mem-0 #f null)]
+				(update-rbstate (iassert-pc-next #t #t) mem-in #f null)]
 
 			[(inst-init classname)
 				(begin
@@ -570,7 +571,7 @@
 			[(inst-ret v-expr) 
 				(begin
 				(define ret-value (expr-eval v-expr mac-eval-ctxt))
-				(define mem-ret (memory-sforce-write mem-0 var-ret-name ret-value))
+				(define mem-ret (memory-sym-commit (memory-sforce-write mem-0 var-ret-name ret-value)))
 				(define fml-update (memory-sym-get-fml mem-ret))
 				(define fml-ret (select-fml? fml-update))
 				(define fml-path (iassert-pc-ret #t fml-ret))
@@ -588,7 +589,7 @@
 				(define mem-ret (memory-sym-reset mem-0 (root-invoke-ret-mem funcs-ret)))
 				(define ret-val (memory-sread mem-ret var-ret-name))
 				(define mem-pop (memory-spop mem-ret))
-				(define mem-ass (memory-swrite mem-pop ret ret-val))
+				(define mem-ass (memory-sym-commit (memory-swrite mem-pop ret ret-val)))
 				(define fml-ret (memory-sym-get-fml mem-ass))
 
 				(define fml-op (select-fml? (and fml-in fml-ret)))
@@ -611,7 +612,7 @@
 				;	funcs-invoked)))
 
 				;push an extra scope to avoid overwriting "this" of the current scope
-				(define mem-this (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr))
+				(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr)))
 				(define fml-this (memory-sym-get-fml mem-this))
 
 				(define (invoke-candidate fcan)
@@ -623,7 +624,7 @@
 					(define mem-ret (memory-sym-reset mem-0 (root-invoke-ret-mem funcs-ret)))
 					(define ret-val (memory-sread mem-ret var-ret-name))
 					(define mem-pop (memory-spop (memory-spop mem-ret)))
-					(define mem-ass (memory-swrite mem-pop ret ret-val))
+					(define mem-ass (memory-sym-commit (memory-swrite mem-pop ret ret-val)))
 					(define fml-ret (memory-sym-get-fml mem-ass))
 					(define cnd (equal? (function-formula-sid fcan) true-func-invoked-sid))
 					(list func-fml-in cnd fml-in mem-ass fml-ret funcs-ret)))
@@ -651,7 +652,7 @@
 				(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))
 
 				;push an extra scope to avoid overwriting "this" of the current scope
-				(define mem-this (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr))
+				(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr)))
 				(define fml-this (memory-sym-get-fml mem-this))
 
 				(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
@@ -660,7 +661,7 @@
 				(define mem-ret (memory-sym-reset mem-0 (root-invoke-ret-mem funcs-ret)))
 				(define ret-val (memory-sread mem-ret var-ret-name))
 				(define mem-pop (memory-spop (memory-spop mem-ret)))
-				(define mem-ass (memory-swrite mem-pop ret ret-val))
+				(define mem-ass (memory-sym-commit (memory-swrite mem-pop ret ret-val)))
 				(define fml-ret (memory-sym-get-fml mem-ass))
 
 				(define fml-op (select-fml? (and fml-this fml-in fml-ret)))
@@ -695,8 +696,8 @@
 				(begin
 				(define lmap (function-lmap func))
 				(define value (expr-eval condition mac-eval-ctxt))
-				(define fml-update (memory-sym-get-fml mem-0))
+				(define fml-update #t)
 				(define fml-new (iassert-pc-branch (select-fml? fml-update) (select-fml? value) (select-fml? (not value)) label))
 				(define pc-br (imap-get (function-lmap func) label))
-				(update-rbstate fml-new mem-0 pc-br))]))]))
+				(update-rbstate fml-new mem-in pc-br))]))]))
 
