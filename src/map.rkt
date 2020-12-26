@@ -140,8 +140,8 @@
 
 	(define (imap-sym-tracked-reset m m-base)
 		(if (imap-conc? m-base)
-			(std:struct-copy imap-sym-tracked m [imap (imap-sym-reset (imap-sym-tracked-imap m) m-base)])
-			(std:struct-copy imap-sym-tracked m [imap (imap-sym-reset (imap-sym-tracked-imap m) (imap-sym-tracked-imap m-base))])))
+			(imap-sym-tracked (imap-sym-reset (imap-sym-tracked-imap m) m-base) null)
+			(imap-sym-tracked (imap-sym-reset (imap-sym-tracked-imap m) (imap-sym-tracked-imap m-base)) (imap-sym-tracked-keys m-base))))
 
 	(define (imap-sym-tracked-commit m)
 		(imap-sym-tracked
