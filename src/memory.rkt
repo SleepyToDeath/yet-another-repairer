@@ -127,27 +127,29 @@
 ;	See "map.rkt". Memory is just a wrapper for imap
 
 (define (memory-sym-new)
-	(std:struct-copy memory memory-empty [addr-space (imap-sym-new)]))
+	(std:struct-copy memory memory-empty [addr-space (imap-sym-tracked-new)]))
 
 (define (memory-sym-reset m m-base)
-	(std:struct-copy memory m-base [addr-space (imap-sym-reset (memory-addr-space m) (memory-addr-space m-base))]))
+	(std:struct-copy memory m-base [addr-space (imap-sym-tracked-reset (memory-addr-space m) (memory-addr-space m-base))]))
 
 (define (memory-sym-commit m)
-	(std:struct-copy memory m [addr-space (imap-sym-commit (memory-addr-space m))]))
+	(std:struct-copy memory m [addr-space (imap-sym-tracked-commit (memory-addr-space m))]))
 
 (define (memory-sym-get-fml m)
-	(imap-sym-get-fml (memory-addr-space m)))
+	(imap-sym-tracked-get-fml (memory-addr-space m)))
 
 ;candidates: list of (condition X memory)
 ;only select address space, others are static
 (define (memory-select candidates)
-	(define stack-top-new (apply max (map (lambda (p+m) (stack-meta-top (memory-s-meta (cdr p+m)))) candidates)))
-	(define obj-top-new (apply max (map (lambda (p+m) (heap-meta-o-top (memory-h-meta (cdr p+m)))) candidates)))
-	(define heap-top-new (apply max (map (lambda (p+m) (heap-meta-a-top (memory-h-meta (cdr p+m)))) candidates))) 
-	(std:struct-copy memory (cdr (car candidates)) 
-		[s-meta (std:struct-copy stack-meta (memory-s-meta (cdar candidates)) [top stack-top-new])]
-		[h-meta (heap-meta obj-top-new heap-top-new)]
-		[addr-space (ormap (lambda (p+m) (if (car p+m) (memory-addr-space (cdr p+m)) #f)) candidates)]))
+	(if (equal? 1 (length candidates)) (cdr (car candidates))
+		(begin
+		(define stack-top-new (apply max (map (lambda (p+m) (stack-meta-top (memory-s-meta (cdr p+m)))) candidates)))
+		(define obj-top-new (apply max (map (lambda (p+m) (heap-meta-o-top (memory-h-meta (cdr p+m)))) candidates)))
+		(define heap-top-new (apply max (map (lambda (p+m) (heap-meta-a-top (memory-h-meta (cdr p+m)))) candidates))) 
+		(std:struct-copy memory (cdr (car candidates)) 
+			[s-meta (std:struct-copy stack-meta (memory-s-meta (cdar candidates)) [top stack-top-new])]
+			[h-meta (heap-meta obj-top-new heap-top-new)]
+			[addr-space (imap-sym-tracked-select (map (lambda (p+m) (cons (car p+m) (memory-addr-space (cdr p+m)))) candidates))]))))
 	
 
 ;====================================================================

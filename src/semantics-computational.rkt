@@ -55,6 +55,7 @@
 (define delimiter-static (string-id "::"))
 (define delimiter-virtual (string-id "::::"))
 (define delimiter-minor (string-id ","))
+(define field-name-class (string-id "__CLASS__"))
 (define machine-empty (machine #f null imap-empty imap-empty memory-empty pc-init))
 
 (define class-name-main (string-id "dummy"))
@@ -94,6 +95,7 @@
 					#f)))
 		#f))
 
+;virtual functions sharing same signature will have same vid
 (define (vfunc-id mac cls func arg-types) (string-id (lookup-virtual-function mac cls func arg-types)))
 
 (define (vfield-id mac cls field) (string-id (lookup-virtual-field mac cls field)))
@@ -300,7 +302,7 @@
 		(define sfuncs (class-sfuncs cls))
 		(define vfuncs (class-vfuncs cls))
 		(define sfields (class-sfields cls))
-		(define vfields (class-vfields cls))
+		(define vfields (cons field-name-class (class-vfields cls)))
 
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 
