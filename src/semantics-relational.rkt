@@ -158,6 +158,7 @@
 		(define fml-always-right
 			(andmap (lambda (mem-id)
 					(define mem (vector-ref imap-dummy2map mem-id))
+					(pretty-print (~a "Generate keys for state #" mem-id))
 					(andmap (lambda (key+id) 
 							(if (contain-key? mem-id (car key+id)) #t
 								(if (is-concrete-value (car key+id))
@@ -170,7 +171,7 @@
 						all-keys))
 				imap-dummy-list))
 
-		(pretty-print (~a "totally " key-counter "always-correct keys!"))
+;		(pretty-print (~a "totally " key-counter " always-correct keys!"))
 
 		(display "\n ###############################################7.3 \n")
 		(define sum-fml (* (length imap-dummy-list) (length all-keys)))

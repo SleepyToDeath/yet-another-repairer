@@ -155,9 +155,22 @@
 		(imap-sym-tracked (imap-sym-new) null))
 
 	(define (imap-sym-tracked-select candidates)
+		(pretty-print "merging!")
 		(imap-sym-tracked 
 			(ormap (lambda (p+m) (if (car p+m) (imap-sym-tracked-imap (cdr p+m)) #f)) candidates)
-			(apply append (map (lambda (p+m) (imap-sym-tracked-keys (cdr p+m)))))))
+			(foldl 
+				(lambda (p+m keys)
+					(pretty-print (~a "One incoming key num: " (length (imap-sym-tracked-keys (cdr p+m)))))
+					(define ret (append 
+						keys
+						(filter (lambda (key+id.1)
+							(andmap (lambda (key+id.2) (not (equal? (cdr key+id.1) (cdr key+id.2)))) keys))
+							(imap-sym-tracked-keys (cdr p+m)))))
+					(pretty-print (~a "Append key num: " (length ret)))
+					ret)
+				null
+				candidates)))
+			;(apply append (map (lambda (p+m) (imap-sym-tracked-keys (cdr p+m))) candidates))))
 
 ;==================================================
 

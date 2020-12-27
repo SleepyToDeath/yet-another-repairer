@@ -137,7 +137,8 @@ result
 (pretty-print (length (asserts)))
 
 ;(define debug-tf (equal? 0 (list-ref soft 11)))
-(define debug-tf (andmap identity cons-pending))
+;(define debug-tf (andmap identity cons-pending))
+(define debug-tf (equal? 1 (first soft)))
 
 (display "\nDebug-tf\n")
 debug-tf
