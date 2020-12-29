@@ -95,7 +95,7 @@
 	(if pending pending (func-base-true index)))
 
 (define (imap-sym-key-fml m index)
-	(equal? ((imap-sym-func-true m) index) (imap-sym-real-get (imap-sym-commit m) index)))
+	(equal? ((imap-sym-func-true m) index) (imap-sym-real-get m index)))
 
 (define (imap-sym-reset m m-base)
 	(set! imap-section-keys null)
@@ -108,7 +108,12 @@
 
 ;make updates so far visible to new reads
 (define (imap-sym-commit m)
-	(std:struct-copy imap-sym m [updates null] [committed-updates (imap-sym-updates m)]))
+	(define ret (cons
+		(std:struct-copy imap-sym m [updates null] [committed-updates (imap-sym-updates m)])
+		(imap-sym-get-keys m)))
+	(set! imap-section-keys null)
+	ret)
+
 
 ;should only be called once for each section, otherwise only the last one will work
 (define (imap-sym-get-fml m)
@@ -144,9 +149,11 @@
 			(imap-sym-tracked (imap-sym-reset (imap-sym-tracked-imap m) (imap-sym-tracked-imap m-base)) (imap-sym-tracked-keys m-base))))
 
 	(define (imap-sym-tracked-commit m)
+		(match-define (cons ms-commit keys) (imap-sym-commit (imap-sym-tracked-imap m)))
+		(display (~a "Committed " (length keys) " keys\n"))
 		(imap-sym-tracked
-			(imap-sym-commit (imap-sym-tracked-imap m))
-			(append (imap-sym-tracked-keys m) (imap-sym-get-keys (imap-sym-tracked-imap m)))))
+			ms-commit
+			(append (imap-sym-tracked-keys m) keys)))
 
 	(define (imap-sym-tracked-get-fml m)
 		(imap-sym-get-fml (imap-sym-tracked-imap m)))
@@ -211,3 +218,11 @@
 (define all-symbols null)
 (define (global-add-symbol sym)
 	(set! all-symbols (cons sym all-symbols)))
+
+
+;================== Helpers ====================
+(define (imap-sym-lookback m)
+	(display (~a "map track: " (imap-sym-func-base m) " ~> " (imap-sym-func-dummy m) 
+				" #updates: " (length (imap-sym-committed-updates m)) "\n")))
+
+

@@ -126,17 +126,20 @@
 ;Usage: 
 ;	See "map.rkt". Memory is just a wrapper for imap
 
-(define (memory-sym-new)
-	(std:struct-copy memory memory-empty [addr-space (imap-sym-tracked-new)]))
+(define (memory-sym-new summary?)
+	(if summary? #f
+		(std:struct-copy memory memory-empty [addr-space (imap-sym-tracked-new)])))
 
-(define (memory-sym-reset m m-base)
-	(std:struct-copy memory m-base [addr-space (imap-sym-tracked-reset (memory-addr-space m) (memory-addr-space m-base))]))
+(define (memory-sym-reset m m-base summary?)
+	(if summary? m-base 
+		(std:struct-copy memory m-base [addr-space (imap-sym-tracked-reset (memory-addr-space m) (memory-addr-space m-base))])))
 
 (define (memory-sym-commit m)
 	(std:struct-copy memory m [addr-space (imap-sym-tracked-commit (memory-addr-space m))]))
 
-(define (memory-sym-get-fml m)
-	(imap-sym-tracked-get-fml (memory-addr-space m)))
+(define (memory-sym-get-fml m summary?)
+	(if summary? #t
+		(imap-sym-tracked-get-fml (memory-addr-space m))))
 
 ;candidates: list of (condition X memory)
 ;only select address space, others are static
