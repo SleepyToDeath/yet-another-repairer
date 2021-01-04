@@ -13,6 +13,7 @@
 (require "syntax-jimple.rkt")
 (require "semantics-relational.rkt")
 (require "semantics-computational.rkt")
+(require "formula.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 
 (define class-A (p:build-ast-file (p:parse-to-stx
@@ -105,8 +106,9 @@ result
 
 
 
-
 (output-smt #t)
+
+(clear-pending-eval)
 
 (match-define (cons soft hard) (ast->relation buggy))
 
@@ -116,16 +118,16 @@ result
 ;(define tf2 (hard input2 output2))
 (define tf3 (hard input2 output2))
 
-(define tf3++ (forall (append (list $r1 $r2 $r3 $ret) all-symbols)
-	(implies 
-		(and 
-			(> $ret 0)
-			(> $r1 0)
-			(> $r2 0)
-			(> $r3 0))
-		(implies 
-			tf3
-			(equal? $ret (+ $r1 $r2 $r3))))))
+;(define tf3++ (forall (append (list $r1 $r2 $r3 $ret) all-symbols)
+;	(implies 
+;		(and 
+;			(> $ret 0)
+;			(> $r1 0)
+;			(> $r2 0)
+;			(> $r3 0))
+;		(implies 
+;			tf3
+;			(equal? $ret (+ $r1 $r2 $r3))))))
 
 (display "\n")
 
@@ -146,7 +148,7 @@ debug-tf
 
 all-symbols
 
-;(define fml-no-bug (equal? (apply + soft) (length soft)))
+(define fml-no-bug (equal? (apply + soft) (length soft)))
 
 (display "\nSolution:\n")
 (define debug-sol (optimize #:maximize (list (apply + soft))
@@ -155,12 +157,17 @@ all-symbols
 
 ;nobug-sol
 
-debug-sol
-;(core debug-sol)
-
-soft
-
+;(pretty-print (fml-to-print tf3))
 (display "\n")
 (pretty-print string-id-table)
 
+debug-sol
+(unsat? debug-sol)
+;(core debug-sol)
 
+;soft
+
+
+((lambda ()
+(print-pending-eval debug-sol)
+(display "\n")))

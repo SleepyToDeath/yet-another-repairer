@@ -19,7 +19,8 @@
 ;	  and `imap-get`, `imap-set` to read & write
 ;	3.Symbolic map: use `imap-sym-tracked-new` to get a new symbolic map.
 ;	  Use `imap-sym-tracked-reset` to copy a base map(concrete/symbolic),
-;	  then use it as if it's concrete. Finally, use `imap-sym-tracked-get-fml`
+;	  then use it as if it's concrete(except that a commit is needed for
+;	  updates to be seen by future reads). Finally, use `imap-sym-tracked-get-fml`
 ;	  to get a formula describing the relation between the updated map
 ;	  and the base map.
 ;	4.A concrete map can map anything to anything. But a symbolic
@@ -81,9 +82,12 @@
 
 		(define (imap-get m index)
 			(imap-add-section-key index)
-			(imap-sym-real-get m index))
+			(define ret (imap-sym-real-get m index))
+			(defer-eval "imap get" (list (imap-sym-func-dummy m) index ret))
+			ret)
 
 		(define (imap-set m index value)
+			(defer-eval "imap set" (list (imap-sym-func-dummy m) index value))
 			(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))]))
 	])
 
@@ -94,13 +98,26 @@
 	(define func-base-true (imap-sym-func-base-true m))
 	(if pending pending (func-base-true index)))
 
+(define (imap-sym-key-fml-debug m index)
+	(defer-eval "equal?" (cons ((imap-sym-func-true m) index) (imap-sym-real-get m index))))
+
+
 (define (imap-sym-key-fml m index)
-	(equal? ((imap-sym-func-true m) index) (imap-sym-real-get m index)))
+	(define ret (equal? ((imap-sym-func-true m) index) (imap-sym-real-get m index)))
+;	(if (equal? 2098202 index)
+;		(begin
+;		(display "\n")
+;		(pretty-print index)
+;		(pretty-print (imap-sym-func-dummy m))
+;		(pretty-print (imap-sym-func-true m))
+;		(pretty-print  ret)
+;		(display "\n"))
+;		#f)
+	ret)
 
 (define (imap-sym-reset m m-base)
 	(set! imap-section-keys null)
 	(define-symbolic* fml-deferred boolean?)
-	(global-add-symbol fml-deferred)
 	(define func-base (imap-get-func m-base))
 	(imap-sym (imap-get-func m) func-base (imap-sym-func-true m) 
 		(if (imap-func-is-dummy func-base) (imap-sym-func-true m-base) func-base)
@@ -109,7 +126,7 @@
 ;make updates so far visible to new reads
 (define (imap-sym-commit m)
 	(define ret (cons
-		(std:struct-copy imap-sym m [updates null] [committed-updates (imap-sym-updates m)])
+		(std:struct-copy imap-sym m [updates null] [committed-updates (append (imap-sym-updates m) (imap-sym-committed-updates m))])
 		(imap-sym-get-keys m)))
 	(set! imap-section-keys null)
 	ret)
@@ -188,7 +205,7 @@
 (define imap-empty (imap-conc default-func))
 
 (define nullptr -1)
-(define not-found -666)
+(define not-found -66666666)
 ;========================================
 
 ;================== Generate Deferred Formulae ====================
@@ -211,6 +228,7 @@
 (define imap-dummy-counter 0)
 (define (imap-new-dummy)
 	(set! imap-dummy-counter (+ 1 imap-dummy-counter))
+	(display (~a "New state id: " imap-dummy-counter "\n"))
 	imap-dummy-counter)
 
 (define imap-func-is-dummy number?)

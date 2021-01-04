@@ -2,6 +2,8 @@
 
 (require rosette/lib/match)   ; provides `match`
 (require (prefix-in std: racket/base))
+(require racket/format)
+(require "formula.rkt")
 (require "map.rkt")
 (require "stack.rkt")
 (require "string-id.rkt")
@@ -29,7 +31,7 @@
 
 ;decl & write
 (define (memory-sforce-write mem name value)
-	(memory-swrite (memory-sdecl mem name) name value))
+	(stack-force-write mem name value))
 
 ;push a scope to stack
 (define (memory-spush mem)
@@ -153,7 +155,15 @@
 			[s-meta (std:struct-copy stack-meta (memory-s-meta (cdar candidates)) [top stack-top-new])]
 			[h-meta (heap-meta obj-top-new heap-top-new)]
 			[addr-space (imap-sym-tracked-select (map (lambda (p+m) (cons (car p+m) (memory-addr-space (cdr p+m)))) candidates))]))))
-	
-
 ;====================================================================
+
+
+;======================= Helper ========================
+(define (memory-print-id name m)
+	(defer-eval "" (~a "current state id: " name " : " 
+		(imap-sym-func-dummy (imap-sym-tracked-imap (memory-addr-space m))) " <~ " 
+		(imap-sym-func-base (imap-sym-tracked-imap (memory-addr-space m)))  "\n")))
+;=======================================================
+
+
 

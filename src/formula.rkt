@@ -54,3 +54,20 @@
 			[(expression op child ...) #f]
 			[(constant id type) #f]
 			[_ #t])))
+
+;============================= Debug ========================================
+(define eval-pending null)
+(define (defer-eval msg value)
+	(set! eval-pending (cons (cons msg value) eval-pending)))
+
+(define (print-pending-eval sol)
+	(map (lambda (m.v) (display (~a (car m.v) " : " (evaluate (cdr m.v) sol) "\n"))) eval-pending))
+
+(define (clear-pending-eval)
+	(set! eval-pending null))
+
+(define cons-pending null)
+(define (defer-cons v)
+	(set! cons-pending (cons v cons-pending)))
+
+

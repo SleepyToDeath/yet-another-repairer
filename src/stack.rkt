@@ -60,6 +60,14 @@
 						(if (fourth maybe-updated) (fourth maybe-updated)
 							nullptr)))))
 		(std:struct-copy memory mem [addr-space (imap-set (memory-addr-space mem) maybe-addr value)]))))
+
+(define (stack-force-write mem name value)
+	(if (stack-empty? mem) mem
+		(begin
+		(define bases (stack-meta-bases (memory-s-meta mem)))
+		(define top0 (car bases))
+		(define addr (+ top0 name))
+		(std:struct-copy memory mem [addr-space (imap-set (memory-addr-space mem) addr value)]))))
 	
 ;declare at the current top level scope
 ;default value is nullptr

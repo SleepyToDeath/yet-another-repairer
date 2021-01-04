@@ -8,6 +8,7 @@
 (require "jimple/jimple-parser.rkt")
 (require "memory-common.rkt")
 (require "match-define.rkt")
+(require "formula.rkt")
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
 (require racket/pretty)
@@ -547,6 +548,8 @@
 	[(define (expr-eval e m)
 		(define v1 (expr-eval-dispatch (iexpr-binary-expr1 e) m))
 		(define v2 (expr-eval-dispatch (iexpr-binary-expr2 e) m))
+		(defer-eval e v1)
+		(defer-eval e v2)
 		((iexpr-binary-op e) v1 v2))])
 
 (struct iexpr-array (arr-name index) #:transparent

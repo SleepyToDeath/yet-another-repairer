@@ -17,15 +17,6 @@
 
 (provide (all-defined-out))
 
-;============================= Debug ========================================
-(define eval-pending null)
-(define (defer-eval v)
-	(set! eval-pending (cons v eval-pending)))
-
-(define cons-pending null)
-(define (defer-cons v)
-	(set! cons-pending (cons v cons-pending)))
-
 ;============================= Definition ====================================
 (struct function-formula (func lids lstates ret-lstate fmls vid sid) #:transparent)
 
@@ -58,7 +49,6 @@
 				(foldl 
 					(lambda (kv mem+fml) 
 						(define-symbolic* vi integer?)
-						(global-add-symbol vi)
 						(define fml (equal? vi (cdr kv)))
 						(cons 
 							(memory-sforce-write (car mem+fml) (string-id (car kv)) vi) 
@@ -100,60 +90,46 @@
 		(define all-keys (imap-sym-tracked-keys (memory-addr-space (machine-mem mac-done))))
 		(pretty-print (~a "Totally " (length all-keys) " keys"))
 
-		(define key-counter 0)
-		
-		(define (add-key i2k id key)
-;			(pretty-print (~a "key: " key))
-;			(pretty-print (~a "size: " (size-of key)))
-			(set! key-counter (+ 1 key-counter))
-			(define keys-old (imap-get i2k id))
-			(define keys-new (if (is-not-found? keys-old) (list key) (cons key keys-old)))
-			(imap-set i2k id keys-new))
-
-		(define id2keys 
-			(foldl (lambda (mem-id i2k)
-				(foldl (lambda (key+id i2k)
-					(if (equal? (cdr key+id) mem-id) (add-key i2k mem-id (car key+id)) i2k))
-					i2k
-					all-keys))
-				imap-empty
-				imap-dummy-list))
+		(define (id2keys id)
+			(map car (imap-sym-committed-updates (vector-ref imap-dummy2map id))))
 
 		(define (contain-key? id key)
-			(define keys (imap-get id2keys id))
-			(if (is-not-found? keys) #f (ormap (lambda (key0) (equal? key key0)) keys)))
-
+			(ormap (lambda (key0) (equal? key key0)) (id2keys id)))
 
 		(display "\n ###############################################7.1 \n")
 
-		(set! key-counter 0)
-
-		(pretty-print (~a (length imap-dummy-list) " states"))
+		(pretty-print (~a (length imap-dummy-list) " states:"))
+		(pretty-print imap-dummy-list)
 
 		(define fml-maybe-wrong
 			(andmap (lambda (mem-id)
 				(define mem (vector-ref imap-dummy2map mem-id))
 				(define fml-true 
-					(andmap (lambda (key+id) 
-						(if (not (equal? (cdr key+id) mem-id)) #t
-							(if (is-concrete-value (car key+id))
-								(imap-sym-key-fml mem (car key+id))
+					(andmap (lambda (key) 
+							(if (is-concrete-value key)
+								(imap-sym-key-fml mem key)
 								((lambda () 
 									(define-symbolic* key-sym integer?)
 									(and 
-										(equal? key-sym (car key+id))
-										(imap-sym-key-fml mem key-sym)))))))
-						all-keys))
+										(equal? key-sym key)
+										(imap-sym-key-fml mem key-sym))))))
+						(id2keys mem-id)))
 				(define fml-deferred (imap-sym-fml-deferred mem))
 				(equal? fml-deferred fml-true))
 				imap-dummy-list))
-
-;		(pretty-print (~a "totally " key-counter " maybe-wrong keys!"))
+#|
+		(map (lambda (mem-id)
+			(define mem (vector-ref imap-dummy2map mem-id))
+			(defer-eval "^^^^^^^^^ content of formula ^^^^^^^^^" (imap-sym-fml-deferred mem))
+			(map (lambda (key)
+					(defer-eval "maybe-wrong-key: " (cons mem-id key))
+					(imap-sym-key-fml-debug mem key))
+				(id2keys mem-id)))
+			imap-dummy-list)
+|#
+		
 
 		(display "\n ###############################################7.2 \n")
-
-		(set! key-counter 0)
-
 
 		(define fml-always-right
 			(andmap (lambda (mem-id)
@@ -172,19 +148,24 @@
 						all-keys))
 				imap-dummy-list))
 
-;		(pretty-print (~a "totally " key-counter " always-correct keys!"))
+#|
+		(map (lambda (mem-id)
+			(define mem (vector-ref imap-dummy2map mem-id))
+			(map (lambda (key.id)
+					(defer-eval "always-correct-key: " (cons mem-id (if (contain-key? mem-id (car key.id)) "xxxxxxxx" (car key.id))))
+					(imap-sym-key-fml-debug mem (car key.id)))
+				all-keys))
+			imap-dummy-list)
+|#
 
 		(display "\n ###############################################7.3 \n")
-		(define sum-fml (* (length imap-dummy-list) (length all-keys)))
-		(pretty-print (~a "Total symbols: " sum-fml))
 		
-;		(pretty-print fml-maybe-wrong)
-;		(pretty-print fml-always-right)
 		(define fml-code-bind (and fml-maybe-wrong fml-always-right))
 
 		(display "\n ###############################################8 \n")
+		(pretty-print fml-out)
 		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
-;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-code fml-code-bind))
+;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-code fml-ass fml-code-bind))
 
 	(cons soft-cons hard-cons))
 
@@ -327,7 +308,7 @@
 
 (define (lstate-new)
 	(lstate 
-		((lambda () (define-symbolic* path-mark-ret boolean?) (global-add-symbol path-mark-ret) path-mark-ret))
+		((lambda () (define-symbolic* path-mark boolean?) path-mark))
 		null
 		(memory-sym-new #f)))
 
@@ -450,6 +431,7 @@
 		(define in-target? (and (not summary?) (equal? (function-formula-sid func-fml) target-sid)))
 ;		(imap-set-selector id)
 
+		(defer-eval "instruction: " inst)
 		(display "\nInstruction:\n")
 		(println inst)
 		(println mark)
@@ -474,7 +456,9 @@
 
 		(define (select-fml? fml)
 			(if in-target?
-				(implies id fml)
+				(begin 
+				(display (~a "selector application: " (implies id fml) "\n"))
+				(implies id fml))
 				fml))
 
 		(define (iassert-pc-next fml-path fml-op)
@@ -506,7 +490,7 @@
 										(equal? cnd (starting-pmark func-fml))
 										(implies cnd fml-op))) 
 								func-fmls fml-ops cnds)]
-						 [fml-brs (ormap ending-pmark func-fmls)])
+						 [fml-brs (ormap starting-pmark func-fmls)])
 						(and
 							fml-path
 							(equal? mark (and fml-cnds fml-brs (next-mark)))))))
@@ -514,22 +498,27 @@
 		(define (invoke-setup func-fml-callee mem args)
 ;			(memory-print mem)
 			(define mem-0 (memory-sym-reset (memory-sym-new summary?) mem summary?))
+			(memory-print-id "mem-0" mem-0)
 			(define func (function-formula-func func-fml-callee))
 			(define mem-push (memory-spush mem-0))
-			(define mem-decl
+			(memory-print-id "mem-push" mem-push)
+			(define mem-decl (memory-sym-commit
 				(foldl 
-					(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)))) 
+					(lambda (var-def mem) (memory-sdecl mem (car var-def))) 
 					mem-push
-					(append (function-args func) (function-locals func))))
+					(append (function-args func) (function-locals func)))))
+			(memory-print-id "mem-decl" mem-decl)
 			(define mem-arg (memory-sym-commit
 				(foldl 
-					(lambda (arg-src arg-dst mem) (memory-swrite mem (string-id (car arg-dst)) (expr-eval arg-src mac-eval-ctxt)))
+					(lambda (arg-src arg-dst mem) (memory-swrite mem (car arg-dst) (expr-eval arg-src mac-eval-ctxt)))
 					mem-decl
 					args 
 					(function-args func))))
+			(memory-print-id "mem-arg" mem-arg)
+			(define fml-in (memory-sym-get-fml mem-arg summary?))
 			(define mem-input (memory-sym-reset (memory-sym-new summary?) mem-arg (not in-target?)))
+			(memory-print-id "mem-input" mem-input)
 			(define func-fml-in (prepend-starting-mem-in func-fml-callee mark mem-input))
-			(define fml-in (memory-sym-get-fml mem-input summary?))
 			(cons func-fml-in fml-in))
 
 		; bool X memory X int(if with branch)/#f(if no branch) -> rbstate
@@ -538,6 +527,8 @@
 			(define func-fml-next (prepend-mem-in func-fml mark mem-out pc-next))
 			(define func-fml-br (if pc-opt-br (prepend-mem-in func-fml-next mark mem-out pc-opt-br) func-fml-next))
 			(define func-fml-new (append-fml func-fml-br fml-new))
+			(pretty-print inst)
+			(display (~a "Output state id: " (imap-sym-func-dummy (imap-sym-tracked-imap (memory-addr-space mem-out))) " \n"))
 			(std:struct-copy rbstate st [pc pc-next] [func-fml func-fml-new]))
 
 		(define (update-mem-only mem-new)
@@ -555,7 +546,7 @@
 				(define maybe-this-sid 
 					(ormap 
 						(lambda (func-fml-cur)
-							(if (equal? vid (function-formula-vid func-fml-cur)) func-fml-cur #f))
+							(if (equal? vid (function-formula-vid func-fml-cur)) (function-formula-sid func-fml-cur) #f))
 						(class-vfuncs (imap-get (machine-cmap mac) classname))))
 				(if maybe-this-sid maybe-this-sid 
 					(begin
@@ -585,12 +576,15 @@
 			[(inst-ret v-expr) 
 				(begin
 				(define ret-value (expr-eval v-expr mac-eval-ctxt))
+				(if summary? #f (defer-eval inst ret-value))
 				(define mem-ret (memory-sym-commit (memory-sforce-write mem-0 var-ret-name ret-value)))
 				(define fml-update (memory-sym-get-fml mem-ret summary?))
 				(define fml-ret (select-fml? fml-update))
 				(define fml-path (iassert-pc-ret #t fml-ret))
 				(define func-fml-ret (prepend-ending-mem-in func-fml mark mem-ret))
 				(define func-fml-new (append-fml func-fml-ret fml-path))
+				(pretty-print inst)
+				(display (~a "Output state id: " (imap-sym-func-dummy (imap-sym-tracked-imap (memory-addr-space mem-ret))) " \n"))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
 
 			[(inst-static-call ret cls-name func-name arg-types args) 
@@ -606,6 +600,7 @@
 
 				(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
 				(define ret-val (memory-sread mem-ret var-ret-name))
+				(if summary? #f (defer-eval inst ret-val))
 				(define mem-pop (memory-spop mem-ret))
 				(define mem-ass (memory-sym-commit (memory-swrite mem-pop ret ret-val)))
 				(define fml-ret (memory-sym-get-fml mem-ass summary?))
@@ -625,6 +620,9 @@
 				(define funcs-invoked (map alloc-lstate (filter (lambda (f) (equal? (function-formula-vid f) vid)) (all-vfunctions mac))))
 				(define classname-true (memory-fread mem--1 field-name-class obj-addr))
 				(define true-func-invoked-sid (vid2sid mac classname-true vid))
+			;	(display (~a "true vid: " vid " true sid: " (vid2sid mac 11 vid) " true sid found: " true-func-invoked-sid " true class name:\n")) 
+			;	(pretty-print (fml-to-print classname-true))
+
 
 				;(define func-invoked (car (filter 
 				;	(lambda (f) (equal? (function-formula-sid f) true-func-invoked-sid))
@@ -633,6 +631,7 @@
 				;push an extra scope to avoid overwriting "this" of the current scope
 				(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr)))
 				(define fml-this (memory-sym-get-fml mem-this summary?))
+				(memory-print-id "mem-this" mem-this)
 
 				(define (invoke-candidate fcan)
 					(begin
@@ -643,19 +642,26 @@
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret))
 					(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
 					(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
+					(memory-print-id "mem-ret.tmp2" mem-ret.tmp2)
 
-					(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
+					(define mem-ret (memory-sym-reset (if summary? mem-0 (memory-sym-new summary?)) mem-ret.tmp2 summary?))
 					(define ret-val (memory-sread mem-ret var-ret-name))
+					(if summary? #f (defer-eval inst ret-val))
 					(define mem-pop (memory-spop (memory-spop mem-ret)))
 					(define mem-ass (memory-sym-commit (memory-swrite mem-pop ret ret-val)))
 					(define fml-ret (memory-sym-get-fml mem-ass summary?))
+					(memory-print-id "mem-ass" mem-ass)
 					(define cnd (equal? (function-formula-sid fcan) true-func-invoked-sid))
+;					(display (~a "this function sid: " (function-formula-sid fcan) " true sid: " true-func-invoked-sid "\n"))
 					(list func-fml-in cnd fml-in mem-ass fml-ret funcs-ret fml-sum)))
 				
 				(define ret-pack (map invoke-candidate funcs-invoked))
 
 				(define func-fml-ins (map first ret-pack))
 				(define cnds (map second ret-pack))
+;				(display "conditions:\n")
+;				(pretty-print cnds)
+				(defer-eval "Virtual call conditions:" cnds)
 				;[TODO] use an extra selector for fml-sum
 				(define fml-call (and
 					(andmap third ret-pack)
@@ -689,6 +695,7 @@
 
 				(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
 				(define ret-val (memory-sread mem-ret var-ret-name))
+				(if summary? #f (defer-eval inst ret-val))
 				(define mem-pop (memory-spop (memory-spop mem-ret)))
 				(define mem-ass (memory-sym-commit (memory-swrite mem-pop ret ret-val)))
 				(define fml-ret (memory-sym-get-fml mem-ass summary?))
@@ -703,6 +710,7 @@
 			[(inst-ass vl vr) 
 				(begin
 				(define value (expr-eval vr mac-eval-ctxt))
+				(if summary? #f (defer-eval inst value))
 ;				(defer-cons (equal? value 6))
 				(define rhs (lexpr-rhs vl))
 				(define mem-new 
@@ -720,6 +728,7 @@
 								(letrec
 									([addr (memory-sread mem-0 (string-id (variable-name obj)))])
 									(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value)))]))
+				(memory-print-id "mem-new" mem-new)
 				(update-mem-only mem-new))]
 
 			[(inst-jmp condition label)
