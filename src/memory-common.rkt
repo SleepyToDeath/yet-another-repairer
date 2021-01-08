@@ -44,4 +44,4 @@
 ;o-top: top of object area
 (struct heap-meta (o-top a-top) #:transparent)
 
-
+(define no-scope 0)

@@ -11,6 +11,7 @@
 (require "syntax-jimple.rkt")
 (require "semantics-relational.rkt")
 (require "semantics-computational.rkt")
+(require "formula.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 
 (define src-dir "../benchmark/benchmark1/sootOutput/")
@@ -54,6 +55,9 @@ result
 
 (define tf1 (hard input1 output1))
 
+(display "\n")
+(pretty-print string-id-table)
+
 (display "\n Solving: \n")
 
 (output-smt #t)
@@ -62,3 +66,7 @@ result
           #:guarantee (assert (and tf1))))
 
 debug-sol
+
+((lambda ()
+(print-pending-eval debug-sol)
+(display "\n")))

@@ -45,7 +45,7 @@
 ;-----------------Heap Operations---------------
 ;read from heap
 (define (memory-hread mem addr)
-	(imap-get (memory-addr-space mem) addr))
+	(imap-get2 (memory-addr-space mem) addr no-scope))
 
 ;write to heap
 (define (memory-hwrite mem addr value)
@@ -96,7 +96,7 @@
 
 ;return baes address of a virtual table
 (define (memory-vt-base mem name)
-	(imap-get (vtab-meta-name2tab (memory-v-meta mem)) name))
+	(imap-get2 (vtab-meta-name2tab (memory-v-meta mem)) name no-scope))
 
 ;return entry address of a virtual table
 ;must be used after initialization
@@ -130,18 +130,23 @@
 
 (define (memory-sym-new summary?)
 	(if summary? #f
-		(std:struct-copy memory memory-empty [addr-space (imap-sym-tracked-new)])))
+		(std:struct-copy memory memory-empty [addr-space (imap-sym-scoped-new)])))
 
 (define (memory-sym-reset m m-base summary?)
 	(if summary? m-base 
-		(std:struct-copy memory m-base [addr-space (imap-sym-tracked-reset (memory-addr-space m) (memory-addr-space m-base))])))
+		(std:struct-copy memory m-base 
+			[addr-space 
+				(imap-sym-scoped-reset 
+					(memory-addr-space m) 
+					(memory-addr-space m-base) 
+					(stack-meta-bases (memory-s-meta m-base)))])))
 
 (define (memory-sym-commit m)
-	(std:struct-copy memory m [addr-space (imap-sym-tracked-commit (memory-addr-space m))]))
+	(std:struct-copy memory m [addr-space (imap-sym-scoped-commit (memory-addr-space m))]))
 
 (define (memory-sym-get-fml m summary?)
 	(if summary? #t
-		(imap-sym-tracked-get-fml (memory-addr-space m))))
+		(imap-sym-scoped-get-fml (memory-addr-space m))))
 
 ;candidates: list of (condition X memory)
 ;only select address space, others are static
@@ -154,15 +159,23 @@
 		(std:struct-copy memory (cdr (car candidates)) 
 			[s-meta (std:struct-copy stack-meta (memory-s-meta (cdar candidates)) [top stack-top-new])]
 			[h-meta (heap-meta obj-top-new heap-top-new)]
-			[addr-space (imap-sym-tracked-select (map (lambda (p+m) (cons (car p+m) (memory-addr-space (cdr p+m)))) candidates))]))))
+			[addr-space 
+				(imap-sym-scoped-select 
+					(map (lambda (p+m) (cons (car p+m) (memory-addr-space (cdr p+m)))) candidates)
+					(remove-duplicates (apply append (map (compose imap-sym-scoped-scope memory-addr-space cdr) candidates))))]))))
 ;====================================================================
 
 
 ;======================= Helper ========================
 (define (memory-print-id name m)
 	(defer-eval "" (~a "current state id: " name " : " 
-		(imap-sym-func-dummy (imap-sym-tracked-imap (memory-addr-space m))) " <~ " 
-		(imap-sym-func-base (imap-sym-tracked-imap (memory-addr-space m)))  "\n")))
+		(imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space m)))) " <~ " 
+		(imap-sym-func-base (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space m))))  "\n")))
+
+(define (in-scope? key.scope scope)
+	(or
+		(equal? (cdr key.scope) no-scope)
+		(member (cdr key.scope) scope)))
 ;=======================================================
 
 

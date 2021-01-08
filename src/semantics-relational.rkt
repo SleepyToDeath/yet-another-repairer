@@ -87,11 +87,11 @@
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(display "\n ###############################################7 \n")
 
-		(define all-keys (imap-sym-tracked-keys (memory-addr-space (machine-mem mac-done))))
+		(define all-keys (imap-sym-tracked-keys (imap-sym-scoped-imap (memory-addr-space (machine-mem mac-done)))))
 		(pretty-print (~a "Totally " (length all-keys) " keys"))
 
 		(define (id2keys id)
-			(map car (imap-sym-committed-updates (vector-ref imap-dummy2map id))))
+			(map car (imap-sym-committed-updates (imap-unwrap (vector-ref imap-dummy2map id)))))
 
 		(define (contain-key? id key)
 			(ormap (lambda (key0) (equal? key key0)) (id2keys id)))
@@ -107,23 +107,23 @@
 				(define fml-true 
 					(andmap (lambda (key) 
 							(if (is-concrete-value key)
-								(imap-sym-key-fml mem key)
+								(imap-sym-key-fml (imap-unwrap mem) key)
 								((lambda () 
 									(define-symbolic* key-sym integer?)
 									(and 
 										(equal? key-sym key)
-										(imap-sym-key-fml mem key-sym))))))
+										(imap-sym-key-fml (imap-unwrap mem) key-sym))))))
 						(id2keys mem-id)))
-				(define fml-deferred (imap-sym-fml-deferred mem))
+				(define fml-deferred (imap-sym-fml-deferred (imap-unwrap mem)))
 				(equal? fml-deferred fml-true))
 				imap-dummy-list))
 #|
 		(map (lambda (mem-id)
 			(define mem (vector-ref imap-dummy2map mem-id))
-			(defer-eval "^^^^^^^^^ content of formula ^^^^^^^^^" (imap-sym-fml-deferred mem))
+			(defer-eval "^^^^^^^^^ content of formula ^^^^^^^^^" (imap-sym-fml-deferred (imap-unwrap mem)))
 			(map (lambda (key)
 					(defer-eval "maybe-wrong-key: " (cons mem-id key))
-					(imap-sym-key-fml-debug mem key))
+					(imap-sym-key-fml-debug (imap-unwrap mem) key))
 				(id2keys mem-id)))
 			imap-dummy-list)
 |#
@@ -131,32 +131,58 @@
 
 		(display "\n ###############################################7.2 \n")
 
+		(define kounter 0)
+
 		(define fml-always-right
 			(andmap (lambda (mem-id)
 					(define mem (vector-ref imap-dummy2map mem-id))
 					(pretty-print (~a "Generate keys for state #" mem-id))
+					(pretty-print (imap-sym-scoped-scope mem))
 					(imap-sym-lookback mem)
-					(andmap (lambda (key+id) 
-							(if (contain-key? mem-id (car key+id)) #t
-								(if (is-concrete-value (car key+id))
-									(imap-sym-key-fml mem (car key+id))
-									((lambda () 
-										(define-symbolic* key-sym integer?)
-										(and 
-											(equal? key-sym (car key+id))
-											(imap-sym-key-fml mem key-sym)))))))
+					(andmap (lambda (key.scope) 
+							(if (in-scope? key.scope (imap-sym-scoped-scope mem))
+								(begin
+								(set! kounter (+ 1 kounter))
+								(if (contain-key? mem-id (car key.scope)) #t
+;									(and
+										(if (is-concrete-value (car key.scope))
+											(imap-sym-key-fml (imap-unwrap mem) (car key.scope))
+											((lambda () 
+												(define-symbolic* key-sym integer?)
+												(and 
+													(equal? key-sym (car key.scope))
+													(imap-sym-key-fml (imap-unwrap mem) key-sym)))))))
+;										(letrec
+;											([func-base (imap-sym-func-base (imap-unwrap mem))]
+;											 [mem-base (if (imap-func-is-dummy? func-base) (vector-ref imap-dummy2map func-base) #f)])
+;											(if (imap-func-is-dummy? func-base)
+;												(if (not (in-scope? key.scope (imap-sym-scoped-scope mem-base)))
+;													(imap-sym-key-not-found (imap-unwrap mem-base) (car key.scope))
+;													#t)
+;												#t)))))
+;								#t))
+								(imap-sym-key-not-found (imap-unwrap mem) (car key.scope))))
 						all-keys))
 				imap-dummy-list))
 
+		(display (~a "Totally " kounter " keys in scope\n"))
+		(defer-eval "Totally keys in scope: " kounter)
+
 #|
+		(map pretty-print all-keys)
+
 		(map (lambda (mem-id)
 			(define mem (vector-ref imap-dummy2map mem-id))
-			(map (lambda (key.id)
-					(defer-eval "always-correct-key: " (cons mem-id (if (contain-key? mem-id (car key.id)) "xxxxxxxx" (car key.id))))
-					(imap-sym-key-fml-debug mem (car key.id)))
+			(map (lambda (key.scope)
+					(if (in-scope? key.scope (imap-sym-scoped-scope mem))
+						(begin
+							(defer-eval "always-correct-key: " (cons mem-id (if (contain-key? mem-id (car key.scope)) "xxxxxxxx" (car key.scope))))
+							(imap-sym-key-fml-debug (imap-unwrap mem) (car key.scope)))
+						#f))
 				all-keys))
 			imap-dummy-list)
 |#
+
 
 		(display "\n ###############################################7.3 \n")
 		
@@ -164,8 +190,8 @@
 
 		(display "\n ###############################################8 \n")
 		(pretty-print fml-out)
+;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
 		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
-;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-code fml-ass fml-code-bind))
 
 	(cons soft-cons hard-cons))
 
@@ -528,7 +554,7 @@
 			(define func-fml-br (if pc-opt-br (prepend-mem-in func-fml-next mark mem-out pc-opt-br) func-fml-next))
 			(define func-fml-new (append-fml func-fml-br fml-new))
 			(pretty-print inst)
-			(display (~a "Output state id: " (imap-sym-func-dummy (imap-sym-tracked-imap (memory-addr-space mem-out))) " \n"))
+			(display (~a "Output state id: " (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-out)))) " \n"))
 			(std:struct-copy rbstate st [pc pc-next] [func-fml func-fml-new]))
 
 		(define (update-mem-only mem-new)
@@ -584,7 +610,7 @@
 				(define func-fml-ret (prepend-ending-mem-in func-fml mark mem-ret))
 				(define func-fml-new (append-fml func-fml-ret fml-path))
 				(pretty-print inst)
-				(display (~a "Output state id: " (imap-sym-func-dummy (imap-sym-tracked-imap (memory-addr-space mem-ret))) " \n"))
+				(display (~a "Output state id: " (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-ret)))) " \n"))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
 
 			[(inst-static-call ret cls-name func-name arg-types args) 

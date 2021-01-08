@@ -7,6 +7,7 @@
 
 (provide (all-defined-out))
 
+
 (define (stack-empty? mem)
 	(empty? (stack-meta-bases (memory-s-meta mem))))
 
@@ -25,7 +26,7 @@
 			(map 
 				(lambda (scope-base)
 					(define cur-addr (+ scope-base name))
-					(define cur-val (imap-get (memory-addr-space mem) cur-addr))
+					(define cur-val (imap-get2 (memory-addr-space mem) cur-addr scope-base))
 					(if (is-not-found? cur-val) #f cur-val))
 				(list top0 top1 butt1 butt0)))
 		(if (first maybe-ret) (first maybe-ret) 
@@ -50,7 +51,7 @@
 			(map 
 				(lambda (scope-base)
 					(define cur-addr (+ scope-base name))
-					(define cur-val (imap-get (memory-addr-space mem) cur-addr))
+					(define cur-val (imap-get2 (memory-addr-space mem) cur-addr scope-base))
 					(if (is-not-found? cur-val) #f cur-addr))
 				(list top0 top1 butt1 butt0)))
 		(define maybe-addr 
@@ -84,7 +85,13 @@
 	(define bases (stack-meta-bases (memory-s-meta mem)))
 	(define top+ (+ top scope-size))
 	(define bases+ (cons top+ bases))
-	(std:struct-copy memory mem [s-meta (stack-meta bases+ top+)]))
+	(define imap (memory-addr-space mem))
+	(if (imap-conc? imap)
+		(std:struct-copy memory mem 
+			[s-meta (stack-meta bases+ top+)])
+		(std:struct-copy memory mem 
+			[s-meta (stack-meta bases+ top+)]
+			[addr-space (imap-sym-scoped-update-scope imap (cons top+ (imap-sym-scoped-scope imap)))])))
 
 ;pop a scope from the top
 (define (stack-pop mem)
