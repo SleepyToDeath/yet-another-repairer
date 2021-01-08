@@ -62,8 +62,13 @@ result
 
 (output-smt #t)
 
-(define debug-sol (optimize #:maximize (list (apply + soft))
-          #:guarantee (assert (and tf1))))
+(define fml-no-bug (equal? (apply + soft) (length soft)))
+(define fml-one-bug (equal? (apply + soft) (- (length soft) 1)))
+
+;(define debug-sol (optimize #:maximize (list (apply + soft))
+;          #:guarantee (assert (and tf1))))
+
+(define debug-sol (solve (assert (and tf1 fml-one-bug))))
 
 debug-sol
 

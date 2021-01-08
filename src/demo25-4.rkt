@@ -149,11 +149,14 @@ debug-tf
 all-symbols
 
 (define fml-no-bug (equal? (apply + soft) (length soft)))
+(define fml-one-bug (equal? (apply + soft) (- (length soft) 1)))
 
 (display "\nSolution:\n")
-(define debug-sol (optimize #:maximize (list (apply + soft))
-          #:guarantee (assert (and tf3 debug-tf))))
+;(define debug-sol (optimize #:maximize (list (apply + soft))
+;          #:guarantee (assert (and tf3 debug-tf))))
 ;(define nobug-sol (solve (assert tf3)))
+
+(define debug-sol (solve (assert (and tf3 fml-one-bug))))
 
 ;nobug-sol
 
