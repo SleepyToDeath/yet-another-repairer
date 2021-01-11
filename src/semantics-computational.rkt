@@ -62,6 +62,8 @@
 (define class-name-main (string-id "dummy"))
 (define class-names-clinit null)
 
+(define func-main #f)
+(define funcs-clinit null)
 
 ;============================= Utils ===================================
 (define (lookup-virtual-function mac cls func arg-types) 
@@ -225,24 +227,36 @@
 		[(function-content name-ast args-ast local-vars-ast statements-ast)
 			(letrec 
 				([name (string-id (func-name-name name-ast))]
-				[args (variable-definitions->list args-ast)]
-				[local-vars (variable-definitions->list local-vars-ast)]
-				[func-sig 
+				 [args (variable-definitions->list args-ast)]
+				 [local-vars (variable-definitions->list local-vars-ast)]
+				 [func-sig 
 					(function name 
 						(if (std:equal? name func-name-init) (list (inst-init classname)) null) 
 						imap-empty args local-vars)])
 				(begin
-					(if (equal? name func-name-main) (set! class-name-main classname) #f)
-					(if (equal? name func-name-clinit) (set! class-names-clinit (cons classname class-names-clinit)) #f)
-					(foldl (lambda (st func)
-						(letrec ([ret-pair (ast->instruction st (function-lmap func) (length (function-prog func)))]
-							[inst (car ret-pair)]
-							[lmap-new (cdr ret-pair)])
-							(std:struct-copy function func 
-								[prog (if inst (append (function-prog func) (list inst)) (function-prog func))]
-								[lmap lmap-new])))
-						func-sig
-						(stat-list-sl (stats-rhs statements-ast)))))]))
+					(define func 
+						(foldl (lambda (st func)
+							(letrec 
+								([ret-pair (ast->instruction st (function-lmap func) (length (function-prog func)))]
+								 [inst (car ret-pair)]
+								 [lmap-new (cdr ret-pair)])
+								(std:struct-copy function func 
+									[prog (if inst (append (function-prog func) (list inst)) (function-prog func))]
+									[lmap lmap-new])))
+							func-sig
+							(stat-list-sl (stats-rhs statements-ast))))
+
+					(if (equal? name func-name-main) 
+						(begin 
+							(set! func-main func) 
+							(set! class-name-main classname)) #f)
+
+					(if (equal? name func-name-clinit) 
+						(begin 
+							(set! funcs-clinit (cons func funcs-clinit)) 
+							(set! class-names-clinit (cons classname class-names-clinit))) #f)
+
+					func))]))
 
 ;ast X lmap X line-number -> instruction X lmap(updated)
 (define (ast->instruction ast lmap line-num)

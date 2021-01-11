@@ -5,6 +5,7 @@
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
 
+(require "localization.rkt")
 (require "match-define.rkt")
 (require "string-id.rkt")
 (require "syntax.rkt")
@@ -51,27 +52,30 @@ result
 (display "================================================ Encoding ... =================================================\n")
 (display "===============================================================================================================\n")
 
-(match-define (cons soft hard) (ast->relation buggy))
-
-(define tf1 (hard input1 output1))
-
-(display "\n")
-(pretty-print string-id-table)
-
-(display "\n Solving: \n")
-
 (output-smt #t)
+(define bugl (localize-bug buggy (list (cons input1 output1))))
+(pretty-print bugl)
 
-(define fml-no-bug (equal? (apply + soft) (length soft)))
-(define fml-one-bug (equal? (apply + soft) (- (length soft) 1)))
+;(match-define (cons soft hard) (ast->relation buggy))
+
+;(define tf1 (hard input1 output1))
+
+;(display "\n")
+;(pretty-print string-id-table)
+
+;(display "\n Solving: \n")
+
+
+;(define fml-no-bug (equal? (apply + soft) (length soft)))
+;(define fml-one-bug (equal? (apply + soft) (- (length soft) 1)))
 
 ;(define debug-sol (optimize #:maximize (list (apply + soft))
 ;          #:guarantee (assert (and tf1))))
 
-(define debug-sol (solve (assert (and tf1 fml-one-bug))))
+;(define debug-sol (solve (assert (and tf1 fml-one-bug))))
 
-debug-sol
+;debug-sol
 
-((lambda ()
-(print-pending-eval debug-sol)
-(display "\n")))
+;((lambda ()
+;(print-pending-eval debug-sol)
+;(display "\n")))

@@ -18,7 +18,9 @@
 (provide (all-defined-out))
 
 ;============================= Definition ====================================
-(struct function-formula (func lids lstates ret-lstate fmls vid sid) #:transparent)
+;class: string
+;lids: list of symbolic boolean
+(struct function-formula (func lids lstates ret-lstate fmls vid sid class) #:transparent)
 
 ;pmark : boolean value deciding whether this line is executed
 ;mem-out : memory symbol of this line after its execution
@@ -28,6 +30,9 @@
 
 ;cnd: the entire subtree is considered only if cnd is true
 (struct invoke-tree (root cnd subtrees) #:transparent)
+
+;(string X string X int)
+(struct location (class func line inst selector) #:transparent)
 ;============================= Top Level Interface ====================================
 ;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
 (define (ast->relation ast)
@@ -35,10 +40,18 @@
 	(define mac (initialize-machine-encoding mac-raw))
 
 	(define soft-cons 
-		(map (lambda (b) (if b 1 0)) 
-			(apply append (map (lambda (func) (function-formula-lids func)) (all-functions mac)))))
+		(apply append 
+			(map (lambda (func-fml) 
+				(match func-fml
+					[(function-formula func lids _ _ _ _ _ class)
+						(map 
+							(lambda (line inst selector) (location class (function-name func) line inst selector))
+							(std:range (length lids)) 
+							(function-prog func)
+							lids)]))
+				(all-functions mac))))
 
-	(define (hard-cons input output) 
+	(define (hard-cons input output target-sids) 
 
 		(set! imap-dummy-list null)
 
@@ -67,7 +80,7 @@
 		(define mac-ass (build-virtual-table-alt mac-ass0))
 		(define boot-lstate (prepend-starting-mem-in (alloc-lstate (machine-boot mac-ass)) #t (machine-mem mac-ass)))
 		(display "\n ###############################################0 \n")
-		(define all-invokes (invoke->relation boot-lstate mac-ass 59 #f))
+		(define all-invokes (invoke->relation boot-lstate mac-ass target-sids #f))
 		(display "\n ###############################################1 \n")
 		(define mac-done (std:struct-copy machine mac-ass [mem (root-invoke-ret-mem all-invokes)]))
 		(display "\n ###############################################4 \n")
@@ -193,7 +206,7 @@
 ;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
 		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
 
-	(cons soft-cons hard-cons))
+	(list mac soft-cons hard-cons))
 
 
 ;============================= Helper Functions ====================================
@@ -324,7 +337,8 @@
 		#f
 		#t
 		(if mac (vfunc-id mac clsname (function-name func) (map cdr (function-args func))) #f)
-		(sfunc-id clsname (function-name func) (map cdr (function-args func)))))
+		(sfunc-id clsname (function-name func) (map cdr (function-args func)))
+		clsname))
 
 ;function-formula -> function-formula (with pmark)
 (define (alloc-lstate func-fml)
@@ -412,16 +426,16 @@
 
 ;relation building state
 ;pc : not true pc, just the position when scanning through the program
-(struct rbstate (funcs pc func-fml mac target-sid summary?) #:transparent)
+(struct rbstate (funcs pc func-fml mac target-sids summary?) #:transparent)
 
 
 ; function X machine -> invoke-tree of function-formula from all functions in `mac` transitively invoked by `func`
 ; if summary? then this will compute a summary (root-invoke-ret-mem will contain all updates)
 ; otherwise it is guaranteed to encode this invoked function (but may not recursively do so)
-(define (invoke->relation func-fml mac target-sid summary?)
+(define (invoke->relation func-fml mac target-sids summary?)
 	(display (~a "sid for invoked function is: " (function-formula-sid func-fml) "\n"))
 	(display "\n ###############################################2 \n")
-	(define ret (insts->relation func-fml mac target-sid summary?))
+	(define ret (insts->relation func-fml mac target-sids summary?))
 	(display "\n ###############################################3 \n")
 	ret)
 
@@ -432,9 +446,9 @@
 (define (root-invoke-ret-mem itree)
 	(memory-select (lstate-mem-in-list (ending-lstate (root-invoke itree)))))
 	
-(define (insts->relation func-fml mac target-sid summary?)
+(define (insts->relation func-fml mac target-sids summary?)
 	(match (foldl inst->relation
-					(rbstate null pc-init func-fml mac target-sid summary?) 
+					(rbstate null pc-init func-fml mac target-sids summary?) 
 					(function-prog (function-formula-func func-fml)))
 		[(rbstate funcs pc func-fml mac sid sum?) 
 				(invoke-tree func-fml #t funcs)]))
@@ -449,21 +463,21 @@
 (define (inst->relation.real inst st)
 
 
-	(match st [(rbstate funcs pc func-fml mac target-sid summary?)
+	(match st [(rbstate funcs pc func-fml mac target-sids summary?)
 		(begin
 		(define func (function-formula-func func-fml))
 		(define mark (get-pmark func-fml pc))
 		(define id (get-lid func-fml pc))
-		(define in-target? (and (not summary?) (equal? (function-formula-sid func-fml) target-sid)))
+		(define in-target? (and (not summary?) (member (function-formula-sid func-fml) target-sids)))
 ;		(imap-set-selector id)
 
 		(defer-eval "instruction: " inst)
-		(display "\nInstruction:\n")
-		(println inst)
-		(println mark)
-		(println id)
-		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
-		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
+;		(display "\nInstruction:\n")
+;		(println inst)
+;		(println mark)
+;		(println id)
+;		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
+;		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
 
 		(define mem-in (memory-select (get-mem-in-list func-fml pc)))
 		(define mem-0 (memory-sym-reset (get-mem-out func-fml pc) mem-in summary?))
@@ -618,7 +632,7 @@
 				(define sid (sfunc-id cls-name func-name arg-types))
 				(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))
 				(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-in args))
-				(define funcs-ret (invoke->relation func-fml-in mac target-sid (or summary? in-target?)))
+				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
 
 				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret))
 				(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
@@ -663,7 +677,7 @@
 					(begin
 					(match-define (cons func-fml-in fml-in) (invoke-setup fcan mem-this args))
 					;an invoke tree without condition
-					(define funcs-ret (invoke->relation func-fml-in mac target-sid (or summary? in-target?)))
+					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
 
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret))
 					(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
@@ -713,7 +727,7 @@
 				(define fml-this (memory-sym-get-fml mem-this summary?))
 
 				(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
-				(define funcs-ret (invoke->relation func-fml-in mac target-sid (or in-target? summary?)))
+				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or in-target? summary?)))
 
 				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret))
 				(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
