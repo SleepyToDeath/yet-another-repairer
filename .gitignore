@@ -8,3 +8,7 @@
 *.jimple
 !benchmark/model/*.jimple
 
+# IDE
+.idea
+*.iml
+
