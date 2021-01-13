@@ -7,6 +7,7 @@
 (provide void-return-var)
 (provide void-receiver)
 
+(require (prefix-in std: racket/format))
 (require (prefix-in std: racket/base))
 (require (prefix-in l: racket/list))
 (require (prefix-in s: racket/string))
@@ -554,7 +555,7 @@
     ;[({p:~literal binop} "|") or]
     ;[({p:~literal binop} "^") xor]
     [({p:~literal binop} "%") (ast:op modulo)]
-    ;[({p:~literal binop} "cmp") ???]
+    [({p:~literal binop} "cmp") (ast:op (lambda (x y) (if (equal? x y) 0 (if (> x y) 1 -1))))]
     ;[({p:~literal binop} "cmpg") ???]
     ;[({p:~literal binop} "cmpl") ???]
     [({p:~literal binop} "==") (ast:op equal?)]
@@ -581,7 +582,7 @@
     [({p:~literal float_const} p:~rest _)
      (build-ast-const-float expr-imm-stx)]
     [({p:~literal class_const} _)
-     (std:error "Class constant is not supported yet")]
+     (std:error (std:~a "Class constant is not supported yet" expr-imm-stx))]
     ["null" (build-ast-const-null expr-imm-stx)]
     [_ (build-ast-const-str expr-imm-stx)]))
 
