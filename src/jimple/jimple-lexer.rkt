@@ -4,6 +4,7 @@
 
 (require brag/support)
 (require br-parser-tools/lex)
+(require (prefix-in s: racket/string))
 (require (prefix-in sre: br-parser-tools/lex-sre))
 
 
@@ -13,6 +14,12 @@
       (if (equal? str "false")
           #f
           (error "Unknown boolean constant: " str))))
+
+
+(define (string->int str)
+  (if (s:string-suffix? str "L")
+      (string->number (substring str 0 (- (string-length str) 1)))
+      (string->number str)))
 
 
 (define-lex-abbrevs
@@ -264,7 +271,7 @@
        [bool_constant
         (token 'BOOL_CONSTANT (string->bool lexeme))]
        [integer_constant
-        (token 'INTEGER_CONSTANT (string->number lexeme))]
+        (token 'INTEGER_CONSTANT (string->int lexeme))]
        [float_constant
         (token 'FLOAT_CONSTANT (string->number lexeme))]
        [string_constant
