@@ -551,9 +551,9 @@
 
 (define (build-ast-expr-bop expr-bop-stx)
   (p:syntax-parse expr-bop-stx
-    ;[({p:~literal binop} "&") and]
+    [({p:~literal binop} "&") (ast:op std:bitwise-and)]
     ;[({p:~literal binop} "|") or]
-    ;[({p:~literal binop} "^") xor]
+    [({p:~literal binop} "^") (ast:op std:bitwise-xor)]
     [({p:~literal binop} "%") (ast:op modulo)]
     [({p:~literal binop} "cmp") (ast:op (lambda (x y) (if (equal? x y) 0 (if (> x y) 1 -1))))]
     ;[({p:~literal binop} "cmpg") ???]
@@ -566,7 +566,7 @@
     [({p:~literal binop} "<=") (ast:op <=)]
     ;[({p:~literal binop} "<<") ???]
     ;[({p:~literal binop} ">>") ???]
-    ;[({p:~literal binop} ">>>") ???]
+    [({p:~literal binop} ">>>") (ast:op std:arithmetic-shift)]
     [({p:~literal binop} "+") (ast:op +)]
     [({p:~literal binop} "-") (ast:op -)]
     [({p:~literal binop} "*") (ast:op *)]
