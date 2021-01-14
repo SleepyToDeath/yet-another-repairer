@@ -31,8 +31,8 @@
                         (ast:class-def-rhs
                           (car
                             (ast:class-list-cl
-                              (ast:program-rhs prog-ast))))))))
-                1
+                              (ast:program-rhs transformed-ast))))))))
+                2
                 "static init test 1")
   (check-equal? (length
                   (ast:function-list-fl
@@ -41,8 +41,26 @@
                         (ast:class-def-rhs
                           (car
                             (ast:class-list-cl
-                              (ast:program-rhs prog-ast))))))))
-                2
+                              (ast:program-rhs transformed-ast))))))))
+                1
                 "static init test 2")
+)
+
+(test-case "trans-init-return"
+  (check-equal? (car
+                  (ast:stat-list-sl
+                    (ast:stats-rhs
+                      (ast:function-content-statements
+                        (ast:function-declare-rhs
+                          (car
+                            (ast:function-list-fl
+                              (ast:function-declares-rhs
+                                (ast:class-default-static-functions
+                                  (ast:class-def-rhs
+                                    (car
+                                      (ast:class-list-cl
+                                        (ast:program-rhs transformed-ast)))))))))))))
+                (ast:stat (ast:stat-ret (ast:dexpr (ast:expr-var (ast:variable "r0")))))
+                "init return test 1")
 )
 
