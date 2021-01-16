@@ -29,22 +29,28 @@
 			class-names-clinit
 			funcs-clinit)))
 
-	(localize-bug-in-funcs mac soft hard spec funcs-init))
+	(define ret (localize-bug-in-funcs mac soft hard spec funcs-init))
+	(pretty-print string-id-table)
+	ret)
 
 ;selectors: list of 
 ;funcs: list of sid
 (define (localize-bug-in-funcs mac locations encoder spec funcs)
 	(display "\n Encoding: \n")
 	(clear-asserts!)
+	(clear-pending-eval)
 
 	(define sum (apply + (map (lambda (l) (if (location-selector l) 1 0)) locations)))
 	(define one-bug (equal? sum (- (length locations) 1)))
-	(define hard (andmap (lambda (io) (encoder (car io) (cdr io) funcs)) spec))
+	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) spec)))
 
 	(display "\n Solving: \n")
 	(output-smt #t)
 	(define debug-sol (solve (assert (and hard one-bug))))
+	
+	(display "\n Model: \n")
 	(pretty-print debug-sol)
+;	((lambda () (print-pending-eval debug-sol) (display "\n")))
 
 	(define bugl (ormap (lambda (l) (if (evaluate (location-selector l) debug-sol) #f l)) locations))
 	(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")

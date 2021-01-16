@@ -322,7 +322,7 @@
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 
 				(define sid (sfunc-id cls-name (function-name sf) (map cdr (function-args sf))))
-				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid))
+				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid 0))
 				(define fmap-1 (imap-set (machine-fmap mac) sid sf))
 				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
 			mac sfuncs))
@@ -456,7 +456,7 @@
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define ret-value (expr-eval (inst-ret-v-expr i) m))
-		(define mem-ret (memory-sforce-write (machine-mem m) var-ret-name ret-value))
+		(define mem-ret (memory-sforce-write (machine-mem m) var-ret-name ret-value 0))
 		(std:struct-copy machine m [pc pc-ret][mem mem-ret]))])
 
 (struct inst-static-call (ret cls-name func-name arg-types args) #:transparent
@@ -501,7 +501,7 @@
 ;		(pretty-print func)
 		(define args (inst-virtual-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
-		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
+		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr 0))
 		(define mac-this (std:struct-copy machine m [mem mem-this]))
 
 		(define mac-ret (function-call mac-this func args))
@@ -531,7 +531,7 @@
 ;		(pretty-print func)
 		(define args (inst-special-call-args i))
 		;push an extra scope to avoid overwriting "this" of the current scope
-		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr))
+		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr 0))
 		(define mac-this (std:struct-copy machine m [mem mem-this]))
 
 		(define mac-ret (function-call mac-this func args))

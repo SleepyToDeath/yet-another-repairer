@@ -29,9 +29,13 @@
 (define (memory-sdecl mem name)
 	(stack-decl mem name))
 
-;decl & write
-(define (memory-sforce-write mem name value)
-	(stack-force-write mem name value))
+;skip decl and lookup, force write to a certain level
+(define (memory-sforce-write mem name value lvl) 
+	(stack-force-write mem name value lvl))
+
+;skip lookup, force read from a certain level
+(define (memory-sforce-read mem name lvl)
+	(stack-force-read mem name lvl))
 
 ;push a scope to stack
 (define (memory-spush mem)

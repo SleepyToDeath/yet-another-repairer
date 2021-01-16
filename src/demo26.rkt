@@ -56,6 +56,7 @@ result
 (define bugl (localize-bug buggy (list (cons input1 output1))))
 (pretty-print bugl)
 
+
 ;(match-define (cons soft hard) (ast->relation buggy))
 
 ;(define tf1 (hard input1 output1))

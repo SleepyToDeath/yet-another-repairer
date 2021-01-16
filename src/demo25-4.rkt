@@ -7,6 +7,7 @@
 
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 (require "match-define.rkt")
+(require "localization.rkt")
 (require "string-id.rkt")
 (require "map.rkt")
 (require "syntax.rkt")
@@ -105,7 +106,12 @@ result
 (display "===============================================================================================================\n")
 
 
+(output-smt #t)
+(define bugl (localize-bug buggy (list (cons input1 output1) (cons input2 output2))))
+(pretty-print bugl)
 
+
+#|
 (output-smt #t)
 
 (clear-pending-eval)
@@ -171,6 +177,4 @@ debug-sol
 ;soft
 
 
-((lambda ()
-(print-pending-eval debug-sol)
-(display "\n")))
+|#

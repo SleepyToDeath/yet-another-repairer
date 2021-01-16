@@ -62,11 +62,19 @@
 							nullptr)))))
 		(std:struct-copy memory mem [addr-space (imap-set (memory-addr-space mem) maybe-addr value)]))))
 
-(define (stack-force-write mem name value)
+(define (stack-force-read mem name lvl)
+	(if (stack-empty? mem) not-found
+		(begin
+		(define bases (stack-meta-bases (memory-s-meta mem)))
+		(define top0 (list-ref bases lvl))
+		(define addr (+ top0 name))
+		(imap-get2 (memory-addr-space mem) addr top0))))
+
+(define (stack-force-write mem name value lvl)
 	(if (stack-empty? mem) mem
 		(begin
 		(define bases (stack-meta-bases (memory-s-meta mem)))
-		(define top0 (car bases))
+		(define top0 (list-ref bases lvl))
 		(define addr (+ top0 name))
 		(std:struct-copy memory mem [addr-space (imap-set (memory-addr-space mem) addr value)]))))
 	

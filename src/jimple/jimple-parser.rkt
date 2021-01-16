@@ -15,6 +15,7 @@
 (require (prefix-in r: rosette/lib/match))
 (require "jimple-grammar.rkt")
 (require "jimple-lexer.rkt")
+(require "bitwise-op.rkt")
 (require "../syntax.rkt")
 (require (prefix-in ast: "../syntax-jimple.rkt"))
 (require (prefix-in m: "../map.rkt"))
@@ -551,9 +552,9 @@
 
 (define (build-ast-expr-bop expr-bop-stx)
   (p:syntax-parse expr-bop-stx
-    [({p:~literal binop} "&") (ast:op std:bitwise-and)]
+    [({p:~literal binop} "&") (ast:op b-andl)]
     ;[({p:~literal binop} "|") or]
-    [({p:~literal binop} "^") (ast:op std:bitwise-xor)]
+    [({p:~literal binop} "^") (ast:op b-xorl)]
     [({p:~literal binop} "%") (ast:op modulo)]
     [({p:~literal binop} "cmp") (ast:op (lambda (x y) (if (equal? x y) 0 (if (> x y) 1 -1))))]
     ;[({p:~literal binop} "cmpg") ???]
@@ -566,7 +567,7 @@
     [({p:~literal binop} "<=") (ast:op <=)]
     ;[({p:~literal binop} "<<") ???]
     ;[({p:~literal binop} ">>") ???]
-    [({p:~literal binop} ">>>") (ast:op std:arithmetic-shift)]
+    [({p:~literal binop} ">>>") (ast:op b-rshift)]
     [({p:~literal binop} "+") (ast:op +)]
     [({p:~literal binop} "-") (ast:op -)]
     [({p:~literal binop} "*") (ast:op *)]
