@@ -99,9 +99,9 @@
 	])
 
 (define (imap-sym-real-get m index)
-	(define pending	(ormap
+	(define pending	(ormap identity (map
 		(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
-		(cons (cons nullptr nullptr) (imap-sym-committed-updates m))))
+		(cons (cons nullptr nullptr) (imap-sym-committed-updates m)))))
 	(define func-base-true (imap-sym-func-base-true m))
 	(if pending pending (func-base-true index)))
 
@@ -184,18 +184,31 @@
 		(imap-sym-tracked (imap-sym-new) null))
 
 	(define (imap-sym-tracked-select candidates)
-		(pretty-print "merging!")
+		(define (select-reorder l)
+			(foldl (lambda (p.m l) 
+					(if (and (is-concrete-value (car p.m)) (car p.m)) 
+						(append l (list p.m)) 
+						(cons p.m l)))
+				null l))
+
+		(defer-eval "merging" "!")
+		(display "merging!\n")
 		(imap-sym-tracked 
-			(ormap (lambda (p+m) (if (car p+m) (imap-sym-tracked-imap (cdr p+m)) #f)) candidates)
+			(ormap identity 
+				(map (lambda (p+m) 
+					(defer-eval "cnd: " (car p+m))
+					(defer-eval "incoming key num: " (length (imap-sym-tracked-keys (cdr p+m))))
+					(display (~a "p.m: " p+m "\n"))
+					(display (~a "incoming key num: " (length (imap-sym-tracked-keys (cdr p+m))) "\n"))
+					(if (car p+m) (imap-sym-tracked-imap (cdr p+m)) #f)) candidates))
 			(foldl 
 				(lambda (p+m keys)
-					(pretty-print (~a "One incoming key num: " (length (imap-sym-tracked-keys (cdr p+m)))))
 					(define ret (append 
 						keys
 						(filter (lambda (key+id.1)
 							(andmap (lambda (key+id.2) (not (equal? (cdr key+id.1) (cdr key+id.2)))) keys))
 							(imap-sym-tracked-keys (cdr p+m)))))
-					(pretty-print (~a "Append key num: " (length ret)))
+					;(pretty-print (~a "Append key num: " (length ret)))
 					ret)
 				null
 				candidates)))
@@ -203,7 +216,7 @@
 
 ;----------------- Symbolic Wrapper For Tracking Keys' Scopes ---------------------
 
-(struct imap-sym-scoped (imap scope) #:transparent
+(struct imap-sym-scoped (imap scope)
 	#:methods gen:imap
 	[
 		(define (imap-get-func m)
@@ -261,7 +274,7 @@
 (define imap-empty (imap-conc default-func))
 
 (define nullptr -1)
-(define not-found -66666666)
+(define not-found -6666666666)
 ;========================================
 
 ;================== Generate Deferred Formulae ====================

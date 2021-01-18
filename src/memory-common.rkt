@@ -14,18 +14,18 @@
 ;	2.All tops take the maximum input at branches to avoid uncertainty
 
 ;vt-num = max number of different member fields/functions
-(define vt-num 4096)
+(define vt-num 1000)
 ;vt-size = max number of objects
-(define vt-size 4096)
+(define vt-size 1000)
 ;scope-size = max number of different variable names
-(define scope-size 4096)
+(define scope-size 1000)
 
 (define vt-base-addr 0)
 ;no need to know beginning of arraies
 
 (define stack-bottom (* (* 2 vt-num) vt-size))
 
-(define max-program-length 10000)
+(define max-program-length 1000)
 
 ;v-meta: vtab-meta
 ;s-meta: stack-meta

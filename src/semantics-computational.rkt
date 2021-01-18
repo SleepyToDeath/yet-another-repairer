@@ -555,7 +555,9 @@
 (struct iexpr-var (name) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
-		(memory-sread (machine-mem m) (iexpr-var-name e)))])
+		(if (equal? (iexpr-var-name e) var-this-name)
+			(memory-sforce-read (machine-mem m) (iexpr-var-name e) 1)
+			(memory-sforce-read (machine-mem m) (iexpr-var-name e) 0)))])
 
 (struct iexpr-binary (op expr1 expr2) #:transparent
 	#:methods gen:expression
@@ -570,7 +572,7 @@
 	#:methods gen:expression
 	[(define (expr-eval e m) 
 		(define mem0 (machine-mem m))
-		(define arr-addr (memory-sread mem0 (iexpr-array-arr-name e)))
+		(define arr-addr (memory-sforce-read mem0 (iexpr-array-arr-name e) 0))
 		(define idx (expr-eval-dispatch (iexpr-array-index e) m))
 		(memory-aread mem0 arr-addr idx))])
 
@@ -582,7 +584,7 @@
 		(define cls-name (iexpr-field-cls-name e))
 		(define obj-name (iexpr-field-obj-name e))
 		(if (equal? obj-name (string-id (variable-name void-receiver)))
-			(memory-sread mem0 (sfield-id cls-name fname))
-			(let([obj-addr (memory-sread mem0 obj-name)])
+			(memory-sforce-read mem0 (sfield-id cls-name fname) 0)
+			(let([obj-addr (memory-sforce-read mem0 obj-name 0)])
 				(memory-fread mem0 (vfield-id m cls-name fname) obj-addr))))])
 

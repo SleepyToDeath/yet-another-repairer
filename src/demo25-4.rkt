@@ -39,6 +39,9 @@ public class A {
 		$r1 := @parameter0: int;
 		$r2 = r0.<A: int n>;
 		$r3 = $r1 + $r2;
+		if $r3 > 0 goto label1;
+		return $r3;
+     label1:
 		return $r3;
 	}
 }
@@ -107,7 +110,7 @@ result
 
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1) (cons input2 output2))))
+(define bugl (localize-bug buggy (list (cons input1 output1) )))
 (pretty-print bugl)
 
 

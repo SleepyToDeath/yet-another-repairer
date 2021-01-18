@@ -1,9 +1,11 @@
 #lang rosette/safe
 
 (provide (all-defined-out))
+(require (prefix-in std: racket/base))
 
 (define (bitwise-op-gen bit-op)
 	(define (bitwise-op a b width)
+		(std:error "Bitwise op should not be used!")
 		(if (equal? width 0) 0
 			(let 
 				([b1 (modulo a 2)]
@@ -30,6 +32,7 @@
 (define b-xor (bitwise-op-gen (lambda (b1 b2) (equal? b1 b2))))
 
 (define (b-rshift a w)
+	(std:error "Bitwise op should not be used!")
 	(if (equal? w 0) a
 		(if (> w 0) (b-rshift (quotient a 2) (- w 1))
 			(b-rshift (* a 2) (+ w 1)))))

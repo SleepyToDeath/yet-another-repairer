@@ -4,6 +4,7 @@
 (require racket/format)
 (require racket/pretty)
 (require rosette/lib/match)   ; provides `match`
+(require rosette/base/core/polymorphic)
 
 (provide (all-defined-out))
 
@@ -27,17 +28,12 @@
 (define (size-of-limited-real e)
 	(set! size-limit (- size-limit 1))
 	(if (> size-limit 0)
-		(match e
-			[(expression op child ...) 
-				(begin 
-				(display "Op: ") 
-				(print op) 
-				(display "\n") 
-				(display (length child))
-				(display "\n") 
-				(+ 1 (apply + (map size-of-limited-real child))))]
-			[(constant id type) (begin (print id) (display "\n\n") 1)]
-			[x (begin (print x) (display "\n\n")1)])
+		(if (union? e) 
+			(apply + (map (lambda (gv) (+ (size-of-limited-real (car gv)) (size-of-limited-real (cdr gv)))) (union-contents e)))
+			(match e
+				[(expression op child ...) (+ 1 (apply + (map size-of-limited-real child)))]
+				[(constant id type) 1]
+				[_ 1]))
 		0))
 
 (define (size-of e)
@@ -54,6 +50,23 @@
 			[(expression op child ...) #f]
 			[(constant id type) #f]
 			[_ #t])))
+
+;A map that applies the function(f) to every POSSIBLE element of the list(l) 
+;	identified by a predicate(p) and flatten the result(guards are discarded)
+;Used to map a symbolic list to a concrete one
+(define (reflection-map p f l)
+	(define (symbolic->list e)
+;		(display (~a "---: " e "\n"))
+		(if (union? e) 
+			(apply append (map (lambda (g.v) (symbolic->list (cdr g.v))) (union-contents e)))
+			(match e
+				[(expression op child ...) 
+					(if (equal? op ite) 
+						(apply append (map symbolic->list (cdr child)))
+						(apply append (map symbolic->list child)))]
+				[(constant id type) null]
+				[e (if (p e) (list e) null)])))
+	(map f (apply append (map symbolic->list l))))
 
 ;============================= Debug ========================================
 (define eval-pending null)
