@@ -1,6 +1,7 @@
 #lang rosette/safe
 
 (require (prefix-in std: racket/match))
+(require (prefix-in std: racket/base))
 (require racket/format)
 (require racket/pretty)
 (require rosette/lib/match)   ; provides `match`
@@ -68,6 +69,10 @@
 				[e (if (p e) (list e) null)])))
 	(map f (apply append (map symbolic->list l))))
 
+(define (maybe f s)
+	(if s (f s) #f))
+
+
 ;============================= Debug ========================================
 (define eval-pending null)
 (define (defer-eval msg value)
@@ -83,4 +88,8 @@
 (define (defer-cons v)
 	(set! cons-pending (cons v cons-pending)))
 
-
+(define (check-asserts index)
+	(display (~a "!!!!!!!!!!!!!!!#" index " Asserts: " (length (asserts)) "\n"))
+	(define fail? (unsat? (solve (assert #t))))
+	(display (~a "Unsat? " fail? "\n"))
+	(if fail? (std:error "Asserts are infeasible!") #f))

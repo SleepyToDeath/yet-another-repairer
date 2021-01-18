@@ -181,19 +181,42 @@
 ;candidates: list of (condition X memory)
 ;only select address space, others are static
 (define (memory-select candidates summary?)
-	(map (lambda (p.m) (pretty-print (cons (car p.m) (fml-to-print (cdr p.m))))) candidates)
-	(if (equal? 1 (length candidates)) (if summary? (if (car (car candidates)) (cdr (car candidates)) #f) (cdr (car candidates)))
+;	(map (lambda (p.m) (pretty-print (cons (car p.m) (fml-to-print (cdr p.m))))) candidates)
+;	(if (equal? 1 (length candidates)) (if summary? (if (car (car candidates)) (cdr (car candidates)) #f) (cdr (car candidates)))
+	(if (and (equal? 1 (length candidates)) (imap-conc? (memory-addr-space (cdar candidates)))) (cdar candidates)
 		(begin
-		(define stack-top-new (apply max (map (lambda (p+m) (stack-meta-top (memory-s-meta (cdr p+m)))) candidates)))
-		(define obj-top-new (apply max (map (lambda (p+m) (heap-meta-o-top (memory-h-meta (cdr p+m)))) candidates)))
-		(define heap-top-new (apply max (map (lambda (p+m) (heap-meta-a-top (memory-h-meta (cdr p+m)))) candidates))) 
-		(std:struct-copy memory (cdr (car candidates)) 
-			[s-meta (std:struct-copy stack-meta (memory-s-meta (cdar candidates)) [top stack-top-new])]
+
+		(check-asserts 1)
+		;remove maybe
+		(define candidates-semi-conc (reflection-map memory? identity (map cdr candidates)))
+		(display (~a "Candidate mems: " (length candidates-semi-conc) "\n"))
+
+		(check-asserts 2)
+		(define (extract-max f)
+			(apply max (reflection-map number? identity 
+				(map f candidates-semi-conc))))
+
+		(check-asserts 3)
+		(define stack-top-new (extract-max (compose stack-meta-top memory-s-meta)))
+		(define obj-top-new (extract-max (compose heap-meta-o-top memory-h-meta)))
+		(define heap-top-new (extract-max (compose heap-meta-a-top memory-h-meta)))
+
+		(check-asserts 4)
+		(define mem-template (car candidates-semi-conc))
+
+		(check-asserts 5)
+		;[!] make sure to concretize every field that might have branches of different values
+		(define ret (std:struct-copy memory mem-template
+			[s-meta (std:struct-copy stack-meta (memory-s-meta mem-template) [top stack-top-new])]
 			[h-meta (heap-meta obj-top-new heap-top-new)]
 			[addr-space 
 				(imap-sym-scoped-select 
-					(map (lambda (p+m) (cons (car p+m) (memory-addr-space (cdr p+m)))) candidates)
-					(remove-duplicates (apply append (map (compose imap-sym-scoped-scope memory-addr-space cdr) candidates))))]))))
+					(map (lambda (p.m) (cons (car p.m) (maybe memory-addr-space (cdr p.m)))) candidates)
+					(remove-duplicates 
+						(reflection-map number? identity 
+							(apply append (map (compose imap-sym-scoped-scope memory-addr-space) candidates-semi-conc)))))]))
+		(check-asserts 6)
+		ret)))
 ;====================================================================
 
 

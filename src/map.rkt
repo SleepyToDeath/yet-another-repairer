@@ -148,7 +148,7 @@
 	(imap-sym func-dummy default-func func-true default-func null null #f))
 
 ;----------------- Symbolic Wrapper For Tracking Keys ---------------------
-(struct imap-sym-tracked (imap keys) #:transparent
+(struct imap-sym-tracked (imap keys)
 	#:methods gen:imap
 	[
 		(define (imap-get-func m)
@@ -184,39 +184,35 @@
 		(imap-sym-tracked (imap-sym-new) null))
 
 	(define (imap-sym-tracked-select candidates)
-		(define (select-reorder l)
-			(foldl (lambda (p.m l) 
-					(if (and (is-concrete-value (car p.m)) (car p.m)) 
-						(append l (list p.m)) 
-						(cons p.m l)))
-				null l))
 
 		(defer-eval "merging" "!")
 		(display "merging!\n")
-		(imap-sym-tracked 
+
+		(define m-new
 			(ormap identity 
-				(map (lambda (p+m) 
-					(defer-eval "cnd: " (car p+m))
-					(defer-eval "incoming key num: " (length (imap-sym-tracked-keys (cdr p+m))))
-					(display (~a "p.m: " p+m "\n"))
-					(display (~a "incoming key num: " (length (imap-sym-tracked-keys (cdr p+m))) "\n"))
-					(if (car p+m) (imap-sym-tracked-imap (cdr p+m)) #f)) candidates))
+				(map (lambda (p.m) 
+					(if (car p.m) (maybe imap-sym-tracked-imap (cdr p.m)) #f)) candidates)))
+
+		(define k-new
 			(foldl 
-				(lambda (p+m keys)
-					(define ret (append 
+				(lambda (p.m keys)
+					(append 
 						keys
 						(filter (lambda (key+id.1)
 							(andmap (lambda (key+id.2) (not (equal? (cdr key+id.1) (cdr key+id.2)))) keys))
-							(imap-sym-tracked-keys (cdr p+m)))))
-					;(pretty-print (~a "Append key num: " (length ret)))
-					ret)
+							(apply append (reflection-map list? identity (if (cdr p.m) (imap-sym-tracked-keys (cdr p.m)) null))))))
 				null
-				candidates)))
-			;(apply append (map (lambda (p+m) (imap-sym-tracked-keys (cdr p+m))) candidates))))
+				candidates))
+
+		(display (~a "Keys num : " (length k-new) "\n"))
+
+		(imap-sym-tracked m-new k-new))
+
+			;(apply append (map (lambda (p.m) (imap-sym-tracked-keys (cdr p.m))) candidates))))
 
 ;----------------- Symbolic Wrapper For Tracking Keys' Scopes ---------------------
 
-(struct imap-sym-scoped (imap scope)
+(struct imap-sym-scoped (imap scope) #:transparent
 	#:methods gen:imap
 	[
 		(define (imap-get-func m)
@@ -259,7 +255,7 @@
 
 	(define (imap-sym-scoped-select candidates merged-scope)
 		(imap-sym-scoped 
-			(imap-sym-tracked-select (map (lambda (cnd.m) (cons (car cnd.m) (imap-sym-scoped-imap (cdr cnd.m)))) candidates))
+			(imap-sym-tracked-select (map (lambda (cnd.m) (cons (car cnd.m) (maybe imap-sym-scoped-imap (cdr cnd.m)))) candidates))
 			merged-scope))
 
 	(define (imap-sym-scoped-update-scope m scope)

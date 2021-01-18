@@ -211,9 +211,9 @@
 
 		(display "\n ###############################################8 \n")
 ;		(pretty-print fml-out)
-;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
+		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
 ;		(display (~a "Starting pmark is: " (starting-pmark boot-lstate) "\n\n"))
-		(and #t))
+;		(and #t))
 
 	(list mac soft-cons hard-cons))
 
@@ -496,6 +496,7 @@
 		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
 
 		(define mem-in (memory-select (get-mem-in-list func-fml pc) summary?))
+		(pretty-print mem-in)
 		(define mem-0 (memory-sym-reset (get-mem-out func-fml pc) mem-in summary?))
 		;used only for expr-eval
 		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0]))
@@ -574,7 +575,7 @@
 			(define fml-in (memory-sym-get-fml mem-arg summary?))
 			(define mem-input (memory-sym-reset (memory-sym-new summary?) mem-arg (not in-target?)))
 			(memory-print-id "mem-input" mem-input)
-			(define func-fml-in (prepend-starting-mem-in func-fml-callee (if in-target? #t mark) mem-input))
+			(define func-fml-in (prepend-starting-mem-in func-fml-callee (if (or summary? in-target?) #t mark) mem-input))
 			(cons func-fml-in fml-in))
 
 		; bool X memory X int(if with branch)/#f(if no branch) -> rbstate
@@ -630,6 +631,7 @@
 				(define mem-commit (memory-sym-commit mem-bind))
 				(define fml-update (memory-sym-get-fml mem-commit summary?))
 				(define fml-new (iassert-pc-next #t fml-update))
+				(assert id)
 				(update-rbstate fml-new mem-commit #f))]
 
 				;(update-mem-only mem-bind))]
@@ -638,6 +640,7 @@
 				(begin
 				(match-define (cons addr mem-alloc) (memory-new mem-0))
 				(define mem-ass (memory-sforce-write mem-alloc v-name addr 0))
+				(assert id)
 				(update-mem-only mem-ass))]
 
 			[(inst-ret v-expr) 
@@ -646,10 +649,12 @@
 				(if summary? #f (defer-eval inst ret-value))
 				(define mem-ret (memory-sym-commit (memory-sforce-write mem-0 var-ret-name ret-value 0)))
 				(define fml-update (memory-sym-get-fml mem-ret summary?))
-				(define fml-ret (select-fml? fml-update))
+;				(define fml-ret (select-fml? fml-update))
+				(define fml-ret fml-update)
 				(define fml-path (iassert-pc-ret #t fml-ret))
 				(define func-fml-ret (prepend-ending-mem-in func-fml (if summary? #t mark) mem-ret))
 				(define func-fml-new (append-fml func-fml-ret fml-path))
+				(assert id)
 				(pretty-print inst)
 				;(display (~a "Output state id: " (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-ret)))) " \n"))
 				;(display (~a "Output state id: " (if mem-ret (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-ret)))) #f) " \n"))
@@ -736,6 +741,7 @@
 					(andmap fifth ret-pack)
 					(andmap seventh ret-pack)))
 				(define mem-ass (memory-select (map cons cnds (map fourth ret-pack)) summary?))
+				(pretty-print mem-ass)
 				(define funcs-ret (map sixth ret-pack))
 
 				(define fml-op (select-fml? (and fml-this fml-call)))

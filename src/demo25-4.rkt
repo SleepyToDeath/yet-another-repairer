@@ -110,7 +110,7 @@ result
 
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1) )))
+(define bugl (localize-bug buggy (list (cons input1 output1) (cons input2 output2))))
 (pretty-print bugl)
 
 

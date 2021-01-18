@@ -1,6 +1,7 @@
 #lang rosette/safe
 
 (require (prefix-in std: racket/base))
+(require racket/format)
 (require racket/pretty)
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
@@ -48,8 +49,9 @@
 
 	(display "\n Solving: \n")
 ;	(pretty-print (map fml-to-print (asserts)))
+	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
 	(output-smt #t)
-	(define debug-sol (solve (assert #t)))
+	(define debug-sol (solve (assert (and hard one-bug))))
 	
 	(display "\n Model: \n")
 	(pretty-print debug-sol)
@@ -59,7 +61,7 @@
 	(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 	(pretty-print bugl)
 	
-	(std:error "Halt!")
+;	(std:error "Halt!")
 
 	(match (location-inst bugl)
 		[(inst-static-call ret cls-name func-name arg-types args) 
