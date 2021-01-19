@@ -83,7 +83,11 @@
 	(set! eval-pending (cons (cons msg value) eval-pending)))
 
 (define (print-pending-eval sol)
-	(map (lambda (m.v) (display (~a (car m.v) " : " (evaluate (cdr m.v) sol) "\n"))) eval-pending))
+	(map (lambda (m.v) 
+			(display (~a (car m.v) " : " ))
+			(print (evaluate (cdr m.v) sol))
+			(display  "\n"))
+		eval-pending))
 
 (define (clear-pending-eval)
 	(set! eval-pending null))

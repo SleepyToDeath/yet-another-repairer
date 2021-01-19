@@ -20,7 +20,7 @@
 ;	3.Symbolic map: use `imap-sym-tracked-new` to get a new symbolic map.
 ;	  Use `imap-sym-tracked-reset` to copy a base map(concrete/symbolic),
 ;	  then use it as if it's concrete(except that a commit is needed for
-;	  updates to be seen by future reads). Finally, use `imap-sym-tracked-get-fml`
+;	  updates to be seen by future reads). Finally, use `imap-sym-scoped-get-fml`
 ;	  to get a formula describing the relation between the updated map
 ;	  and the base map.
 ;	4.A concrete map can map anything to anything. But a symbolic
@@ -83,7 +83,8 @@
 
 		(define (imap-get m index)
 			(imap-add-section-key (cons (imap-sym-func-dummy m) index))
-			(define ret (imap-sym-real-get m index))
+			(define ret (if (equal? (imap-sym-func-dummy m) 0) not-found
+				(imap-sym-real-get m index)))
 			(defer-eval "imap get" (list (imap-sym-func-dummy m) index ret))
 			ret)
 
@@ -92,7 +93,8 @@
 
 		(define (imap-set m index value)
 			(defer-eval "imap set" (list (imap-sym-func-dummy m) index value))
-			(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))]))
+			(if (equal? (imap-sym-func-dummy m) 0) m
+				(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))])))
 	])
 
 (define (imap-sym-real-get m index)
@@ -129,11 +131,12 @@
 	ret)
 
 ;should only be called once for each section, otherwise only the last one will work
-(define (imap-sym-finish m)
-	(imap-add-sym-map (imap-sym-func-dummy m) m)
-	(imap-add-dummy (imap-sym-func-dummy m)))
+;(define (imap-sym-finish m)
+;	(imap-add-sym-map (imap-sym-func-dummy m) m)
+;	(imap-add-dummy (imap-sym-func-dummy m)))
 
 (define (imap-sym-get-fml m)
+	(assert (not (equal? (imap-sym-func-dummy m) 0)))
 	(imap-sym-fml-deferred m))
 
 (define (imap-sym-get-keys m)
@@ -173,24 +176,32 @@
 			ms-commit
 			(append (imap-sym-tracked-keys m) keys)))
 
-	(define (imap-sym-tracked-get-fml m)
-		(imap-sym-finish (imap-sym-tracked-imap m))
-		(imap-sym-get-fml (imap-sym-tracked-imap m)))
+;	(define (imap-sym-tracked-get-fml m)
+;		(imap-sym-finish (imap-sym-tracked-imap m))
+;		(imap-sym-get-fml (imap-sym-tracked-imap m)))
 
 	(define (imap-sym-tracked-new)
 		(imap-sym-tracked (imap-sym-new) null))
 
 	(define (imap-sym-tracked-select candidates)
 
-		(defer-eval "merging" "!")
-		(display "merging!\n")
+;		(defer-eval "merging" "!")
+;		(display "merging!\n")
 
-		(define m-new
+		(define maybe-m-new 
 			(ormap identity 
 				(map 
 					(lambda (p.m) 
-						(if (car p.m) (imap-sym-tracked-imap (cdr p.m)) #f)) 
-					(append candidates (list (cons #t (imap-sym-tracked imap-sym-null null)))))))
+						(define maybe-imap (imap-sym-tracked-imap (cdr p.m)))
+						(if 
+							(and 
+								(car p.m) 
+								(imap-sym? maybe-imap)
+								(not (equal? (imap-sym-func-dummy maybe-imap) 0)))
+							maybe-imap #f))
+					candidates)))
+
+		(define m-new (if (imap-sym? maybe-m-new) maybe-m-new imap-sym-null))
 
 		(define k-new
 			(foldl 
@@ -269,7 +280,7 @@
 (define imap-empty (imap-conc default-func))
 
 (define imap-sym-null
-	(imap-sym 0 0 default-func default-func null null #f))
+	(imap-sym 0 0 default-func default-func null null #t))
 ;========================================
 
 ;================== Generate Deferred Formulae ====================

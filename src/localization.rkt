@@ -52,16 +52,18 @@
 	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
 	(output-smt #t)
 	(define debug-sol (solve (assert (and hard one-bug))))
+;	(define debug-sol (optimize #:maximize (list sum)
+;			  #:guarantee (assert (and hard))))
 	
 	(display "\n Model: \n")
 	(pretty-print debug-sol)
-	((lambda () (print-pending-eval debug-sol) (display "\n")))
+;	((lambda () (print-pending-eval debug-sol) (display "\n")))
 
 	(define bugl (ormap (lambda (l) (if (evaluate (location-selector l) debug-sol) #f l)) locations))
 	(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 	(pretty-print bugl)
 	
-	(std:error "Halt!")
+;	(std:error "Halt!")
 
 	(match (location-inst bugl)
 		[(inst-static-call ret cls-name func-name arg-types args) 
