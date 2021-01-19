@@ -45,3 +45,9 @@
 (struct heap-meta (o-top a-top) #:transparent)
 
 (define no-scope 0)
+(define nullptr -1)
+(define not-found -6666666666)
+
+(define (is-not-found? v)
+	(equal? v not-found))
+

@@ -61,7 +61,7 @@
 	(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 	(pretty-print bugl)
 	
-;	(std:error "Halt!")
+	(std:error "Halt!")
 
 	(match (location-inst bugl)
 		[(inst-static-call ret cls-name func-name arg-types args) 

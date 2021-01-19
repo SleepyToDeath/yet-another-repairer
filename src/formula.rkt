@@ -2,6 +2,8 @@
 
 (require (prefix-in std: racket/match))
 (require (prefix-in std: racket/base))
+
+(require "memory-common.rkt")
 (require racket/format)
 (require racket/pretty)
 (require rosette/lib/match)   ; provides `match`
@@ -69,9 +71,11 @@
 				[e (if (p e) (list e) null)])))
 	(map f (apply append (map symbolic->list l))))
 
-(define (maybe f s)
-	(if s (f s) #f))
+;(define (maybe f s)
+;	(if s (f s) #f))
 
+(define (maybe pred f s default)
+	(if (pred s) (f s) default))
 
 ;============================= Debug ========================================
 (define eval-pending null)
@@ -92,4 +96,6 @@
 	(display (~a "!!!!!!!!!!!!!!!#" index " Asserts: " (length (asserts)) "\n"))
 	(define fail? (unsat? (solve (assert #t))))
 	(display (~a "Unsat? " fail? "\n"))
+	;(if (equal? (length (asserts)) 1) (pretty-print (asserts)) #f)
+	(pretty-print (asserts))
 	(if fail? (std:error "Asserts are infeasible!") #f))

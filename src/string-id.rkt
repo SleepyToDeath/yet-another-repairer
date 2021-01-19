@@ -1,5 +1,6 @@
 #lang rosette/safe
 
+(require "memory-common.rkt")
 (require "map.rkt")
 (require (prefix-in std: racket/base))
 (require racket/pretty)

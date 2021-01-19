@@ -18,7 +18,8 @@
 (require "bitwise-op.rkt")
 (require "../syntax.rkt")
 (require (prefix-in ast: "../syntax-jimple.rkt"))
-(require (prefix-in m: "../map.rkt"))
+;(require (prefix-in m: "../map.rkt"))
+(require (prefix-in m: "../memory-common.rkt"))
 
 
 ;============ Constants ============

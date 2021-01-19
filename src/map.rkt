@@ -40,9 +40,6 @@
 (define (imap-contains? m index)
 	(not (is-not-found? (imap-get m index))))
 
-(define (is-not-found? v)
-	(equal? v not-found))
-
 (define (imap-batch-set imap kvlist)
 	(foldl (lambda (kv m) (imap-set m (car kv) (cdr kv))) imap kvlist))
 
@@ -103,7 +100,7 @@
 		(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
 		(cons (cons nullptr nullptr) (imap-sym-committed-updates m)))))
 	(define func-base-true (imap-sym-func-base-true m))
-	(if pending pending (func-base-true index)))
+	(if (number? pending) pending (func-base-true index)))
 
 (define (imap-sym-key-fml-debug m index)
 	(defer-eval "equal?" (cons ((imap-sym-func-true m) index) (imap-sym-real-get m index))))
@@ -137,7 +134,7 @@
 	(imap-add-dummy (imap-sym-func-dummy m)))
 
 (define (imap-sym-get-fml m)
-	(imap-sym-fml-deferred m)) 
+	(imap-sym-fml-deferred m))
 
 (define (imap-sym-get-keys m)
 	imap-section-keys)
@@ -148,7 +145,7 @@
 	(imap-sym func-dummy default-func func-true default-func null null #f))
 
 ;----------------- Symbolic Wrapper For Tracking Keys ---------------------
-(struct imap-sym-tracked (imap keys)
+(struct imap-sym-tracked (imap keys) #:transparent
 	#:methods gen:imap
 	[
 		(define (imap-get-func m)
@@ -190,8 +187,10 @@
 
 		(define m-new
 			(ormap identity 
-				(map (lambda (p.m) 
-					(if (car p.m) (maybe imap-sym-tracked-imap (cdr p.m)) #f)) candidates)))
+				(map 
+					(lambda (p.m) 
+						(if (car p.m) (imap-sym-tracked-imap (cdr p.m)) #f)) 
+					(append candidates (list (cons #t (imap-sym-tracked imap-sym-null null)))))))
 
 		(define k-new
 			(foldl 
@@ -200,7 +199,7 @@
 						keys
 						(filter (lambda (key+id.1)
 							(andmap (lambda (key+id.2) (not (equal? (cdr key+id.1) (cdr key+id.2)))) keys))
-							(apply append (reflection-map list? identity (if (cdr p.m) (imap-sym-tracked-keys (cdr p.m)) null))))))
+							(imap-sym-tracked-keys (cdr p.m)))))
 				null
 				candidates))
 
@@ -255,7 +254,7 @@
 
 	(define (imap-sym-scoped-select candidates merged-scope)
 		(imap-sym-scoped 
-			(imap-sym-tracked-select (map (lambda (cnd.m) (cons (car cnd.m) (maybe imap-sym-scoped-imap (cdr cnd.m)))) candidates))
+			(imap-sym-tracked-select (map (lambda (cnd.m) (cons (car cnd.m) (imap-sym-scoped-imap (cdr cnd.m)))) candidates))
 			merged-scope))
 
 	(define (imap-sym-scoped-update-scope m scope)
@@ -269,8 +268,8 @@
 
 (define imap-empty (imap-conc default-func))
 
-(define nullptr -1)
-(define not-found -6666666666)
+(define imap-sym-null
+	(imap-sym 0 0 default-func default-func null null #f))
 ;========================================
 
 ;================== Generate Deferred Formulae ====================
@@ -287,6 +286,7 @@
 (define imap-dummy2map (list->vector (std:build-list max-program-length (lambda (x) not-found))))
 (define (imap-add-sym-map func-dummy m)
 	(vector-set! imap-dummy2map func-dummy m))
+(imap-add-sym-map 0 imap-sym-null)
 
 (define imap-dummy-list null)
 (define (imap-add-dummy func-dummy)

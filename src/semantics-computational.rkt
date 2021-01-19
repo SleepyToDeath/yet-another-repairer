@@ -9,6 +9,7 @@
 (require "memory-common.rkt")
 (require "match-define.rkt")
 (require "formula.rkt")
+(require racket/format)
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
 (require racket/pretty)
@@ -562,10 +563,20 @@
 (struct iexpr-binary (op expr1 expr2) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
+;		(check-asserts 0.72)
 		(define v1 (expr-eval-dispatch (iexpr-binary-expr1 e) m))
+;		(check-asserts 0.73)
 		(define v2 (expr-eval-dispatch (iexpr-binary-expr2 e) m))
+;		(check-asserts 0.74)
 		(defer-eval e v1)
 		(defer-eval e v2)
+;		(check-asserts 0.745)
+;		(print (fml-to-print v1))
+;		(pretty-print v1)
+;		(display "\n")
+;		(print (fml-to-print v2))
+;		(pretty-print v2)
+;		(display "\n")
 		((iexpr-binary-op e) v1 v2))])
 
 (struct iexpr-array (arr-name index) #:transparent
