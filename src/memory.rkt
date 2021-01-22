@@ -188,18 +188,22 @@
 			[addr-space 
 				(imap-sym-scoped-select 
 					(map (lambda (p.m) (cons (car p.m) (memory-addr-space (cdr p.m)))) candidates)
-					(remove-duplicates 
-;						(reflection-map number? identity 
-						(apply append (map (compose imap-sym-scoped-scope memory-addr-space cdr) candidates))))]))
+					(remove-duplicates (apply append (map (compose imap-sym-scoped-scope memory-addr-space cdr) candidates)))
+					summary?)]))
 		ret)))
+
+(define (memory-is-null mem)
+	(not 
+		(or (imap-conc? (memory-addr-space mem))
+			(imap-sym? (imap-unwrap (memory-addr-space mem))))))
 ;====================================================================
 
 
 ;======================= Helper ========================
 (define (memory-print-id name m)
 	(defer-eval "" (~a "current state id: " name " : " 
-		(imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space m)))) " <~ " 
-		(imap-sym-func-base (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space m))))  "\n")))
+		(maybe imap-sym? imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space m))) #f) " <~ " 
+		(maybe imap-sym? imap-sym-func-base (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space m))) #f)  "\n")))
 
 (define (in-scope? key.scope scope)
 	(or

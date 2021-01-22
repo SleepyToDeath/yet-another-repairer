@@ -77,6 +77,12 @@
 (define (maybe pred f s default)
 	(if (pred s) (f s) default))
 
+(define (force-error cnd msg)
+	(define len1 (length (asserts)))
+	(if cnd (std:error msg) #f)
+	(define len2 (length (asserts)))
+	(if (> len2 len1) (std:error msg) #f))
+
 ;============================= Debug ========================================
 (define eval-pending null)
 (define (defer-eval msg value)

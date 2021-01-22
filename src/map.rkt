@@ -82,9 +82,8 @@
 			(imap-sym-func-dummy m))
 
 		(define (imap-get m index)
-			(imap-add-section-key (cons (imap-sym-func-dummy m) index))
-			(define ret (if (equal? (imap-sym-func-dummy m) 0) not-found
-				(imap-sym-real-get m index)))
+			(force-error (equal? (imap-sym-func-dummy m) 0) "reading from mem 0!")
+			(define ret (imap-sym-real-get m index))
 			(defer-eval "imap get" (list (imap-sym-func-dummy m) index ret))
 			ret)
 
@@ -92,9 +91,9 @@
 			(imap-get m index))
 
 		(define (imap-set m index value)
+			(force-error (equal? (imap-sym-func-dummy m) 0) "writing to mem 0!")
 			(defer-eval "imap set" (list (imap-sym-func-dummy m) index value))
-			(if (equal? (imap-sym-func-dummy m) 0) m
-				(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))])))
+			(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))]))
 	])
 
 (define (imap-sym-real-get m index)
@@ -115,7 +114,6 @@
 	ret)
 
 (define (imap-sym-reset m m-base)
-	(set! imap-section-keys null)
 	(define-symbolic* fml-deferred boolean?)
 	(define func-base (imap-get-func m-base))
 	(imap-sym (imap-get-func m) func-base (imap-sym-func-true m) 
@@ -124,11 +122,7 @@
 
 ;make updates so far visible to new reads
 (define (imap-sym-commit m)
-	(define ret (cons
-		(std:struct-copy imap-sym m [updates null] [committed-updates (append (imap-sym-updates m) (imap-sym-committed-updates m))])
-		(imap-sym-get-keys m)))
-	(set! imap-section-keys null)
-	ret)
+	(std:struct-copy imap-sym m [updates null] [committed-updates (append (imap-sym-updates m) (imap-sym-committed-updates m))]))
 
 ;should only be called once for each section, otherwise only the last one will work
 ;(define (imap-sym-finish m)
@@ -138,9 +132,6 @@
 (define (imap-sym-get-fml m)
 	(assert (not (equal? (imap-sym-func-dummy m) 0)))
 	(imap-sym-fml-deferred m))
-
-(define (imap-sym-get-keys m)
-	imap-section-keys)
 
 (define (imap-sym-new)
 	(define-symbolic* func-true (~> integer? integer?))
@@ -152,25 +143,34 @@
 	#:methods gen:imap
 	[
 		(define (imap-get-func m)
-			(imap-get-func-dispatch (imap-sym-tracked-imap m)))
+			(force-error #t "imap-get-func shouldn't be called on imap-sym-tracked"))
 
 		(define (imap-get m index)
-			(imap-get-dispatch (imap-sym-tracked-imap m) index))
+			(imap-add-section-key (cons index #f))
+			(if (not (imap-sym? (imap-sym-tracked-imap m)))
+				not-found
+				(imap-get-dispatch (imap-sym-tracked-imap m) index)))
 
 		(define (imap-get2 m index extra)
 			(imap-get m index))
 
 		(define (imap-set m index value)
-			(std:struct-copy imap-sym-tracked m [imap (imap-set-dispatch (imap-sym-tracked-imap m) index value)]))
+			(if (not (imap-sym? (imap-sym-tracked-imap m)))
+				m
+				(std:struct-copy imap-sym-tracked m [imap (imap-set-dispatch (imap-sym-tracked-imap m) index value)])))
 	])
 
 	(define (imap-sym-tracked-reset m m-base)
+		(set! imap-section-keys null)
 		(if (imap-conc? m-base)
 			(imap-sym-tracked (imap-sym-reset (imap-sym-tracked-imap m) m-base) null)
 			(imap-sym-tracked (imap-sym-reset (imap-sym-tracked-imap m) (imap-sym-tracked-imap m-base)) (imap-sym-tracked-keys m-base))))
 
 	(define (imap-sym-tracked-commit m)
-		(match-define (cons ms-commit keys) (imap-sym-commit (imap-sym-tracked-imap m)))
+		(define keys imap-section-keys)
+		(define ms-commit (maybe imap-sym? imap-sym-commit (imap-sym-tracked-imap m) #f))
+		(set! imap-section-keys null)
+
 		(display (~a "Committed " (length keys) " keys\n"))
 		(imap-sym-tracked
 			ms-commit
@@ -183,7 +183,7 @@
 	(define (imap-sym-tracked-new)
 		(imap-sym-tracked (imap-sym-new) null))
 
-	(define (imap-sym-tracked-select candidates)
+	(define (imap-sym-tracked-select candidates summary?)
 
 ;		(defer-eval "merging" "!")
 ;		(display "merging!\n")
@@ -201,7 +201,7 @@
 							maybe-imap #f))
 					candidates)))
 
-		(define m-new (if (imap-sym? maybe-m-new) maybe-m-new imap-sym-null))
+		(define m-new (if (or summary? (imap-sym? maybe-m-new)) maybe-m-new imap-sym-null))
 
 		(define k-new
 			(foldl 
@@ -263,9 +263,9 @@
 	(define (imap-sym-scoped-new)
 		(imap-sym-scoped (imap-sym-tracked-new) #f))
 
-	(define (imap-sym-scoped-select candidates merged-scope)
+	(define (imap-sym-scoped-select candidates merged-scope summary?)
 		(imap-sym-scoped 
-			(imap-sym-tracked-select (map (lambda (cnd.m) (cons (car cnd.m) (imap-sym-scoped-imap (cdr cnd.m)))) candidates))
+			(imap-sym-tracked-select (map (lambda (cnd.m) (cons (car cnd.m) (imap-sym-scoped-imap (cdr cnd.m)))) candidates) summary?)
 			merged-scope))
 
 	(define (imap-sym-scoped-update-scope m scope)

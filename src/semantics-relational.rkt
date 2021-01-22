@@ -81,11 +81,15 @@
 		(define boot-lstate (prepend-starting-mem-in (alloc-lstate (machine-boot mac-ass)) #t (machine-mem mac-ass)))
 		(display "\n ###############################################0 \n")
 		(define all-invokes (invoke->relation boot-lstate mac-ass target-sids #f))
+;		(check-asserts 10.5)
 		(display "\n ###############################################1 \n")
-		(define mac-done (std:struct-copy machine mac-ass [mem (root-invoke-ret-mem all-invokes)]))
+		(define mem-done-sym (root-invoke-ret-mem all-invokes #f))
+		(define mem-done (memory-sym-reset (memory-sym-new #f) mem-done-sym #f))
+		(define mac-done (std:struct-copy machine mac-ass [mem mem-done]))
 		(display "\n ###############################################4 \n")
 		(define fml-out (compare-output mac-done output))
 		(display "\n ###############################################5 \n")
+		(define mem-all-done (memory-sym-commit mem-done))
 
 		(define (extract-fml itree) 
 			(match itree
@@ -94,13 +98,13 @@
 						(function-formula-fmls root) 
 						(andmap extract-fml subs))]))
 
-		(define fml-code (extract-fml all-invokes))
+		(define fml-code (and (memory-sym-get-fml mem-all-done #f) (extract-fml all-invokes)))
 
 		(display "\n ###############################################6 \n")
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(display "\n ###############################################7 \n")
 
-		(define all-keys (imap-sym-tracked-keys (imap-sym-scoped-imap (memory-addr-space (machine-mem mac-done)))))
+		(define all-keys (imap-sym-tracked-keys (imap-sym-scoped-imap (memory-addr-space mem-all-done))))
 		(pretty-print (~a "Totally " (length all-keys) " keys"))
 
 		(define (id2keys id)
@@ -110,6 +114,8 @@
 			(ormap identity (map (lambda (key0) (equal? key key0)) (id2keys id))))
 
 		(display "\n ###############################################7.1 \n")
+
+;		(check-asserts 11)
 
 		(pretty-print (~a (length imap-dummy-list) " states:"))
 		(pretty-print imap-dummy-list)
@@ -149,6 +155,7 @@
 			imap-dummy-list)
 |#
 		
+;		(check-asserts 12)
 
 		(display "\n ###############################################7.2 \n")
 
@@ -160,7 +167,7 @@
 					(define mem (vector-ref imap-dummy2map mem-id))
 					(pretty-print (~a "Generate keys for state #" mem-id))
 					(pretty-print (imap-sym-scoped-scope mem))
-					(imap-sym-lookback mem)
+;					(imap-sym-lookback mem)
 					(define ret (andmap identity (map (lambda (key.scope) 
 							(if (in-scope? key.scope (imap-sym-scoped-scope mem))
 								(begin
@@ -207,6 +214,7 @@
 			imap-dummy-list)
 |#
 
+;		(check-asserts 13)
 
 		(display "\n ###############################################7.3 \n")
 		
@@ -214,8 +222,8 @@
 
 		(display "\n ###############################################8 \n")
 
-;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
 		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
+;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-code fml-code-bind))
 
 	(list mac soft-cons hard-cons))
 
@@ -461,8 +469,8 @@
 (define (root-invoke itree)
 	(invoke-tree-root itree))
 
-(define (root-invoke-ret-mem itree)
-	(memory-select (lstate-mem-in-list (ending-lstate (root-invoke itree))) #f))
+(define (root-invoke-ret-mem itree summary?)
+	(memory-select (lstate-mem-in-list (ending-lstate (root-invoke itree))) summary?))
 	
 (define (insts->relation func-fml mac target-sids summary?)
 	(match (foldl inst->relation
@@ -499,6 +507,11 @@
 		(println id)
 		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
 		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
+
+		(if (not in-target?) (assert id) #f)
+
+		(define fml-feasible-path (implies mark (ormap car (get-mem-in-list func-fml pc))))
+		(assert fml-feasible-path)
 
 		(define mem-in (memory-select (get-mem-in-list func-fml pc) summary?))
 ;		(pretty-print mem-in)
@@ -632,6 +645,7 @@
 					(if base-sid base-sid not-found))))
 				not-found))
 
+;		(if (and summary? (memory-is-null mem-in)) (std:struct-copy rbstate st [pc (+ 1 pc)])
 		(match inst 
 			[(inst-nop _) 
 				(update-rbstate (iassert-pc-next #t #t) mem-in #f null)]
@@ -659,23 +673,17 @@
 
 			[(inst-ret v-expr) 
 				(begin
-;				(check-asserts 1)
-;				(pretty-print v-expr)
-;				(pretty-print mac-eval-ctxt)
 				(define ret-value (expr-eval v-expr mac-eval-ctxt))
-;				(check-asserts 2)
 				(if summary? #f (defer-eval inst ret-value))
 				(define mem-ret (memory-sym-commit (memory-sforce-write mem-0 var-ret-name ret-value 0)))
 				(define fml-update (memory-sym-get-fml mem-ret summary?))
 ;				(define fml-ret (select-fml? fml-update))
 				(define fml-ret fml-update)
-;				(check-asserts 3)
 				(define fml-path (iassert-pc-ret #t fml-ret))
 				(define func-fml-ret (prepend-ending-mem-in func-fml (if summary? #t mark) mem-ret))
 				(define func-fml-new (append-fml func-fml-ret fml-path))
-				;(assert id)
+				(assert id)
 				(pretty-print inst)
-;				(check-asserts 4)
 				;(display (~a "Output state id: " (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-ret)))) " \n"))
 				;(display (~a "Output state id: " (if mem-ret (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-ret)))) #f) " \n"))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
@@ -687,7 +695,7 @@
 				(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-in args))
 				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
 
-				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret))
+				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret summary?))
 				(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
 				(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
 
@@ -737,7 +745,7 @@
 					;an invoke tree without condition
 					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
 
-					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret))
+					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret summary?))
 					(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
 					(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
 					(if (not summary?) (memory-print-id "mem-ret.tmp2" mem-ret.tmp2) #f)
@@ -788,7 +796,7 @@
 				(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
 				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or in-target? summary?)))
 
-				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret))
+				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret summary?))
 				(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
 				(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
 
@@ -808,13 +816,10 @@
 
 			[(inst-ass vl vr) 
 				(begin
-;				(check-asserts 0.5)
 				(define value (expr-eval vr mac-eval-ctxt))
-;				(check-asserts 0.75)
 				(if summary? #f (defer-eval inst value))
 ;				(defer-cons (equal? value 6))
 				(define rhs (lexpr-rhs vl))
-;				(check-asserts 1)
 				(define mem-new 
 					(match rhs
 						[(expr-var v) (memory-sforce-write mem-0 (string-id (variable-name v)) value 0)]
@@ -830,7 +835,6 @@
 								(letrec
 									([addr (memory-sforce-read mem-0 (string-id (variable-name obj)) 0)])
 									(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value)))]))
-;				(check-asserts 2)
 				(memory-print-id "mem-new" mem-new)
 				(update-mem-only mem-new))]
 

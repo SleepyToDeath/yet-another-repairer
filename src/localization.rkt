@@ -63,6 +63,8 @@
 	(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 	(pretty-print bugl)
 	
+;	(pretty-print string-id-table)
+
 ;	(std:error "Halt!")
 
 	(match (location-inst bugl)
