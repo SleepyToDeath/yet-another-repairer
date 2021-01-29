@@ -53,7 +53,7 @@
 
 	(define (hard-cons input output target-sids) 
 
-		(set! imap-dummy-list null)
+		(set! memory-id-list null)
 
 		(define (assign-input mac input)
 			(define mem0 (machine-mem mac))
@@ -81,7 +81,6 @@
 		(define boot-lstate (prepend-starting-mem-in (alloc-lstate (machine-boot mac-ass)) #t (machine-mem mac-ass)))
 		(display "\n ###############################################0 \n")
 		(define all-invokes (invoke->relation boot-lstate mac-ass target-sids #f))
-;		(check-asserts 10.5)
 		(display "\n ###############################################1 \n")
 		(define mem-done-sym (root-invoke-ret-mem all-invokes #f))
 		(define mem-done (memory-sym-reset (memory-sym-new #f) mem-done-sym #f))
@@ -99,131 +98,12 @@
 						(andmap extract-fml subs))]))
 
 		(define fml-code (and (memory-sym-get-fml mem-all-done #f) (extract-fml all-invokes)))
-
 		(display "\n ###############################################6 \n")
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(display "\n ###############################################7 \n")
-
-		(define all-keys (imap-sym-tracked-keys (imap-sym-scoped-imap (memory-addr-space mem-all-done))))
-		(pretty-print (~a "Totally " (length all-keys) " keys"))
-
-		(define (id2keys id)
-			(map car (imap-sym-committed-updates (imap-unwrap (vector-ref imap-dummy2map id)))))
-
-		(define (contain-key? id key)
-			(ormap identity (map (lambda (key0) (equal? key key0)) (id2keys id))))
-
-		(display "\n ###############################################7.1 \n")
-
-;		(check-asserts 11)
-
-		(pretty-print (~a (length imap-dummy-list) " states:"))
-		(pretty-print imap-dummy-list)
-
-		(define fml-maybe-wrong
-			(andmap identity (map (lambda (mem-id)
-				(if (equal? mem-id 0) (std:error "processing mem 0!") #f)
-				(pretty-print (~a "Generate keys for state #" mem-id))
-				(define mem (vector-ref imap-dummy2map mem-id))
-;				(pretty-print mem)
-				(define fml-true 
-					(andmap identity (map (lambda (key) 
-							(define ret (if (is-concrete-value key)
-								(imap-sym-key-fml (imap-unwrap mem) key)
-								((lambda () 
-									(define-symbolic* key-sym integer?)
-									(and 
-										(equal? key-sym key)
-										(imap-sym-key-fml (imap-unwrap mem) key-sym))))))
-					;		(display (~a "Memory id: " mem-id "\n"))
-					;		(display (~a " key size: " (size-of key) "\n"))
-					;		(display (~a " formula size: " (size-of-limited ret 100) "\n"))
-							ret)
-						(id2keys mem-id))))
-;				(display (~a "Memory id: " mem-id " formula size: " (size-of fml-true)))
-				(define fml-deferred (imap-sym-fml-deferred (imap-unwrap mem)))
-				(equal? fml-deferred fml-true))
-				imap-dummy-list)))
-#|
-		(map (lambda (mem-id)
-			(define mem (vector-ref imap-dummy2map mem-id))
-			(defer-eval "^^^^^^^^^ content of formula ^^^^^^^^^" (imap-sym-fml-deferred (imap-unwrap mem)))
-			(map (lambda (key)
-					(defer-eval "maybe-wrong-key: " (cons mem-id key))
-					(imap-sym-key-fml-debug (imap-unwrap mem) key))
-				(id2keys mem-id)))
-			imap-dummy-list)
-|#
-		
-;		(check-asserts 12)
-
-		(display "\n ###############################################7.2 \n")
-
-		(define kounter 0)
-
-		(define fml-always-right
-			(andmap identity (map (lambda (mem-id)
-					(if (equal? mem-id 0) (std:error "processing mem 0!") #f)
-					(define mem (vector-ref imap-dummy2map mem-id))
-					(pretty-print (~a "Generate keys for state #" mem-id))
-					(pretty-print (imap-sym-scoped-scope mem))
-;					(imap-sym-lookback mem)
-					(define ret (andmap identity (map (lambda (key.scope) 
-							(if (in-scope? key.scope (imap-sym-scoped-scope mem))
-								(begin
-								(set! kounter (+ 1 kounter))
-								(if (contain-key? mem-id (car key.scope)) #t
-;									(and
-										(if (is-concrete-value (car key.scope))
-											(imap-sym-key-fml (imap-unwrap mem) (car key.scope))
-											((lambda () 
-												(define-symbolic* key-sym integer?)
-												(and 
-													(equal? key-sym (car key.scope))
-													(imap-sym-key-fml (imap-unwrap mem) key-sym)))))))
-;										(letrec
-;											([func-base (imap-sym-func-base (imap-unwrap mem))]
-;											 [mem-base (if (imap-func-is-dummy? func-base) (vector-ref imap-dummy2map func-base) #f)])
-;											(if (imap-func-is-dummy? func-base)
-;												(if (not (in-scope? key.scope (imap-sym-scoped-scope mem-base)))
-;													(imap-sym-key-not-found (imap-unwrap mem-base) (car key.scope))
-;													#t)
-;												#t)))))
-;								#t))
-								(imap-sym-key-not-found (imap-unwrap mem) (car key.scope))))
-						all-keys)))
-;					(display (~a "Memory id: " mem-id " formula size: " (size-of ret)))
-					ret)
-				imap-dummy-list)))
-
-		(display (~a "Totally " kounter " keys in scope\n"))
-		(defer-eval "Totally keys in scope: " kounter)
-
-#|
-		(map pretty-print all-keys)
-
-		(map (lambda (mem-id)
-			(define mem (vector-ref imap-dummy2map mem-id))
-			(map (lambda (key.scope)
-					(if (in-scope? key.scope (imap-sym-scoped-scope mem))
-						(begin
-							(defer-eval "always-correct-key: " (cons mem-id (if (contain-key? mem-id (car key.scope)) "xxxxxxxx" (car key.scope))))
-							(imap-sym-key-fml-debug (imap-unwrap mem) (car key.scope)))
-						#f))
-				all-keys))
-			imap-dummy-list)
-|#
-
-;		(check-asserts 13)
-
-		(display "\n ###############################################7.3 \n")
-		
-		(define fml-code-bind (and fml-maybe-wrong fml-always-right))
-
+		(define fml-code-bind (memory-gen-binding mem-all-done))
 		(display "\n ###############################################8 \n")
-
 		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
-;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-code fml-code-bind))
 
 	(list mac soft-cons hard-cons))
 
@@ -309,7 +189,7 @@
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 
 				(define sid (sfunc-id cls-name (function-name (function-formula-func sf)) (map cdr (function-args (function-formula-func sf)))))
-				(pretty-print (machine-mem mac))
+;				(pretty-print (machine-mem mac))
 				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid 0))
 				(define fmap-1 (imap-set (machine-fmap mac) sid sf))
 				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
@@ -511,7 +391,7 @@
 		(if (not in-target?) (assert id) #f)
 
 		(define fml-feasible-path (implies mark (ormap car (get-mem-in-list func-fml pc))))
-		(assert fml-feasible-path)
+		(if (not summary?) (assert fml-feasible-path) #f)
 
 		(define mem-in (memory-select (get-mem-in-list func-fml pc) summary?))
 ;		(pretty-print mem-in)
@@ -633,7 +513,7 @@
 						(map 
 							(lambda (func-fml-cur)
 								(if (equal? vid (function-formula-vid func-fml-cur)) (function-formula-sid func-fml-cur) #f))
-							(maybe class? class-vfuncs cls-0 null))))
+							(maybe-do class? null cls-0 class-vfuncs))))
 				(if maybe-this-sid maybe-this-sid 
 					(begin
 					(define base-sid 
@@ -641,7 +521,7 @@
 							(lambda (sid) (if (is-not-found? sid) #f sid))
 							(map 
 								(lambda (cls-cur) (vid2sid mac cls-cur vid)) 
-								(maybe class? (lambda (c) (cons (class-extend c) (class-implements c))) cls-0 null))))
+								(maybe-do class? null cls-0 (lambda (c) (cons (class-extend c) (class-implements c)))))))
 					(if base-sid base-sid not-found))))
 				not-found))
 

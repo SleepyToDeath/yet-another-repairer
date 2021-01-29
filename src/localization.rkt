@@ -48,7 +48,6 @@
 	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) spec)))
 
 	(display "\n Solving: \n")
-;	(pretty-print (map fml-to-print (asserts)))
 	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
 	(output-smt #t)
 	(define debug-sol (solve (assert (and hard one-bug))))

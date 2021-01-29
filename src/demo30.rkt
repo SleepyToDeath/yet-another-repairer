@@ -2,6 +2,7 @@
 (require "formula.rkt")
 
 (require (prefix-in std: racket/base))
+(require (prefix-in std: racket/list))
 
 (struct T (x y) #:transparent)
 
@@ -32,7 +33,7 @@ b2
 c
 (asserts)
 
-(define d1 (maybe identity cadr b2 #f))
+(define d1 (maybe-do identity cadr b2 #f))
 
 (display "\nd1:\n")
 d1
@@ -53,13 +54,87 @@ d2
 t34
 (asserts)
 
+(define t34+ (cons 0 t34))
+
+(display "\nt34+:\n")
+t34+
+(asserts)
+
 (define t5 (if (equal? (car t34) 1) (cons 0 t34) t34))
 
 (display "\nt5:\n")
 t5
 (asserts)
 
-(define len1 (length (asserts)))
-(if (equal? (car t34) 1) (std:error "br1!") #f)
-(define len2 (length (asserts)))
-(if (> len2 len1) (std:error "br1!!") #f)
+(define t3.maybe (if (> c1 0) t3 #f))
+
+(define t3+ (if (list? t3.maybe) (cons 0 t3.maybe) #f))
+
+(display "\nt3+:\n")
+t3+
+(asserts)
+
+(define t3+.maybe (ormap (lambda (c3) (if (> c2 0) c3 #f)) (list t3+)))
+
+(display "\nt3+.maybe:\n")
+t3+.maybe
+(asserts)
+
+(define t3++ (if (list? t3+.maybe) (append (list -1) t3+.maybe) #f))
+
+;(define t3++ (cons -1 t3+.maybe))
+
+(display "\nt3++:\n")
+t3++
+(print-fml (fml-to-print t3++))
+(display "\n")
+(asserts)
+
+(struct st (lsts) #:transparent)
+
+(define (ass-top st0 index value)
+	(define v (car (st-lsts st0)))
+	(define v+ (std:list-set v index value))
+	(st (cons v+ (cdr (st-lsts st0)))))
+
+(define st1 (st (list (list 1 2 3) (list 2 3 4))))
+
+st1
+
+(define st2 (ass-top st1 1 0))
+
+st1
+st2
+
+(define st3 (if (> 0 c1) st1 st2))
+
+st3
+
+
+(struct AB (a b) #:transparent)
+
+(define ab (AB (AB (AB 1 2) (AB 3 4)) (AB 5 6)))
+
+ab
+
+(define abab (std:struct-copy AB ab))
+
+abab
+
+(define bb (AB-b (AB-a abab)))
+
+bb
+
+(set! bb (AB 0 4))
+
+bb
+
+ab
+
+abab
+
+(define ab.maybe (if (> 0 c1) ab #f))
+
+(define ab.maybe.maybe (if ab.maybe 0 1))
+
+ab.maybe.maybe

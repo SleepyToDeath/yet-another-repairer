@@ -30,7 +30,7 @@
 ;v-meta: vtab-meta
 ;s-meta: stack-meta
 ;addr-space: int -> int, the dynamic part of memory
-(struct memory (v-meta s-meta h-meta addr-space) #:transparent)
+(struct memory (id v-meta h-meta heap stack) #:transparent)
 
 ;name2tab: int(field name) -> int(addr of virtual table)
 ;top: the end of virtual table region, also beginning of object region, become fixed after machine initialization
@@ -38,7 +38,7 @@
 
 ;bases: a list of stack base address, first element is stack top scope
 ;top: allocation top of stack area
-(struct stack-meta (bases top) #:transparent)
+;(struct stack-meta (bases top) #:transparent)
 
 ;a-top: top of array area
 ;o-top: top of object area
@@ -46,8 +46,12 @@
 
 (define no-scope 0)
 (define nullptr -1)
-(define not-found -6666666666)
+(define not-found -66666666)
+(define invalid-state -314159265)
 
 (define (is-not-found? v)
 	(equal? v not-found))
+
+(define (is-invalid? v)
+	(equal? v invalid-state))
 

@@ -17,15 +17,15 @@
 ;	1.The maps should be used in an immutable manner
 ;	2.Concrete map: use `imap-emtpy` to get a new empty map
 ;	  and `imap-get`, `imap-set` to read & write
-;	3.Symbolic map: use `imap-sym-tracked-new` to get a new symbolic map.
-;	  Use `imap-sym-tracked-reset` to copy a base map(concrete/symbolic),
+;	3.Symbolic map: use `imap-sym-scoped-new` to get a new symbolic map.
+;	  Use `imap-sym-scoped-reset` to copy a base map(concrete/symbolic),
 ;	  then use it as if it's concrete(except that a commit is needed for
 ;	  updates to be seen by future reads). Finally, use `imap-sym-scoped-get-fml`
 ;	  to get a formula describing the relation between the updated map
 ;	  and the base map.
 ;	4.A concrete map can map anything to anything. But a symbolic
 ;	  map can only map int to int.
-;	5.Use imap-sym-tracked-select to make a merging node from
+;	5.Use imap-sym-scoped-select to make a merging node from
 ;	  a list of sources, each with a condition.
 
 ;============= Definition & Operations ===========
@@ -130,13 +130,12 @@
 ;	(imap-add-dummy (imap-sym-func-dummy m)))
 
 (define (imap-sym-get-fml m)
-	(assert (not (equal? (imap-sym-func-dummy m) 0)))
+	(force-error (equal? (imap-sym-func-dummy m) 0) "getting fml from mem 0!")
 	(imap-sym-fml-deferred m))
 
-(define (imap-sym-new)
+(define (imap-sym-new id)
 	(define-symbolic* func-true (~> integer? integer?))
-	(define func-dummy (imap-new-dummy))
-	(imap-sym func-dummy default-func func-true default-func null null #f))
+	(imap-sym id default-func func-true default-func null null #f))
 
 ;----------------- Symbolic Wrapper For Tracking Keys ---------------------
 (struct imap-sym-tracked (imap keys) #:transparent
@@ -168,7 +167,7 @@
 
 	(define (imap-sym-tracked-commit m)
 		(define keys imap-section-keys)
-		(define ms-commit (maybe imap-sym? imap-sym-commit (imap-sym-tracked-imap m) #f))
+		(define ms-commit (maybe-do imap-sym? #f (imap-sym-tracked-imap m) imap-sym-commit))
 		(set! imap-section-keys null)
 
 		(display (~a "Committed " (length keys) " keys\n"))
@@ -180,28 +179,22 @@
 ;		(imap-sym-finish (imap-sym-tracked-imap m))
 ;		(imap-sym-get-fml (imap-sym-tracked-imap m)))
 
-	(define (imap-sym-tracked-new)
-		(imap-sym-tracked (imap-sym-new) null))
+	(define (imap-sym-tracked-new id)
+		(imap-sym-tracked (imap-sym-new id) null))
 
 	(define (imap-sym-tracked-select candidates summary?)
 
-;		(defer-eval "merging" "!")
-;		(display "merging!\n")
+		(define f-select (maybe-select imap-sym-null (lambda (m) (equal? (imap-sym-func-dummy m) 0))))
 
-		(define maybe-m-new 
-			(ormap identity 
-				(map 
-					(lambda (p.m) 
-						(define maybe-imap (imap-sym-tracked-imap (cdr p.m)))
-						(if 
-							(and 
-								(car p.m) 
-								(imap-sym? maybe-imap)
-								(not (equal? (imap-sym-func-dummy maybe-imap) 0)))
-							maybe-imap #f))
-					candidates)))
+		(define candidates-unwrapped (map (lambda (cnd.m) (cons (car cnd.m) (imap-sym-tracked-imap (cdr cnd.m)))) candidates))
 
-		(define m-new (if (or summary? (imap-sym? maybe-m-new)) maybe-m-new imap-sym-null))
+		(define m-new 
+			(if (and 
+					(equal? (length candidates) 1) 
+					(is-concrete-value (caar candidates)) 
+					(caar candidates))
+				(imap-sym-tracked-imap (cdar candidates))
+				(f-select candidates-unwrapped summary?)))
 
 		(define k-new
 			(foldl 
@@ -217,6 +210,25 @@
 		(display (~a "Keys num : " (length k-new) "\n"))
 
 		(imap-sym-tracked m-new k-new))
+
+
+
+
+;				(begin	
+;					(define maybe-m-new 
+;						(ormap identity 
+;							(map 
+;								(lambda (p.m) 
+;									(define maybe-imap (imap-sym-tracked-imap (cdr p.m)))
+;									(if 
+;										(and 
+;											(car p.m) 
+;											(imap-sym? maybe-imap)
+;											(not (equal? (imap-sym-func-dummy maybe-imap) 0)))
+;										maybe-imap #f))
+;								candidates)))
+;					(define m-new (if (or summary? (imap-sym? maybe-m-new)) maybe-m-new imap-sym-null))
+;					m-new)))
 
 			;(apply append (map (lambda (p.m) (imap-sym-tracked-keys (cdr p.m))) candidates))))
 
@@ -252,16 +264,14 @@
 
 	(define (imap-sym-scoped-get-fml m)
 		(define ms (imap-sym-tracked-imap (imap-sym-scoped-imap m)))
-		(imap-add-sym-map (imap-sym-func-dummy ms) m)
-		(imap-add-dummy (imap-sym-func-dummy ms))
 		(imap-sym-get-fml ms))
 
 ;	(define (imap-sym-scoped-get-fml-pure m)
 ;		(define ms (imap-sym-tracked-imap (imap-sym-scoped-imap m)))
 ;		(imap-sym-get-fml ms))
 
-	(define (imap-sym-scoped-new)
-		(imap-sym-scoped (imap-sym-tracked-new) #f))
+	(define (imap-sym-scoped-new id)
+		(imap-sym-scoped (imap-sym-tracked-new id) #f))
 
 	(define (imap-sym-scoped-select candidates merged-scope summary?)
 		(imap-sym-scoped 
@@ -281,6 +291,12 @@
 
 (define imap-sym-null
 	(imap-sym 0 0 default-func default-func null null #t))
+
+(define imap-sym-tracked-null
+	(imap-sym-tracked imap-sym-null null))
+
+(define imap-sym-scoped-null
+	(imap-sym-scoped imap-sym-tracked-null #f))
 ;========================================
 
 ;================== Generate Deferred Formulae ====================
@@ -294,28 +310,11 @@
 (define (imap-replace-first-key key)
 	(set! imap-section-keys (cons key (cdr imap-section-keys))))
 
-(define imap-dummy2map (list->vector (std:build-list max-program-length (lambda (x) not-found))))
-(define (imap-add-sym-map func-dummy m)
-	(vector-set! imap-dummy2map func-dummy m))
-(imap-add-sym-map 0 imap-sym-null)
-
-(define imap-dummy-list null)
-(define (imap-add-dummy func-dummy)
-	(set! imap-dummy-list (cons func-dummy imap-dummy-list)))
-
-(define imap-dummy-counter 0)
-(define (imap-new-dummy)
-	(set! imap-dummy-counter (+ 1 imap-dummy-counter))
-	(display (~a "New state id: " imap-dummy-counter "\n"))
-	imap-dummy-counter)
-
 (define imap-func-is-dummy? number?)
 
-(define all-symbols null)
-(define (global-add-symbol sym)
-	(set! all-symbols (cons sym all-symbols)))
-
-
+;(define all-symbols null)
+;(define (global-add-symbol sym)
+;	(set! all-symbols (cons sym all-symbols)))
 ;================== Helpers ====================
 (define (imap-sym-lookback m)
 	(display (~a "map track: " (imap-sym-func-base (imap-unwrap m)) " ~> " (imap-sym-func-dummy (imap-unwrap m))

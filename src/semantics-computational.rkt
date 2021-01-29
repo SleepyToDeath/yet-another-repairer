@@ -167,7 +167,7 @@
 ;machine X list of (key, value) -> machine(with input inserted into memory)
 (define (assign-input mac input)
 	(define mem0 (memory-spush (machine-mem mac)))
-	(pretty-print mem0)
+;	(pretty-print mem0)
 	(define mem-ass 
 		(foldl (lambda (kv mem-cur) (memory-swrite (memory-sdecl mem-cur (string-id (car kv))) (string-id (car kv)) (cdr kv))) mem0 input))
 	(std:struct-copy machine mac [mem mem-ass]))

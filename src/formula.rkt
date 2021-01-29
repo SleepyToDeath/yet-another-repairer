@@ -22,6 +22,18 @@
 			[(constant id type) (const-fp id type)]
 			[x x])))
 
+(define (print-fml e)
+	(match e
+		[(expr-fp op children) 
+			(begin
+			(display " (")
+			(print op) 
+			(map print-fml children)
+			(display ")"))]
+		[(const-fp id type) (begin (display " ") (print id))]
+		[(cons x y) (begin (print-fml x) (print-fml y))]
+		[x (begin (display " ") (print x))]))
+
 (define size-limit 0)
 
 (define (size-of-limited e limit)
@@ -71,17 +83,43 @@
 				[e (if (p e) (list e) null)])))
 	(map f (apply append (map symbolic->list l))))
 
-;(define (maybe f s)
-;	(if s (f s) #f))
-
-(define (maybe pred f s default)
-	(if (pred s) (f s) default))
-
 (define (force-error cnd msg)
 	(define len1 (length (asserts)))
 	(if cnd (std:error msg) #f)
 	(define len2 (length (asserts)))
 	(if (> len2 len1) (std:error msg) #f))
+
+(define (int->symbolic v)
+	(define-symbolic* vs integer?)
+	(assert (equal? v vs))
+	vs)
+
+;========================== Optional Type ===================================
+(define (maybe-do+ s f)
+	(maybe-do identity #f s f))
+
+(define (maybe-do pred default s f)
+	(if (pred s) (f s) default))
+
+(define (maybe-select invalid-state is-invalid-state?)
+	(lambda (candidates summary?)
+		(define ret.maybe (ormap
+			(lambda (cnd.v)
+				(if (and 
+						(car cnd.v) 
+						(cdr cnd.v)
+						(not (is-invalid-state? (cdr cnd.v))))
+					(cdr cnd.v)
+					#f))
+			candidates))
+		(if (or summary? ret.maybe) ret.maybe invalid-state)))
+
+;============================= Timer ========================================
+(define last-time 0)
+(define (timer-on)
+	(set! last-time (std:current-inexact-milliseconds)))
+(define (timer-check)
+	(- (std:current-inexact-milliseconds) last-time))
 
 ;============================= Debug ========================================
 (define eval-pending null)
