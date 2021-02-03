@@ -454,6 +454,21 @@
 							fml-path
 							(equal? mark (and fml-cnds fml-brs (next-mark)))))))
 
+		(define (long-jump-setup func-fml-callee mem)
+			(define mem-0 (memory-sym-reset (memory-sym-new summary?) mem summary?))
+			(define func (function-formula-func func-fml-callee))
+
+			(define mem-decl (memory-sym-commit
+				(foldl 
+					(lambda (var-def mem) (memory-sdecl mem (car var-def))) 
+					mem-0
+					(append (function-args func) (function-locals func)))))
+
+			(define fml-in (memory-sym-get-fml mem-decl summary?))
+			(define mem-input (memory-sym-reset (memory-sym-new summary?) mem-decl (not in-target?)))
+			(define func-fml-in (prepend-starting-mem-in func-fml-callee (if (or summary? in-target?) #t mark) mem-input))
+			(cons func-fml-in fml-in))
+
 		(define (invoke-setup func-fml-callee mem args)
 ;			(memory-print mem)
 			(define mem-0 (memory-sym-reset (memory-sym-new summary?) mem summary?))
@@ -567,6 +582,31 @@
 				;(display (~a "Output state id: " (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-ret)))) " \n"))
 				;(display (~a "Output state id: " (if mem-ret (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-ret)))) #f) " \n"))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
+
+			[(inst-long-jump cls-name func-name)
+				(begin
+				(define sid (sfunc-id cls-name func-name null))
+
+				(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))
+				(match-define (cons func-fml-in fml-in) (long-jump-setup func-invoked mem-in))
+				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
+
+				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret summary?))
+				(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
+				(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
+
+				(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
+				(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
+				(if summary? #f (defer-eval inst ret-val))
+				(define mem-ass (memory-sym-commit (memory-sforce-write mem-ret var-ret-name ret-val 0)))
+				(define fml-ret (memory-sym-get-fml mem-ass summary?))
+
+				;[TODO] use an extra selector for fml-sum
+				(define fml-op (select-fml? (and fml-in fml-sum fml-ret)))
+				;(define fml-op (and fml-in fml-ret))
+				(define fml-new (iassert-pc-invoke #t (list fml-op) (list func-fml-in) (list #t)))
+
+				(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (cons funcs-ret funcs)]))]
 
 			[(inst-static-call ret cls-name func-name arg-types args) 
 				(begin
