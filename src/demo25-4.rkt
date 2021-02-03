@@ -59,7 +59,7 @@ public class Test
 		r6 = new A;
 		specialinvoke r6.<A: void <init>(int)>(r1);
 		r4 = virtualinvoke r6.<A: int add(int)>(r2);
-		r5 = r4 - r3;
+		r5 = r4 + r3;
 		return r5;
 	}
 }
@@ -97,12 +97,13 @@ public class Test
 
 
 (define mac (ast->machine buggy))
-(define mac-in (assign-input mac input2))
+(define mac-in (assign-input mac input1))
 (define mac-fin (compute mac-in))
-(define result (compare-output mac-fin output2))
+(define result (compare-output mac-fin output1))
 result
 
 
+(pretty-print string-id-table)
 
 (display "===============================================================================================================\n")
 (display "================================================ Encoding ... =================================================\n")

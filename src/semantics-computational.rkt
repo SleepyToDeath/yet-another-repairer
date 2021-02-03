@@ -134,7 +134,16 @@
 ;machine(init) X list of names -> machine(fin)
 (define (compute mac)
 	(define mac-init (build-virtual-table mac))
-	(function-call mac-init (machine-boot mac-init) null))
+	(function-call-simple mac-init (machine-boot mac-init)))
+
+(define (function-call-simple mac func)
+;	(pretty-print (machine-mem mac))
+	(define mac-decl (std:struct-copy machine mac [mem 
+		(foldl 
+			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)))) 
+			(machine-mem mac) 
+			(append (function-args func) (function-locals func)))]))
+	(function-exec (std:struct-copy machine mac-decl [pc pc-init]) func))
 
 (define (function-call mac func args)
 	(define mac-reset (std:struct-copy machine mac [pc pc-init][mem (memory-spush (machine-mem mac))]))
@@ -145,10 +154,11 @@
 			(append (function-args func) (function-locals func)))]))
 	(define mac-input (std:struct-copy machine mac-decl [mem
 		(foldl 
-			(lambda (arg-src arg-dst mem) (memory-swrite mem (string-id (car arg-dst)) (expr-eval arg-src mac)))
+			(lambda (arg-src arg-dst mem) (memory-swrite mem (string-id (car arg-dst)) arg-src))
 			(machine-mem mac-decl)
 			args 
 			(function-args func))]))
+;	(pretty-print (machine-mem mac-input))
 	(function-exec mac-input func))
 
 (define (function-exec mac func)
@@ -167,7 +177,6 @@
 ;machine X list of (key, value) -> machine(with input inserted into memory)
 (define (assign-input mac input)
 	(define mem0 (memory-spush (machine-mem mac)))
-;	(pretty-print mem0)
 	(define mem-ass 
 		(foldl (lambda (kv mem-cur) (memory-swrite (memory-sdecl mem-cur (string-id (car kv))) (string-id (car kv)) (cdr kv))) mem0 input))
 	(std:struct-copy machine mac [mem mem-ass]))
@@ -306,7 +315,7 @@
 (define (build-boot-func)
 	;(define iboot (inst-boot globals))
 	(define icall-clinit (map (lambda (name) (inst-static-call var-ret-name name func-name-clinit null null)) class-names-clinit))
-	(define icall-main (inst-static-call var-ret-name class-name-main func-name-main null null))
+	(define icall-main (inst-long-jump class-name-main func-name-main))
 	(define iret (inst-ret (iexpr-var var-ret-name)))
 	(function func-name-boot (append icall-clinit (list icall-main iret)) imap-empty null (list (cons var-ret-name "int"))))
 
@@ -323,9 +332,9 @@
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 
 				(define sid (sfunc-id cls-name (function-name sf) (map cdr (function-args sf))))
-				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid 0))
+;				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid 0))
 				(define fmap-1 (imap-set (machine-fmap mac) sid sf))
-				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
+				(std:struct-copy machine mac [fmap fmap-1]))
 			mac sfuncs))
 
 		(define mac-sfields (foldl 
@@ -352,8 +361,8 @@
 ;		(println string-id-table)
 		mac-vfields)
 
-	(define mem-push (memory-spush (machine-mem mac)))
-	(define mac-cls (foldl process-class (std:struct-copy machine mac [mem mem-push]) classes))
+;	(define mem-push (memory-spush (machine-mem mac)))
+	(define mac-cls (foldl process-class mac classes))
 	(define mem-reserve-obj (cdr (memory-alloc (machine-mem mac-cls) vt-size)))
 	(std:struct-copy machine mac-cls [mem mem-reserve-obj]))
 
@@ -420,6 +429,8 @@
 
 		(define pc-next (+ 1 (machine-pc m)))
 
+;		(pretty-print mem-new)
+
 		(std:struct-copy machine m [mem mem-new] [pc pc-next]))])
 
 ;expr X label(int)
@@ -451,28 +462,32 @@
 		(match-define (cons addr mem-alloc) (memory-new mem-0))
 		(define pc-next (+ 1 (machine-pc m)))
 		(define mem-ass (memory-swrite mem-alloc v-name addr))
+;		(pretty-print mem-ass)
 		(std:struct-copy machine m [pc pc-next][mem mem-ass]))])
 
 (struct inst-ret (v-expr) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define ret-value (expr-eval (inst-ret-v-expr i) m))
+		(display (~a "return value:" ret-value "\n"))
 		(define mem-ret (memory-sforce-write (machine-mem m) var-ret-name ret-value 0))
 		(std:struct-copy machine m [pc pc-ret][mem mem-ret]))])
+
+(struct inst-long-jump (cls-name func-name) #:transparent
+	#:methods gen:instruction
+	[(define (inst-exec i m f)
+		(define sid (sfunc-id (inst-long-jump-cls-name i) (inst-long-jump-func-name i) null))
+		(define func (imap-get (machine-fmap m) sid))
+		(function-call-simple m func))])
 
 (struct inst-static-call (ret cls-name func-name arg-types args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
-;		(println i)
 		(define sid (sfunc-id (inst-static-call-cls-name i) (inst-static-call-func-name i) (inst-static-call-arg-types i)))
 		;no need to read from memory
 		(define func (imap-get (machine-fmap m) sid))
-;		(display "\n")
-;		(pretty-print i)
-;		(pretty-print func)
-		(define args (inst-static-call-args i))
+		(define args (map (lambda (arg) (expr-eval arg m)) (inst-static-call-args i)))
 		(define ret (inst-static-call-ret i))
-;		(println++ "Ret Var: " ret)
 
 		(define mac-ret (function-call m func args))
 		(define mem-ret (machine-mem mac-ret))
@@ -496,11 +511,7 @@
 		(define vid (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i) (inst-virtual-call-arg-types i)))
 		(define sid (memory-fread mem0 vid obj-addr))
 		(define func (imap-get (machine-fmap m) sid))
-;		(display "\n")
-;		(pretty-print obj-addr)
-;		(pretty-print i)
-;		(pretty-print func)
-		(define args (inst-virtual-call-args i))
+		(define args (map (lambda (arg) (expr-eval arg m)) (inst-virtual-call-args i)))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr 0))
 		(define mac-this (std:struct-copy machine m [mem mem-this]))
@@ -527,10 +538,7 @@
 		(define sid (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-arg-types i)))
 		;never virtual
 		(define func (imap-get (machine-fmap m) sid))
-;		(display "\n")
-;		(pretty-print i)
-;		(pretty-print func)
-		(define args (inst-special-call-args i))
+		(define args (map (lambda (arg) (expr-eval arg m)) (inst-special-call-args i)))
 		;push an extra scope to avoid overwriting "this" of the current scope
 		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr 0))
 		(define mac-this (std:struct-copy machine m [mem mem-this]))
@@ -556,27 +564,19 @@
 (struct iexpr-var (name) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
-		(if (equal? (iexpr-var-name e) var-this-name)
+		(define ret (if (equal? (iexpr-var-name e) var-this-name)
 			(memory-sforce-read (machine-mem m) (iexpr-var-name e) 1)
-			(memory-sforce-read (machine-mem m) (iexpr-var-name e) 0)))])
+			(memory-sforce-read (machine-mem m) (iexpr-var-name e) 0)))
+		(display (~a "var name: " (iexpr-var-name e) " value: " ret "\n"))
+		ret)])
 
 (struct iexpr-binary (op expr1 expr2) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
-;		(check-asserts 0.72)
 		(define v1 (expr-eval-dispatch (iexpr-binary-expr1 e) m))
-;		(check-asserts 0.73)
 		(define v2 (expr-eval-dispatch (iexpr-binary-expr2 e) m))
-;		(check-asserts 0.74)
 		(defer-eval e v1)
 		(defer-eval e v2)
-;		(check-asserts 0.745)
-;		(print (fml-to-print v1))
-;		(pretty-print v1)
-;		(display "\n")
-;		(print (fml-to-print v2))
-;		(pretty-print v2)
-;		(display "\n")
 		((iexpr-binary-op e) v1 v2))])
 
 (struct iexpr-array (arr-name index) #:transparent

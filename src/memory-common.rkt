@@ -18,7 +18,7 @@
 ;vt-size = max number of objects
 (define vt-size 1000)
 ;scope-size = max number of different variable names
-(define scope-size 1000)
+(define scope-size 40)
 
 (define vt-base-addr 0)
 ;no need to know beginning of arraies
