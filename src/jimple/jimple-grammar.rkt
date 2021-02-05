@@ -168,7 +168,7 @@ return_stmt
   ::= /RETURN immediate? /SEMICOLON
 
 throw_stmt
-  ::= THROW immediate /SEMICOLON
+  ::= /THROW immediate /SEMICOLON
 
 invoke_stmt
   ::= invoke_expr /SEMICOLON

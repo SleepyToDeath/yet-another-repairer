@@ -270,6 +270,8 @@
      (build-ast-stmt-lookupswitch stmt-stx)]
     [({p:~literal nop_stmt})
      (build-ast-stmt-nop stmt-stx)]
+    [({p:~literal throw_stmt} _)
+     (build-ast-stmt-throw stmt-stx)]
     [({p:~literal return_stmt} (p:~optional _))
      (build-ast-stmt-return stmt-stx)]
     [({p:~literal ret_stmt} (p:~optional _))
@@ -387,6 +389,13 @@
 (define (build-ast-stmt-nop stmt-nop-stx)
   (p:syntax-parse stmt-nop-stx
     [({p:~literal nop_stmt})
+     (ast:stat-nop (ast:nop #f))]))
+
+
+(define (build-ast-stmt-throw stmt-throw-stx)
+  (p:syntax-parse stmt-throw-stx
+    [({p:~literal throw_stmt} _)
+     ; treat throw statement as no-op
      (ast:stat-nop (ast:nop #f))]))
 
 
