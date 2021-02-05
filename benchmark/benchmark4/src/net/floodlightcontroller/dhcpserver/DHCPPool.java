@@ -69,6 +69,8 @@ public class DHCPPool implements IDHCPPool {
         DHCPBinding binding = dhcpLeasingPool.get(clientMac);
         // instrumentation
         if (binding == null) return null;
+        // expected:
+        // if (binding == null) return Optional.empty();
         return Optional.of(binding.getIPv4Address());
     }
 

@@ -10,6 +10,7 @@
 
     <target name="clean">
         <delete dir="${classes.dir}"/>
+        <delete dir="sootOutput"/>
     </target>
 
     <target name="build">
@@ -30,9 +31,7 @@
                 <pathelement location="../soot-4.1.0.jar"/>
             </classpath>
         </java>
-        <copy todir="sootOutput">
-            <fileset dir="../model"/>
-        </copy>
+        <copy file="../model/java.lang.Object.jimple" todir="sootOutput"/>
     </target>
 
 </project>
