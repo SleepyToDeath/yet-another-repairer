@@ -184,7 +184,7 @@ case_label
     | DEFAULT
 
 catch_clause
-  ::= CATCH class_name FROM label_name TO label_name WITH label_name /SEMICOLON
+  ::= /CATCH class_name /FROM label_name /TO label_name /WITH label_name /SEMICOLON
 
 j_expression
   ::= @new_expr

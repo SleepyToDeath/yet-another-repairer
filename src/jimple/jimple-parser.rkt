@@ -213,7 +213,9 @@
     [({p:~literal statement} stmt)
      (let ([decl-list null]
            [stmt-list (list (build-ast-statement #'stmt))])
-       (list decl-list stmt-list))]))
+       (list decl-list stmt-list))]
+    [({p:~literal catch_clause} p:~rest _)
+     (list null null)]))
 
 
 (define (build-ast-jimple-type jimple-type-stx)
