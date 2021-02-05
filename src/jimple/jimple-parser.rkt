@@ -264,6 +264,10 @@
      (build-ast-stmt-goto stmt-stx)]
     [({p:~literal if_stmt} _ _)
      (build-ast-stmt-if stmt-stx)]
+    [({p:~literal tableswitch_stmt} p:~rest _)
+     (build-ast-stmt-tableswitch stmt-stx)]
+    [({p:~literal lookupswitch_stmt} p:~rest _)
+     (build-ast-stmt-lookupswitch stmt-stx)]
     [({p:~literal nop_stmt})
      (build-ast-stmt-nop stmt-stx)]
     [({p:~literal return_stmt} (p:~optional _))
@@ -343,6 +347,41 @@
      (ast:stat-jmp
        (build-ast-expression #'expr)
        (ast:label (std:syntax-e #'name)))]))
+
+
+(define (build-ast-stmt-tableswitch stmt-switch-stx)
+  (p:syntax-parse stmt-switch-stx
+    [({p:~literal tableswitch_stmt}
+        ({p:~literal immediate} imm)
+        cases ...)
+     (ast:stat-switch
+       (ast:dexpr (build-ast-expr-immediate #'imm))
+       (ast:stat-case-list
+         (map build-ast-case (std:syntax->list #'(cases ...)))))]))
+
+
+(define (build-ast-stmt-lookupswitch stmt-switch-stx)
+  (p:syntax-parse stmt-switch-stx
+    [({p:~literal lookupswitch_stmt}
+        ({p:~literal immediate} imm)
+        cases ...)
+     (ast:stat-switch
+       (ast:dexpr (build-ast-expr-immediate #'imm))
+       (ast:stat-case-list
+         (map build-ast-case (std:syntax->list #'(cases ...)))))]))
+
+
+(define (build-ast-case case-stx)
+  (p:syntax-parse case-stx
+    [({p:~literal case_stmt} "default" ({p:~literal label_name} name))
+     (ast:stat-case
+       (ast:case-default
+         (ast:label (std:syntax-e #'name))))]
+    [({p:~literal case_stmt} "case" int-const ({p:~literal label_name} name))
+     (ast:stat-case
+       (ast:case-br
+         (ast:expr-const-value (build-ast-const-int #'int-const))
+         (ast:label (std:syntax-e #'name))))]))
 
 
 (define (build-ast-stmt-nop stmt-nop-stx)

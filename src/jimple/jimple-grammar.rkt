@@ -138,10 +138,10 @@ exitmonitor_stmt
   ::= EXITMONITOR immediate /SEMICOLON
 
 tableswitch_stmt
-  ::= TABLESWITCH LPAREN immediate RPAREN LBRACE case_stmt+ RBRACE /SEMICOLON
+  ::= /TABLESWITCH /LPAREN immediate /RPAREN /LBRACE case_stmt+ /RBRACE /SEMICOLON
 
 lookupswitch_stmt
-  ::= LOOKUPSWITCH LPAREN immediate RPAREN LBRACE case_stmt+ RBRACE /SEMICOLON
+  ::= /LOOKUPSWITCH /LPAREN immediate /RPAREN /LBRACE case_stmt+ /RBRACE /SEMICOLON
 
 identity_stmt
   ::= local_name /COLON_EQUALS AT_IDENTIFIER /COLON j_type /SEMICOLON
@@ -177,7 +177,7 @@ label_name
   ::= IDENTIFIER
 
 case_stmt
-  ::= case_label COLON goto_stmt
+  ::= @case_label /COLON @goto_stmt
 
 case_label
   ::= CASE int_const
