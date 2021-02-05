@@ -320,6 +320,8 @@
 	(function func-name-boot (append icall-clinit (list icall-main iret)) imap-empty null (list (cons var-ret-name "int"))))
 
 (define (build-virtual-table mac) 
+	(display "Memory before buiding virtual table:\n")
+;	(pretty-print (machine-mem mac))
 	(define classes (machine-classes mac))
 	(define (process-class cls mac)
 		(define cls-name (class-name cls))

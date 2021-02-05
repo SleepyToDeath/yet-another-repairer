@@ -14,24 +14,28 @@
 (struct expr-fp (op children) #:transparent)
 (struct const-fp (id type) #:transparent)
 
-(define (fml-to-print e)
+(define (print-fml e)
+	(print-fml-struct (fml-to-struct e))
+	(display "\n"))
+
+(define (fml-to-struct e)
 	(if (union? e) 
-		(expr-fp "U" (map (lambda (gv) (cons (fml-to-print (car gv)) (fml-to-print (cdr gv)))) (union-contents e)))
+		(expr-fp "U" (map (lambda (gv) (cons (fml-to-struct (car gv)) (fml-to-struct (cdr gv)))) (union-contents e)))
 		(match e
-			[(expression op child ...) (expr-fp op (map fml-to-print child))]
+			[(expression op child ...) (expr-fp op (map fml-to-struct child))]
 			[(constant id type) (const-fp id type)]
 			[x x])))
 
-(define (print-fml e)
+(define (print-fml-struct e)
 	(match e
 		[(expr-fp op children) 
 			(begin
 			(display " (")
 			(print op) 
-			(map print-fml children)
+			(map print-fml-struct children)
 			(display ")"))]
 		[(const-fp id type) (begin (display " ") (print id))]
-		[(cons x y) (begin (print-fml x) (print-fml y))]
+		[(cons x y) (begin (print-fml-struct x) (print-fml-struct y))]
 		[x (begin (display " ") (print x))]))
 
 (define size-limit 0)

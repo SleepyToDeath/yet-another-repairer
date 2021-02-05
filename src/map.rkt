@@ -82,7 +82,7 @@
 			(imap-sym-func-dummy m))
 
 		(define (imap-get m index)
-			(force-error (equal? (imap-sym-func-dummy m) 0) "reading from mem 0!")
+			(force-error (equal? (imap-sym-func-dummy m) invalid-id) "reading from mem 0!")
 			(define ret (imap-sym-real-get m index))
 			(defer-eval "imap get" (list (imap-sym-func-dummy m) index ret))
 			ret)
@@ -91,7 +91,7 @@
 			(imap-get m index))
 
 		(define (imap-set m index value)
-			(force-error (equal? (imap-sym-func-dummy m) 0) "writing to mem 0!")
+			(force-error (equal? (imap-sym-func-dummy m) invalid-id) "writing to mem 0!")
 			(defer-eval "imap set" (list (imap-sym-func-dummy m) index value))
 			(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))]))
 	])
@@ -130,7 +130,7 @@
 ;	(imap-add-dummy (imap-sym-func-dummy m)))
 
 (define (imap-sym-get-fml m)
-	(force-error (equal? (imap-sym-func-dummy m) 0) "getting fml from mem 0!")
+	(force-error (equal? (imap-sym-func-dummy m) invalid-id) "getting fml from mem 0!")
 	(imap-sym-fml-deferred m))
 
 (define (imap-sym-new id)
@@ -184,7 +184,7 @@
 
 	(define (imap-sym-tracked-select candidates summary?)
 
-		(define f-select (maybe-select imap-sym-null (lambda (m) (equal? (imap-sym-func-dummy m) 0))))
+		(define f-select (maybe-select imap-sym-null (lambda (m) (equal? (imap-sym-func-dummy m) invalid-id))))
 
 		(define candidates-unwrapped (map (lambda (cnd.m) (cons (car cnd.m) (imap-sym-tracked-imap (cdr cnd.m)))) candidates))
 
@@ -224,7 +224,7 @@
 ;										(and 
 ;											(car p.m) 
 ;											(imap-sym? maybe-imap)
-;											(not (equal? (imap-sym-func-dummy maybe-imap) 0)))
+;											(not (equal? (imap-sym-func-dummy maybe-imap) invalid-id)))
 ;										maybe-imap #f))
 ;								candidates)))
 ;					(define m-new (if (or summary? (imap-sym? maybe-m-new)) maybe-m-new imap-sym-null))
@@ -290,7 +290,7 @@
 (define imap-empty (imap-conc default-func))
 
 (define imap-sym-null
-	(imap-sym 0 0 default-func default-func null null #t))
+	(imap-sym invalid-id invalid-id default-func default-func null null #t))
 
 (define imap-sym-tracked-null
 	(imap-sym-tracked imap-sym-null null))

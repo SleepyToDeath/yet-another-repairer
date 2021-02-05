@@ -57,12 +57,17 @@
 	(RHS-C stat-newarray (v : variable) (size : dexpr))
 	(RHS-C stat-ass (lvalue : lexpr) (rvalue : expr))
 	(RHS-C stat-jmp (condition : expr) (target : label))
+	(RHS-C-List stat-switch (cases : stat-case))
 	(RHS-C stat-label (name : label))
 	(RHS-C stat-static-call (ret : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 	(RHS-C stat-special-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 	(RHS-C stat-nop (any : nop))
 	(RHS-C stat-ret (v : dexpr))
+
+(LHS-C stat-case (rhs ::= case-br case-default))
+	(RHS-C case-br (k : const) (l : label))
+	(RHS-C case-default (l : label))
 
 (LHS-C lexpr (rhs ::= expr-var expr-array expr-field))
 (LHS-C dexpr (rhs ::= expr-var expr-const))

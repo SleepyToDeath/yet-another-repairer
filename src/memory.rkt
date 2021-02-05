@@ -177,7 +177,7 @@
 
 ;candidates: list of (condition X memory)
 (define (memory-select candidates summary?)
-;	(map (lambda (p.m) (pretty-print (cons (car p.m) (fml-to-print (cdr p.m))))) candidates)
+;	(map (lambda (p.m) (pretty-print (cons (car p.m) (fml-to-struct (cdr p.m))))) candidates)
 ;	(if (equal? 1 (length candidates)) (if summary? (if (car (car candidates)) (cdr (car candidates)) #f) (cdr (car candidates)))
 	(if (and (equal? 1 (length candidates)) (imap-conc? (memory-heap (cdar candidates)))) (cdar candidates)
 		(begin
@@ -222,7 +222,7 @@
 	(pretty-print (~a "Totally " (length all-keys) " keys"))
 
 	(define (id2keys id)
-		(map car (imap-sym-committed-updates (imap-unwrap (vector-ref memory-id-map id)))))
+		(map car (imap-sym-committed-updates (imap-unwrap (memory-heap (vector-ref memory-id-map id))))))
 
 	(define (contain-key? id key)
 		(ormap identity (map (lambda (key0) (equal? key key0)) (id2keys id))))
@@ -236,9 +236,9 @@
 
 	(define fml-maybe-wrong
 		(andmap identity (map (lambda (mem-id)
-			(if (equal? mem-id 0) (std:error "processing mem 0!") #f)
+			(if (equal? mem-id invalid-id) (std:error "processing mem 0!") #f)
 			(pretty-print (~a "Generate keys for state #" mem-id))
-			(define mem (vector-ref memory-id-map mem-id))
+			(define mem (memory-heap (vector-ref memory-id-map mem-id)))
 ;				(pretty-print mem)
 			(define fml-true 
 				(andmap identity (map (lambda (key) 
@@ -261,10 +261,10 @@
 
 	(define fml-always-right
 		(andmap identity (map (lambda (mem-id)
-				(if (equal? mem-id 0) (std:error "processing mem 0!") #f)
-				(define mem (vector-ref memory-id-map mem-id))
+				(if (equal? mem-id invalid-id) (std:error "processing mem 0!") #f)
+				(define mem (memory-heap (vector-ref memory-id-map mem-id)))
 				(pretty-print (~a "Generate keys for state #" mem-id))
-				(pretty-print (imap-sym-scoped-scope mem))
+;				(pretty-print (imap-sym-scoped-scope mem))
 ;					(imap-sym-lookback mem)
 				(define ret (andmap identity (map (lambda (key.scope) 
 						(if (in-scope? key.scope (imap-sym-scoped-scope mem))
@@ -321,9 +321,9 @@
 (define memory-id-map (list->vector (std:build-list max-program-length (lambda (x) not-found))))
 (define (memory-archive id mem)
 	(vector-set! memory-id-map id mem))
-(memory-archive 0 imap-sym-null)
+(memory-archive invalid-id imap-sym-null)
 
-(define memory-id-counter 0)
+(define memory-id-counter invalid-id)
 (define (memory-new-id)
 	(set! memory-id-counter (+ 1 memory-id-counter))
 	(display (~a "New state id: " memory-id-counter "\n"))

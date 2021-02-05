@@ -18,7 +18,7 @@
 ;vt-size = max number of objects
 (define vt-size 1000)
 ;scope-size = max number of different variable names
-(define scope-size 40)
+(define scope-size 200)
 
 (define vt-base-addr 0)
 ;no need to know beginning of arraies
@@ -44,6 +44,7 @@
 ;o-top: top of object area
 (struct heap-meta (o-top a-top) #:transparent)
 
+(define invalid-id 0)
 (define no-scope 0)
 (define nullptr -1)
 (define not-found -66666666)

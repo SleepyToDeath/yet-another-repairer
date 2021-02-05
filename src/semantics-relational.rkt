@@ -79,6 +79,7 @@
 		(match-define (cons mac-ass0 fml-ass) (assign-input mac input))
 		(define mac-ass (build-virtual-table-alt mac-ass0))
 		(define boot-lstate (prepend-starting-mem-in (alloc-lstate (machine-boot mac-ass)) #t (machine-mem mac-ass)))
+;		(pretty-print (machine-mem mac-ass))
 		(display "\n ###############################################0 \n")
 		(define all-invokes (invoke->relation boot-lstate mac-ass target-sids #f))
 		(display "\n ###############################################1 \n")
@@ -93,17 +94,25 @@
 		(define (extract-fml itree) 
 			(match itree
 				[(invoke-tree root cnd subs)
+					(begin
+					(print-fml (function-formula-fmls root))
 					(and 
 						(function-formula-fmls root) 
-						(andmap extract-fml subs))]))
+						(andmap extract-fml subs)))]))
+		(define fml-code-1 (memory-sym-get-fml mem-all-done #f))
+		(print-fml fml-code-1)
+		(define fml-code-2 (extract-fml all-invokes))
+;		(print-fml fml-code-2)
 
-		(define fml-code (and (memory-sym-get-fml mem-all-done #f) (extract-fml all-invokes)))
+		(define fml-code (and fml-code-1 fml-code-2))
 		(display "\n ###############################################6 \n")
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(display "\n ###############################################7 \n")
 		(define fml-code-bind (memory-gen-binding mem-all-done))
 		(display "\n ###############################################8 \n")
-		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
+;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
+		(print-fml fml-code)
+		(and fml-code))
 
 	(list mac soft-cons hard-cons))
 
@@ -150,31 +159,6 @@
 
 (define (vfunc-id-alt mac cls func arg-types) (string-id (lookup-virtual-function-alt mac cls func arg-types)))
 
-;(define (build-virtual-table-alt mac) 
-;	(define classes (machine-classes mac))
-;	(define (process-class cls mem)
-;		(define cls-name (class-name cls))
-;
-;		(define sfuncs (class-sfuncs cls))
-;		(define vfuncs (class-vfuncs cls))
-;		(define sfields (class-sfields cls))
-;		(define vfields (class-vfields cls))
-;
-;		(define mem-sfuncs (foldl (lambda (sf-fml mem) (memory-sforce-write mem 
-;			(sfunc-id cls-name (function-name (function-formula-func sf-fml)) (map cdr (function-args (function-formula-func sf-fml)))) sf-fml)) mem sfuncs))
-;		(define mem-sfields (foldl (lambda (sf mem) (memory-sdecl mem (sfield-id cls-name sf))) mem-sfuncs sfields))
-;
-;		(define mem-vfuncs (foldl (lambda (vf-fml mem) (memory-fdecl mem 
-;			(vfunc-id-alt mac cls-name (function-name (function-formula-func vf-fml)) (map cdr (function-args (function-formula-func vf-fml)))))) mem-sfields vfuncs))
-;		(define mem-vfields (foldl (lambda (vf mem) (memory-fdecl mem (vfield-id mac cls-name vf))) mem-vfuncs vfields))
-;
-;		(println string-id-table)
-;		mem-vfields)
-;
-;	(define mem-push (memory-spush (machine-mem mac)))
-;	(define mem-reserve-obj (cdr (memory-alloc mem-push vt-size)))
-;	(std:struct-copy machine mac [mem (foldl process-class mem-reserve-obj classes)]))
-
 
 (define (build-virtual-table-alt mac) 
 	(define classes (machine-classes mac))
@@ -190,9 +174,9 @@
 			(lambda (sf mac) 
 				(define sid (sfunc-id cls-name (function-name (function-formula-func sf)) (map cdr (function-args (function-formula-func sf)))))
 ;				(pretty-print (machine-mem mac))
-				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid 0))
+;				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid 0))
 				(define fmap-1 (imap-set (machine-fmap mac) sid sf))
-				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
+				(std:struct-copy machine mac [fmap fmap-1]))
 			mac sfuncs))
 
 		(define mac-sfields (foldl 
@@ -218,8 +202,8 @@
 
 		mac-vfields)
 
-	(define mem-push (memory-spush (machine-mem mac)))
-	(define mac-cls (foldl process-class (std:struct-copy machine mac [mem mem-push]) classes))
+;	(define mem-push (memory-spush (machine-mem mac)))
+	(define mac-cls (foldl process-class mac classes))
 	(define mem-reserve-obj (cdr (memory-alloc (machine-mem mac-cls) vt-size)))
 	(std:struct-copy machine mac-cls [mem mem-reserve-obj]))
 
@@ -342,6 +326,7 @@
 	(display (~a "sid for invoked function is: " (function-formula-sid func-fml) "\n"))
 	(display "\n ###############################################2 \n")
 	(define ret (insts->relation func-fml mac target-sids summary?))
+	(display (~a "sid for invoked function is: " (function-formula-sid func-fml) "\n"))
 	(display "\n ###############################################3 \n")
 	ret)
 
@@ -397,7 +382,7 @@
 ;		(pretty-print mem-in)
 		(define mem-0 (memory-sym-reset (get-mem-out func-fml pc) mem-in summary?))
 ;		(display "State id: ")  
-;		(print (fml-to-print (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-0))))))
+;		(print (fml-to-struct (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-0))))))
 ;		(display " \n")
 		;used only for expr-eval
 		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0]))
@@ -507,7 +492,7 @@
 			(define func-fml-br (if pc-opt-br (prepend-mem-in func-fml-next cnd-br mem-out pc-opt-br) func-fml-next))
 			(define func-fml-new (append-fml func-fml-br fml-new))
 			(pretty-print inst)
-;			(display (~a "Output state id: " (if mem-out (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-out)))) #f) " \n"))
+			(display (~a "Output state id: " (memory-id mem-out) "\n"))
 			(std:struct-copy rbstate st [pc pc-next] [func-fml func-fml-new]))
 
 		(define (update-mem-only mem-new)
@@ -579,6 +564,7 @@
 				(define func-fml-new (append-fml func-fml-ret fml-path))
 				(assert id)
 				(pretty-print inst)
+				(display (~a "Output state id: " (memory-id mem-ret) "\n"))
 				;(display (~a "Output state id: " (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-ret)))) " \n"))
 				;(display (~a "Output state id: " (if mem-ret (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-ret)))) #f) " \n"))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
@@ -591,7 +577,7 @@
 				(match-define (cons func-fml-in fml-in) (long-jump-setup func-invoked mem-in))
 				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
 
-				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret summary?))
+				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? in-target?)))
 				(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
 				(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
 
@@ -615,11 +601,15 @@
 				(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-in args))
 				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
 
-				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret summary?))
+				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? in-target?)))
+				(display (~a "immediate return state id: " (memory-id mem-ret.tmp) "\n"))
 				(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
+				(display (~a "committed return state id: " (memory-id mem-ret.tmp2) "\n"))
 				(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
+				(display "???????????????\n")
 
 				(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
+				(display (~a "resolved state id: " (memory-id mem-ret) "\n"))
 				(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
 				(if summary? #f (defer-eval inst ret-val))
 				(define mem-pop (memory-spop mem-ret))
@@ -637,17 +627,17 @@
 				(begin
 				(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
 				(define obj-addr (memory-sforce-read mem--1 obj-name 0))
-				(pretty-print obj-addr)
+;				(pretty-print obj-addr)
 				(define vid (vfunc-id-alt mac cls-name func-name arg-types))
-				(pretty-print func-name)
+;				(pretty-print func-name)
 				(define funcs-invoked (map alloc-lstate (filter (lambda (f) (equal? (function-formula-vid f) vid)) (all-vfunctions mac))))
 				(define fid-class-name (vfield-id mac cls-name field-name-class))
 				(define classname-true (memory-fread mem--1 fid-class-name obj-addr))
-				(pretty-print classname-true)
+;				(pretty-print classname-true)
 				(define true-func-invoked-sid (vid2sid mac classname-true vid))
-				(pretty-print classname-true)
+;				(pretty-print classname-true)
 			;	(display (~a "true vid: " vid " true sid: " (vid2sid mac 11 vid) " true sid found: " true-func-invoked-sid " true class name:\n")) 
-			;	(pretty-print (fml-to-print classname-true))
+			;	(pretty-print (fml-to-struct classname-true))
 
 
 				;(define func-invoked (car (filter 
@@ -665,7 +655,7 @@
 					;an invoke tree without condition
 					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
 
-					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret summary?))
+					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? in-target?)))
 					(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
 					(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
 					(if (not summary?) (memory-print-id "mem-ret.tmp2" mem-ret.tmp2) #f)
@@ -716,7 +706,7 @@
 				(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
 				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or in-target? summary?)))
 
-				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret summary?))
+				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? in-target?)))
 				(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
 				(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
 

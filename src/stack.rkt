@@ -80,6 +80,7 @@
 
 (define (stack-static-reset st st-base)
 	(define scs-base (static-stack-scopes st-base))
+;	(pretty-print scs-base)
 	(static-stack
 		(map (lambda (sc-base) 
 			(define keys (static-scope-keys sc-base))
@@ -97,10 +98,12 @@
 			(static-scope keys array.new array-out.new))
 			scs-base)))
 
-;candidates: list of (cons cnd stack)
+;candidates: list of (cnd . stack)
 (define (stack-static-select candidates summary?)
 	(define template (cdar candidates))
-	(define stack-invalid (static-stack (map (lambda (x) static-scope-invalid) (static-stack-scopes template))))
+	;keys are static, should be consistant even in invalid states
+	(define stack-invalid (static-stack 
+		(map (lambda (sc) (std:struct-copy static-scope static-scope-invalid [keys (static-scope-keys sc)])) (static-stack-scopes template))))
 	(define f-select (maybe-select stack-invalid (lambda (x) #f)))
 	(f-select candidates #f))
 

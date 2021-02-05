@@ -49,10 +49,12 @@
 
 	(display "\n Solving: \n")
 	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
+;	(pretty-print (asserts))
+;	(check-asserts 0)
 	(output-smt #t)
-	(define debug-sol (solve (assert (and hard one-bug))))
-;	(define debug-sol (optimize #:maximize (list sum)
-;			  #:guarantee (assert (and hard))))
+;	(define debug-sol (solve (assert (and hard one-bug))))
+	(define debug-sol (optimize #:maximize (list sum)
+			  #:guarantee (assert (and hard))))
 	
 	(display "\n Model: \n")
 	(pretty-print debug-sol)
