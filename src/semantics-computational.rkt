@@ -48,6 +48,7 @@
 
 (define pc-ret -1)
 (define pc-init 0)
+(define var-void-ret (string-id "__NONE__"))
 (define var-ret-name (string-id "__return__"))
 (define var-this-name (string-id "@this"))
 (define func-name-main (string-id "main"))
@@ -314,7 +315,7 @@
 
 (define (build-boot-func)
 	;(define iboot (inst-boot globals))
-	(define icall-clinit (map (lambda (name) (inst-static-call var-ret-name name func-name-clinit null null)) class-names-clinit))
+	(define icall-clinit (map (lambda (name) (inst-static-call var-void-ret name func-name-clinit null null)) class-names-clinit))
 	(define icall-main (inst-long-jump class-name-main func-name-main))
 	(define iret (inst-ret (iexpr-var var-ret-name)))
 	(function func-name-boot (append icall-clinit (list icall-main iret)) imap-empty null (list (cons var-ret-name "int"))))
@@ -569,7 +570,7 @@
 		(define ret (if (equal? (iexpr-var-name e) var-this-name)
 			(memory-sforce-read (machine-mem m) (iexpr-var-name e) 1)
 			(memory-sforce-read (machine-mem m) (iexpr-var-name e) 0)))
-		(display (~a "var name: " (iexpr-var-name e) " value: " ret "\n"))
+		(defer-eval "var read: " (cons (iexpr-var-name e) ret))
 		ret)])
 
 (struct iexpr-binary (op expr1 expr2) #:transparent
@@ -577,8 +578,8 @@
 	[(define (expr-eval e m)
 		(define v1 (expr-eval-dispatch (iexpr-binary-expr1 e) m))
 		(define v2 (expr-eval-dispatch (iexpr-binary-expr2 e) m))
-		(defer-eval e v1)
-		(defer-eval e v2)
+;		(defer-eval e v1)
+;		(defer-eval e v2)
 		((iexpr-binary-op e) v1 v2))])
 
 (struct iexpr-array (arr-name index) #:transparent
@@ -596,8 +597,11 @@
 		(define fname (iexpr-field-fname e))
 		(define cls-name (iexpr-field-cls-name e))
 		(define obj-name (iexpr-field-obj-name e))
-		(if (equal? obj-name (string-id (variable-name void-receiver)))
-			(memory-sforce-read mem0 (sfield-id cls-name fname) 0)
-			(let([obj-addr (memory-sforce-read mem0 obj-name 0)])
-				(memory-fread mem0 (vfield-id m cls-name fname) obj-addr))))])
+		(define ret 
+			(if (equal? obj-name (string-id (variable-name void-receiver)))
+				(memory-sforce-read mem0 (sfield-id cls-name fname) 0)
+				(let([obj-addr (memory-sforce-read mem0 obj-name 0)])
+					(memory-fread mem0 (vfield-id m cls-name fname) obj-addr))))
+		(defer-eval "field read: " (list obj-name cls-name fname ret))
+		ret)])
 

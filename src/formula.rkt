@@ -27,6 +27,7 @@
 			[x x])))
 
 (define (print-fml-struct e)
+	(if (> (size-of-struct e) 5) (display "\n") #f)
 	(match e
 		[(expr-fp op children) 
 			(begin
@@ -34,9 +35,17 @@
 			(print op) 
 			(map print-fml-struct children)
 			(display ")"))]
-		[(const-fp id type) (begin (display " ") (print id))]
+		[(const-fp id type) (begin (display " ") (display id))]
 		[(cons x y) (begin (print-fml-struct x) (print-fml-struct y))]
-		[x (begin (display " ") (print x))]))
+		[x (begin (display " ") (display x))]))
+
+(define (size-of-struct e)
+	(match e
+		[(expr-fp op children) 
+			(+ 1 (apply + (map size-of-struct children)))]
+		[(const-fp id type) 1]
+		[(cons x y) (+ (size-of-struct x) (size-of-struct y))]
+		[x 1]))
 
 (define size-limit 0)
 
@@ -133,8 +142,8 @@
 (define (print-pending-eval sol)
 	(map (lambda (m.v) 
 			(display (~a (car m.v) " : " ))
-			(print (evaluate (cdr m.v) sol))
-			(display  "\n"))
+			(pretty-print (evaluate (cdr m.v) sol)))
+;			(display  "\n"))
 		eval-pending))
 
 (define (clear-pending-eval)
@@ -151,3 +160,7 @@
 	;(if (equal? (length (asserts)) 1) (pretty-print (asserts)) #f)
 	(pretty-print (asserts))
 	(if fail? (std:error "Asserts are infeasible!") #f))
+
+(define max-sat-list null)
+(define (add-max-sat fml)
+	(set! max-sat-list (cons fml max-sat-list)))

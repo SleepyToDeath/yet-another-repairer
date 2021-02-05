@@ -73,11 +73,15 @@
 		(define (compare-output mac output)
 			(define mem0 (machine-mem mac))
 			(andmap identity (map
-				(lambda (kv) (equal? (cdr kv) (memory-sread mem0 (string-id (car kv)))))
+				(lambda (kv) (equal? (cdr kv) (memory-sforce-read mem0 (string-id (car kv)) 0)))
 				output)))
 
-		(match-define (cons mac-ass0 fml-ass) (assign-input mac input))
+		(match-define (cons mac-ass0 fml-ass0) (assign-input mac input))
+
 		(define mac-ass (build-virtual-table-alt mac-ass0))
+
+		(define fml-ass (and fml-ass0 (memory-sym-sget-fml (machine-mem mac-ass))))
+
 		(define boot-lstate (prepend-starting-mem-in (alloc-lstate (machine-boot mac-ass)) #t (machine-mem mac-ass)))
 ;		(pretty-print (machine-mem mac-ass))
 		(display "\n ###############################################0 \n")
@@ -95,12 +99,15 @@
 			(match itree
 				[(invoke-tree root cnd subs)
 					(begin
-					(print-fml (function-formula-fmls root))
+					(display "---------fml-------------\n")
+;					(print-fml (function-formula-fmls root))
 					(and 
 						(function-formula-fmls root) 
 						(andmap extract-fml subs)))]))
 		(define fml-code-1 (memory-sym-get-fml mem-all-done #f))
-		(print-fml fml-code-1)
+;		(pretty-print mem-all-done)
+		(display "---------fml0-------------\n")
+;		(print-fml fml-code-1)
 		(define fml-code-2 (extract-fml all-invokes))
 ;		(print-fml fml-code-2)
 
@@ -110,9 +117,12 @@
 		(display "\n ###############################################7 \n")
 		(define fml-code-bind (memory-gen-binding mem-all-done))
 		(display "\n ###############################################8 \n")
-;		(and fml-boot-is-correct (starting-pmark boot-lstate) fml-ass fml-out fml-code fml-code-bind))
-		(print-fml fml-code)
-		(and fml-code))
+		(define fml-cfi (starting-pmark boot-lstate))
+;		(and fml-cfi fml-ass fml-out fml-code fml-code-bind))
+		(and fml-cfi fml-ass fml-code))
+;		(print-fml fml-out)
+;		(print-fml fml-code)
+;		(and fml-cfi fml-code))
 
 	(list mac soft-cons hard-cons))
 
@@ -406,18 +416,21 @@
 				fml))
 
 		(define (iassert-pc-next fml-path fml-op)
+;			(set! fml-op #t)
 			(if summary? #t
 				(and 
 					fml-path
 					(equal? mark (and fml-op (next-mark))))))
 
 		(define (iassert-pc-ret fml-path fml-op)
+;			(set! fml-op #t)
 			(if summary? #t
 				(and
 					fml-path
 					(equal? mark (and fml-op (ending-pmark func-fml))))))
 
 		(define (iassert-pc-branch fml-op cnd-t cnd-f label)
+;			(set! fml-op #t)
 			(if summary? #t
 				(letrec ([fml-t (equal? cnd-t (label-mark label))]
 						 [fml-f (equal? cnd-f (next-mark))]
@@ -430,6 +443,9 @@
 			(if summary? #t
 				(letrec	([fml-cnds (andmap 
 								(lambda (func-fml fml-op cnd)
+									;(set! fml-op #t)
+;									(display "-------Problematic Fml---------\n")
+;									(print-fml fml-ops)
 									(and 
 										(equal? cnd (starting-pmark func-fml))
 										(implies cnd fml-op))) 
@@ -695,6 +711,7 @@
 			[(inst-special-call ret obj-name cls-name func-name arg-types args)
 				(begin
 				(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
+;				(defer-eval "mem--1: " mem--1)
 				(define obj-addr (memory-sforce-read mem--1 obj-name 0))
 				(define sid (sfunc-id cls-name func-name arg-types))
 				(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))

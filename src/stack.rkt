@@ -36,11 +36,14 @@
 				(static-stack-scopes (memory-stack mem))))]))
 
 (define (stack-static-force-read mem name lvl)
-	(list-ref (static-scope-array (list-ref (static-stack-scopes (memory-stack mem)) lvl)) name))
+	(define ret (list-ref (static-scope-array (list-ref (static-stack-scopes (memory-stack mem)) lvl)) name))
+	(defer-eval "stack read: " (list (length (static-stack-scopes (memory-stack mem))) lvl name ret))
+	ret)
 
 (define (stack-static-force-write mem name value lvl)
 	(define mem-decl (if (zero? lvl) (stack-static-decl mem name) mem))
 	(define scs (static-stack-scopes (memory-stack mem-decl)))
+	(defer-eval "stack write: " (list (length scs) lvl name value (is-invalid? (list-ref (static-scope-array (list-ref scs lvl)) name))))
 	(if (is-invalid? (list-ref (static-scope-array (list-ref scs lvl)) name))
 		mem
 		(std:struct-copy memory mem-decl [stack
@@ -49,20 +52,25 @@
 					(std:struct-copy static-scope (list-ref scs lvl) [array (std:list-set (static-scope-array (list-ref scs lvl)) name value)])))])))
 
 (define (stack-static-decl mem name)
+	(defer-eval "stack decl: " name)
 	(define st (memory-stack mem))
 	(define scs (static-stack-scopes st))
 	(define sc (car scs))
 	(define keys (static-scope-keys sc))
 	(define array (static-scope-array sc))
+	(define array-out (static-scope-array-out sc))
 	(define array.new (if (member name keys) array (std:list-set array name nullptr)))
-	(if (is-invalid? (list-ref (static-scope-array (car scs)) name))
+	(define array-out.new (if (member name keys) array-out (std:list-set array-out name 
+		((lambda () (define-symbolic* vs integer?) vs)))))
+	(define ret (if (is-invalid? (list-ref (static-scope-array (car scs)) name))
 		mem
 		(std:struct-copy memory mem 
 			[stack 
 				(static-stack 
 					(cons 
-						(std:struct-copy static-scope sc [array array.new] [keys (std:sort (std:remove-duplicates (cons name keys)) <)])
+						(std:struct-copy static-scope sc [array array.new] [array-out array-out.new] [keys (std:sort (std:remove-duplicates (cons name keys)) <)])
 						(cdr scs)))])))
+	ret)
 	
 (define (stack-static-push mem)
 	(define scs (static-stack-scopes (memory-stack mem)))
@@ -87,12 +95,12 @@
 			(define array-empty (static-scope-array static-scope-empty))
 			(define array-base (static-scope-array-out sc-base))
 			(define array.new (foldl (lambda (key arr)
-					(define-symbolic* vs integer?)
-					(std:list-set arr key vs))
+					(std:list-set arr key (list-ref array-base key)))
 				array-empty
 				keys))
 			(define array-out.new (foldl (lambda (key arr)
-					(std:list-set arr key (list-ref array-base key)))
+					(define-symbolic* vs integer?)
+					(std:list-set arr key vs))
 				array-empty
 				keys))
 			(static-scope keys array.new array-out.new))
@@ -114,10 +122,12 @@
 (define (stack-static-get-fml st)
 	(andmap identity (map (lambda (sc)
 		(andmap identity (map (lambda (key)
-			(equal?
+			(define ret (equal?
 				(list-ref (static-scope-array sc) key)
 				(list-ref (static-scope-array-out sc) key)))
-			(static-scope-keys))))
+;			(print-fml ret)
+			ret)
+			(static-scope-keys sc))))
 		(static-stack-scopes st))))
 
 (define static-scope-invalid

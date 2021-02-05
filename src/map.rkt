@@ -84,7 +84,6 @@
 		(define (imap-get m index)
 			(force-error (equal? (imap-sym-func-dummy m) invalid-id) "reading from mem 0!")
 			(define ret (imap-sym-real-get m index))
-			(defer-eval "imap get" (list (imap-sym-func-dummy m) index ret))
 			ret)
 
 		(define (imap-get2 m index extra)
@@ -92,7 +91,6 @@
 
 		(define (imap-set m index value)
 			(force-error (equal? (imap-sym-func-dummy m) invalid-id) "writing to mem 0!")
-			(defer-eval "imap set" (list (imap-sym-func-dummy m) index value))
 			(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))]))
 	])
 
@@ -146,14 +144,18 @@
 
 		(define (imap-get m index)
 			(imap-add-section-key (cons index #f))
-			(if (not (imap-sym? (imap-sym-tracked-imap m)))
-				not-found
-				(imap-get-dispatch (imap-sym-tracked-imap m) index)))
+			(define ret
+				(if (not (imap-sym? (imap-sym-tracked-imap m)))
+					not-found
+					(imap-get-dispatch (imap-sym-tracked-imap m) index)))
+			(defer-eval "imap get" (cons index ret))
+			ret)
 
 		(define (imap-get2 m index extra)
 			(imap-get m index))
 
 		(define (imap-set m index value)
+			(defer-eval "imap set" (cons index value))
 			(if (not (imap-sym? (imap-sym-tracked-imap m)))
 				m
 				(std:struct-copy imap-sym-tracked m [imap (imap-set-dispatch (imap-sym-tracked-imap m) index value)])))

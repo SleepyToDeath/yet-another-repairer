@@ -173,7 +173,10 @@
 		(memory-archive (memory-id m) m)
 		(and
 			(imap-sym-scoped-get-fml (memory-heap m))
-			(stack-get-fml (memory-stack))))))
+			(stack-get-fml (memory-stack m))))))
+
+(define (memory-sym-sget-fml m)
+	(stack-get-fml (memory-stack m)))
 
 ;candidates: list of (condition X memory)
 (define (memory-select candidates summary?)
@@ -252,6 +255,8 @@
 						ret)
 					(id2keys mem-id))))
 			(define fml-deferred (imap-sym-fml-deferred (imap-unwrap mem)))
+			(add-max-sat (equal? fml-deferred fml-true))
+			(defer-eval "maybe-wrong" (cons mem-id (equal? fml-deferred fml-true)))
 			(equal? fml-deferred fml-true))
 			memory-id-list)))
 
@@ -282,6 +287,8 @@
 							(imap-sym-key-not-found (imap-unwrap mem) (car key.scope))))
 					all-keys)))
 ;					(display (~a "Memory id: " mem-id " formula size: " (size-of ret)))
+				(add-max-sat ret)
+				(defer-eval "always correct" (cons mem-id ret))
 				ret)
 			memory-id-list)))
 
@@ -302,7 +309,7 @@
 ;======================= Helper ========================
 (define (memory-print-id name m)
 	(defer-eval "" (~a "current state id: " name " : " 
-		(maybe-do imap-sym? #f (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-heap m))) imap-sym-func-dummy) " <~ " 
+		(memory-id m) " <~ " ; (maybe-do imap-sym? #f (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-heap m))) imap-sym-func-dummy) " <~ " 
 		(maybe-do imap-sym? #f (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-heap m))) imap-sym-func-base)  "\n")))
 
 (define (in-scope? key.scope scope)

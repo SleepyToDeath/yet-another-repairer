@@ -59,7 +59,7 @@ public class Test
 		r6 = new A;
 		specialinvoke r6.<A: void <init>(int)>(r1);
 		r4 = virtualinvoke r6.<A: int add(int)>(r2);
-		r5 = r4 + r3;
+		r5 = r4 - r3;
 		return r5;
 	}
 }
@@ -79,7 +79,12 @@ public class Test
 (define buggy (program
 	(class-list (list class-A class-B))))
 
+;(define buggy (program (class-list (list class-0))))
+
 (pretty-print buggy)
+
+(define input0 null)
+(define output0 (list (cons var-ret-name 0)))
 
 (define input1 (list (cons "r1" 4) (cons "r2" 5) (cons "r3" 6)))
 (define output1 (list (cons var-ret-name 15)))
@@ -111,7 +116,7 @@ result
 
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1) (cons input2 output2))))
+(define bugl (localize-bug buggy (list (cons input1 output1))))
 (pretty-print bugl)
 
 
