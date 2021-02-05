@@ -27,6 +27,7 @@
 (define void-return-var (ast:variable "__void_return"))
 (define void-receiver (ast:variable "__no_receiver"))
 (define param-prefix "@parameter")
+(define lengthof-index -1)
 
 
 ;============ Helper functions ============
@@ -284,6 +285,16 @@
      (ast:stat-new
        (let ([lhs (build-ast-variable #'lhs-var)])
          (ast:expr-var-name lhs)))]
+    ; newarray
+    [({p:~literal assign_stmt}
+        ({p:~literal variable} lhs-var)
+        ({p:~literal j_expression}
+           ({p:~literal new_array} _ imm)))
+     (let ([lhs (build-ast-variable #'lhs-var)]
+           [size (build-ast-expr-immediate #'imm)])
+         (ast:stat-newarray
+           (ast:expr-var-name lhs) 
+           (ast:dexpr size)))]
     ; invoke statement with non-void return
     [({p:~literal assign_stmt}
         ({p:~literal variable} lhs-var)
@@ -387,7 +398,7 @@
     [({p:~literal simple_new} _)
      (build-ast-expr-new-simple expr-stx)]
     [({p:~literal new_array} _ _)
-     (std:error "New array is not supported yet")]
+     (build-ast-expr-new-array expr-stx)]
     [({p:~literal new_multiarray} p:~rest _)
      (std:error "New multiarray is not supported yet")]
     [({p:~literal cast_expr} _ _)
@@ -400,14 +411,18 @@
      (build-ast-expr-field-ref expr-stx)]
     [({p:~literal binop_expr} _ _ _)
      (build-ast-expr-binop expr-stx)]
-    [({p:~literal unop_expr} p:~rest _)
-     (std:error "Unary operation is not supported yet")]
+    [({p:~literal unop_expr} _ _)
+     (build-ast-expr-unop expr-stx)]
     [({p:~literal immediate} imm)
      (build-ast-expr-immediate #'imm)]))
 
 
 (define (build-ast-expr-new-simple expr-new-stx)
   (std:error "Unreachable: simple new is handled in assignment"))
+
+
+(define (build-ast-expr-new-array expr-new-stx)
+  (std:error "Unreachable: newarray is handled in assignment"))
 
 
 (define (build-ast-expr-invoke expr-invoke-stx)
@@ -575,6 +590,17 @@
     [({p:~literal binop} "-") (ast:op -)]
     [({p:~literal binop} "*") (ast:op *)]
     [({p:~literal binop} "/") (ast:op /)]))
+
+
+(define (build-ast-expr-unop expr-unop-stx)
+  (p:syntax-parse expr-unop-stx
+    [({p:~literal unop_expr} ({p:~literal unop} "lengthof") ({p:~literal immediate} imm))
+     (ast:expr
+       (ast:expr-array
+         (build-ast-expr-immediate #'imm)
+         (ast:expr (ast:expr-const (ast:const lengthof-index)))))]
+    [({p:~literal unop_expr} ({p:~literal unop} "neg") ({p:~literal immediate} imm))
+     (std:error "Neg is not supported yet")]))
 
 
 (define (build-ast-expr-immediate expr-imm-stx)

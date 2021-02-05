@@ -52,8 +52,9 @@
 (LHS-C stats (rhs ::= stat-list))
 	(RHS-C-List stat-list (sl : stat))
 
-(LHS-C stat (rhs ::= stat-ass stat-jmp stat-label stat-static-call stat-virtual-call stat-special-call stat-nop stat-ret stat-new))
+(LHS-C stat (rhs ::= stat-ass stat-jmp stat-label stat-static-call stat-virtual-call stat-special-call stat-nop stat-ret stat-new stat-newarray))
 	(RHS-C stat-new (v : variable))
+	(RHS-C stat-newarray (v : variable) (size : dexpr))
 	(RHS-C stat-ass (lvalue : lexpr) (rvalue : expr))
 	(RHS-C stat-jmp (condition : expr) (target : label))
 	(RHS-C stat-label (name : label))

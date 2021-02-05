@@ -205,7 +205,7 @@ simple_new
   ::= /NEW base_type
 
 new_array
-  ::= /NEWARRAY /LPAREN nonvoid_type /RPAREN fixed_array_descriptor
+  ::= /NEWARRAY /LPAREN nonvoid_type /RPAREN @fixed_array_descriptor
 
 new_multiarray
   ::= /NEWMULTIARRAY /LPAREN base_type /RPAREN array_descriptor+
