@@ -256,8 +256,8 @@ public class OFActionSetTpDstVer10 implements OFActionSetTpDst {
             return true;
         if (obj == null)
             return false;
-        if (getClass() != obj.getClass())
-            return false;
+//        if (getClass() != obj.getClass())
+//            return false;
         OFActionSetTpDstVer10 other = (OFActionSetTpDstVer10) obj;
 
         if (tpPort == null) {

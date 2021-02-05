@@ -215,8 +215,8 @@ public class MacAddress /* implements OFValueType<MacAddress> */ {
             return true;
         if (obj == null)
             return false;
-        if (getClass() != obj.getClass())
-            return false;
+//        if (getClass() != obj.getClass())
+//            return false;
         MacAddress other = (MacAddress) obj;
         if (rawValue != other.rawValue)
             return false;
