@@ -43,7 +43,7 @@
 (define (stack-static-force-write mem name value lvl)
 	(define mem-decl (if (zero? lvl) (stack-static-decl mem name) mem))
 	(define scs (static-stack-scopes (memory-stack mem-decl)))
-	(defer-eval "stack write: " (list (length scs) lvl name value (is-invalid? (list-ref (static-scope-array (list-ref scs lvl)) name))))
+	(defer-eval "stack write: " (list (length scs) lvl name value (not (is-invalid? (list-ref (static-scope-array (list-ref scs lvl)) name)))))
 	(if (is-invalid? (list-ref (static-scope-array (list-ref scs lvl)) name))
 		mem
 		(std:struct-copy memory mem-decl [stack

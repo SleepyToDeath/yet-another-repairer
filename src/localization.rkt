@@ -53,22 +53,22 @@
 ;	(pretty-print (asserts))
 ;	(check-asserts 0)
 	(output-smt #t)
-;	(define debug-sol (solve (assert (and hard no-bug))))
-	(define debug-sol (optimize #:maximize (list max-sat-sum)
-			  #:guarantee (assert (and no-bug hard))))
+	(define debug-sol (solve (assert (and hard one-bug))))
+;	(define debug-sol (optimize #:maximize (list max-sat-sum)
+;			  #:guarantee (assert (and no-bug hard))))
 	
 	(display "\n Model: \n")
-	(display (~a (evaluate max-sat-sum debug-sol) "/" (length max-sat-list) "\n"))
 	(pretty-print debug-sol)
-	((lambda () (print-pending-eval debug-sol) (display "\n")))
+
+	(DEBUG-DO (display (~a (evaluate max-sat-sum debug-sol) "/" (length max-sat-list) "\n")))
+	(DEBUG-DO ((lambda () (print-pending-eval debug-sol) (display "\n"))))
 
 	(define bugl (ormap (lambda (l) (if (evaluate (location-selector l) debug-sol) #f l)) locations))
 	(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 	(pretty-print bugl)
 	
-	(pretty-print string-id-table)
-
-	(std:error "Halt!")
+	(DEBUG-DO (pretty-print string-id-table))
+	(DEBUG-DO (std:error "Halt!"))
 
 	(match (location-inst bugl)
 		[(inst-static-call ret cls-name func-name arg-types args) 

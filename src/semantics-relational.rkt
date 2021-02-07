@@ -118,8 +118,8 @@
 		(define fml-code-bind (memory-gen-binding mem-all-done))
 		(display "\n ###############################################8 \n")
 		(define fml-cfi (starting-pmark boot-lstate))
-;		(and fml-cfi fml-ass fml-out fml-code fml-code-bind))
-		(and fml-cfi fml-ass fml-code))
+		(and fml-cfi fml-ass fml-out fml-code fml-code-bind))
+;		(and fml-cfi fml-ass fml-out fml-code))
 ;		(print-fml fml-out)
 ;		(print-fml fml-code)
 ;		(and fml-cfi fml-code))
@@ -550,7 +550,9 @@
 				(begin
 				(define addr (memory-sforce-read mem-0 var-this-name 1))
 				(define fid-class-name (vfield-id mac classname field-name-class))
-				(define mem-bind (memory-fwrite mem-0 fid-class-name addr classname))
+				(define maybe-old-name (memory-fread mem-0 fid-class-name addr))
+				(define maybe-class-name (if (equal? maybe-old-name not-found) classname maybe-old-name))
+				(define mem-bind (memory-fwrite mem-0 fid-class-name addr maybe-class-name))
 
 				(define mem-commit (memory-sym-commit mem-bind))
 				(define fml-update (memory-sym-get-fml mem-commit summary?))

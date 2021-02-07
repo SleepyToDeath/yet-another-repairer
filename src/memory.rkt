@@ -260,6 +260,16 @@
 			(equal? fml-deferred fml-true))
 			memory-id-list)))
 
+	(DEBUG-DO (map (lambda (mem-id)
+		(define mem (memory-heap (vector-ref memory-id-map mem-id)))
+		(display (~a "keys num for " mem-id " : " (length (id2keys mem-id)) "\n"))
+		(map (lambda (key)
+			(defer-eval "maybe wrong:" "")
+			(imap-sym-key-fml-debug (imap-unwrap mem) key))
+		(id2keys mem-id)))
+	memory-id-list))
+
+
 	(display "\n ###############################################7.2 \n")
 
 	(define kounter 0)
@@ -291,6 +301,16 @@
 				(defer-eval "always correct" (cons mem-id ret))
 				ret)
 			memory-id-list)))
+
+	(DEBUG-DO (map (lambda (mem-id) 
+		(define mem (memory-heap (vector-ref memory-id-map mem-id)))
+		(map (lambda (key.scope)
+			(define key (car key.scope))
+			(defer-eval "always correct:" "")
+			(defer-eval "valid?" (not (contain-key? mem-id (car key.scope))))
+			(imap-sym-key-fml-debug (imap-unwrap mem) key))
+		all-keys))
+	memory-id-list))
 
 	(display (~a "Totally " kounter " keys in scope\n"))
 	(defer-eval "Totally keys in scope: " kounter)

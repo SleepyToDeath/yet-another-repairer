@@ -140,11 +140,12 @@
 	(set! eval-pending (cons (cons msg value) eval-pending)))
 
 (define (print-pending-eval sol)
-	(map (lambda (m.v) 
-			(display (~a (car m.v) " : " ))
-			(pretty-print (evaluate (cdr m.v) sol)))
+	(pretty-print (evaluate eval-pending sol)))
+;	(map (lambda (m.v) 
+;			(display (~a (car m.v) " : " ))
+;			(pretty-print (evaluate (cdr m.v) sol)))
 ;			(display  "\n"))
-		eval-pending))
+;		eval-pending))
 
 (define (clear-pending-eval)
 	(set! eval-pending null))
@@ -164,3 +165,7 @@
 (define max-sat-list null)
 (define (add-max-sat fml)
 	(set! max-sat-list (cons fml max-sat-list)))
+
+(define DEBUG-ON #f)
+(define-syntax-rule (DEBUG-DO something)
+	(if DEBUG-ON something #f))

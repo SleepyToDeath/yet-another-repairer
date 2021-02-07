@@ -102,7 +102,12 @@
 	(if (number? pending) pending (func-base-true index)))
 
 (define (imap-sym-key-fml-debug m index)
-	(defer-eval "equal?" (cons ((imap-sym-func-true m) index) (imap-sym-real-get m index))))
+	(defer-eval "equal?" 
+		(list 
+			index
+			((imap-sym-func-true m) index) 
+			(imap-sym-real-get m index) 
+			(equal? ((imap-sym-func-true m) index) (imap-sym-real-get m index)))))
 
 (define (imap-sym-key-not-found m index)
 	(equal? ((imap-sym-func-true m) index) not-found))
