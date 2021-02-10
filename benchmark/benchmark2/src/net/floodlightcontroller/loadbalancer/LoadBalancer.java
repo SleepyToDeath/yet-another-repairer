@@ -701,7 +701,8 @@ public class LoadBalancer implements ILoadBalancerService {
             pool = pools.get(poolId);
             if (pool == null)	// fix dereference violations
             	return -1;
-            // should be: if (pool.vipId != null && vips.containsKey(pool.vipId))
+            // expected:
+            // if (pool.vipId != null && vips.containsKey(pool.vipId)) {
             if (pool.vipId != null) {
                 LBVip vip = vips.get(pool.vipId);
                 // added
