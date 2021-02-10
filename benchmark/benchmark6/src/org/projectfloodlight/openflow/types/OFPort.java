@@ -526,7 +526,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof OFPort))
+        if (!(obj.getClass() = OFPort))
             return false;
         OFPort other = (OFPort)obj;
         if (other.portNumber != this.portNumber)
