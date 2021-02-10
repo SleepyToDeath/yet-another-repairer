@@ -107,6 +107,13 @@
 	(assert (equal? v vs))
 	vs)
 
+(define (andmap+ f l)
+	(foldl (lambda (e fml) (and (f e) fml)) #t l))
+
+(define (and+ a b)
+	(and a b))
+
+
 ;========================== Optional Type ===================================
 (define (maybe-do+ s f)
 	(maybe-do identity #f s f))
@@ -135,6 +142,10 @@
 	(- (std:current-inexact-milliseconds) last-time))
 
 ;============================= Debug ========================================
+(define DEBUG-ON #f)
+(define-syntax-rule (DEBUG-DO something)
+	(if DEBUG-ON something #f))
+
 (define eval-pending null)
 (define (defer-eval msg value)
 	(set! eval-pending (cons (cons msg value) eval-pending)))
@@ -160,12 +171,42 @@
 	(display (~a "Unsat? " fail? "\n"))
 	;(if (equal? (length (asserts)) 1) (pretty-print (asserts)) #f)
 	(pretty-print (asserts))
-	(if fail? (std:error "Asserts are infeasible!") #f))
+	(if fail? (force-error #t "Asserts are infeasible!") #f))
 
 (define max-sat-list null)
 (define (add-max-sat fml)
 	(set! max-sat-list (cons fml max-sat-list)))
 
-(define DEBUG-ON #f)
-(define-syntax-rule (DEBUG-DO something)
-	(if DEBUG-ON something #f))
+(define (inspect fml)
+	(add-max-sat fml)
+	(defer-eval "Inspecting formula: " fml))
+
+(define stored-asserts null)
+(define (store-asserts)
+	(set! stored-asserts (asserts)))
+(define (restore-asserts)
+	(clear-asserts!)
+	(map (lambda (p) (assert p)) stored-asserts))
+;test if asserting the extra predicate will result in unsat
+;will restore asserts after test
+;will throw error if unsat
+(define (test-assert p)
+	(display "Testing new assert...\n")
+	(store-asserts)
+	(define fail? (unsat? (solve (assert p))))
+	(if fail? (begin (print-fml p) (force-error #t "Asserts are infeasible!")) #f)
+	(restore-asserts))
+;test if asserting the extra predicate will result in unsat
+;will keep the new assert after test
+;will throw error if unsat
+(define (test-assert! p)
+	(display "Testing new assert...\n")
+	(assert p)
+	(define fail? (unsat? (solve (assert #t))))
+	(if fail? (begin (print-fml p) (force-error #t "Asserts are infeasible!")) #f))
+
+(define (test-no-branch)
+	(define len-0 (length (asserts)))
+	(std:error "Not even wrong")
+	(define len-1 (length (asserts)))
+	(if (> len-1 len-0) (force-error #t (take (asserts) (- len-1 len-0))) #f))

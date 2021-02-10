@@ -38,22 +38,28 @@
 ;funcs: list of sid
 (define (localize-bug-in-funcs mac locations encoder spec funcs)
 	(display "\n Encoding: \n")
+	(display (~a "target funcs: " funcs "\n"))
 ;	(pretty-print (asserts))
 	(clear-asserts!)
 	(clear-pending-eval)
 
 	(define sum (apply + (map (lambda (l) (if (location-selector l) 1 0)) locations)))
-	(define one-bug (equal? sum (- (length locations) 1)))
+	(define one-bug (equal? sum (- (length locations) 2)))
 	(define no-bug (equal? sum (length locations)))
 	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) spec)))
 	(define max-sat-sum (apply + (map (lambda (l) (if l 1 0)) max-sat-list)))
+	(define debug-max-sat (> max-sat-sum (- (length max-sat-list) 7)))
 
 	(display "\n Solving: \n")
 	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
 ;	(pretty-print (asserts))
 ;	(check-asserts 0)
 	(output-smt #t)
+;	(print-fml hard)
 	(define debug-sol (solve (assert (and hard one-bug))))
+;	(define debug-sol (optimize #:maximize (list sum)
+;			  #:guarantee (assert (and hard))))
+;	(define debug-sol (solve (assert (and hard debug-max-sat))))
 ;	(define debug-sol (optimize #:maximize (list max-sat-sum)
 ;			  #:guarantee (assert (and no-bug hard))))
 	
@@ -69,6 +75,7 @@
 	
 	(DEBUG-DO (pretty-print string-id-table))
 	(DEBUG-DO (std:error "Halt!"))
+;	(std:error "Halt!")
 
 	(match (location-inst bugl)
 		[(inst-static-call ret cls-name func-name arg-types args) 

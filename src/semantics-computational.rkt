@@ -307,7 +307,7 @@
 		[(expr e) (ast->expression e)]
 		[(lexpr e) (ast->expression e)]
 		[(dexpr e) (ast->expression e)]
-		[(expr-const c) (iexpr-const (string-id (const-v c)))]
+		[(expr-const c) (iexpr-const (if (std:string? (const-v c)) (string-id (const-v c)) (const-v c)))]
 		[(expr-var v) (iexpr-var (string-id (variable-name v)))]
 		[(expr-binary expr1 o expr2) (iexpr-binary (op-v o) (ast->expression expr1) (ast->expression expr2))]
 		[(expr-array array index) (iexpr-array (string-id (variable-name array)) (ast->expression index))]

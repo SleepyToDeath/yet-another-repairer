@@ -171,9 +171,13 @@
 		(begin
 		(memory-add-id (memory-id m))
 		(memory-archive (memory-id m) m)
-		(and
-			(imap-sym-scoped-get-fml (memory-heap m))
-			(stack-get-fml (memory-stack m))))))
+		(define fml-1 
+			(imap-sym-scoped-get-fml (memory-heap m)))
+		(define fml-2
+			(stack-get-fml (memory-stack m)))
+		(inspect fml-1)
+		(inspect fml-2)
+		(and+ fml-1 fml-2))))
 
 (define (memory-sym-sget-fml m)
 	(stack-get-fml (memory-stack m)))
@@ -255,8 +259,8 @@
 						ret)
 					(id2keys mem-id))))
 			(define fml-deferred (imap-sym-fml-deferred (imap-unwrap mem)))
-			(add-max-sat (equal? fml-deferred fml-true))
-			(defer-eval "maybe-wrong" (cons mem-id (equal? fml-deferred fml-true)))
+;			(add-max-sat (equal? fml-deferred fml-true))
+;			(defer-eval "maybe-wrong" (cons mem-id (equal? fml-deferred fml-true)))
 			(equal? fml-deferred fml-true))
 			memory-id-list)))
 
@@ -297,10 +301,11 @@
 							(imap-sym-key-not-found (imap-unwrap mem) (car key.scope))))
 					all-keys)))
 ;					(display (~a "Memory id: " mem-id " formula size: " (size-of ret)))
-				(add-max-sat ret)
-				(defer-eval "always correct" (cons mem-id ret))
+;				(add-max-sat ret)
+;				(defer-eval "always correct" (cons mem-id ret))
 				ret)
 			memory-id-list)))
+
 
 	(DEBUG-DO (map (lambda (mem-id) 
 		(define mem (memory-heap (vector-ref memory-id-map mem-id)))

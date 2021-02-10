@@ -42,7 +42,7 @@
   [simple_id_char (sre:or alpha_char dec_digit "_" "$" "-")]
   [first_id_char (sre:or alpha_char "_" "$")]
   [quotable_char (sre:- not_cr_lf quote_sign)]
-  [string_char (sre:or escape_char (char-range #\u0000 #\u0033) (char-range #\u0035 #\u0091) (char-range #\u0093 #\u0127))]
+  [string_char (sre:or escape_char (char-range #\u0000 #\u0021) (char-range #\u0023 #\u005B) (char-range #\u005D #\u007F))]
   [line_comment (sre:: "//" (sre:* not_cr_lf))]
   [long_comment (sre:: "/*" (sre:* not_star) (sre:+ "*") (sre:* (sre:: not_star_slash (sre:* not_star) (sre:+ "*"))) "/")]
   [blank (sre:+ (sre:or " " "\t" "\r" "\n"))]

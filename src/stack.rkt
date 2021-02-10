@@ -3,6 +3,7 @@
 (require (prefix-in std: racket/base))
 (require (prefix-in std: racket/list))
 (require racket/format)
+(require racket/pretty)
 (require "map.rkt")
 (require "formula.rkt")
 (require "memory-common.rkt")
@@ -61,7 +62,11 @@
 	(define array-out (static-scope-array-out sc))
 	(define array.new (if (member name keys) array (std:list-set array name nullptr)))
 	(define array-out.new (if (member name keys) array-out (std:list-set array-out name 
-		((lambda () (define-symbolic* vs integer?) vs)))))
+		((lambda () (begin
+			(define-symbolic* vs integer?) 
+			(display (~a "stack decl: " name " "))
+			(print-fml vs)
+			vs))))))
 	(define ret (if (is-invalid? (list-ref (static-scope-array (car scs)) name))
 		mem
 		(std:struct-copy memory mem 
@@ -89,7 +94,7 @@
 (define (stack-static-reset st st-base)
 	(define scs-base (static-stack-scopes st-base))
 ;	(pretty-print scs-base)
-	(static-stack
+	(define ret (static-stack
 		(map (lambda (sc-base) 
 			(define keys (static-scope-keys sc-base))
 			(define array-empty (static-scope-array static-scope-empty))
@@ -105,6 +110,9 @@
 				keys))
 			(static-scope keys array.new array-out.new))
 			scs-base)))
+;	(display "Reset stack:\n")
+;	(pretty-print ret)
+	ret)
 
 ;candidates: list of (cnd . stack)
 (define (stack-static-select candidates summary?)
@@ -120,15 +128,23 @@
 	static-stack-empty)
 
 (define (stack-static-get-fml st)
-	(andmap identity (map (lambda (sc)
-		(andmap identity (map (lambda (key)
+;	(display "Finish stack:\n")
+;	(pretty-print st)
+	(andmap+ (lambda (sc)
+		(andmap+ (lambda (key)
 			(define ret (equal?
 				(list-ref (static-scope-array sc) key)
 				(list-ref (static-scope-array-out sc) key)))
+			(defer-eval "stack-fml: " (list ret 
+				key
+				(list-ref (static-scope-array sc) key)
+				(list-ref (static-scope-array-out sc) key)))
+			(inspect ret)
+;			(pretty-print eval-pending)
 ;			(print-fml ret)
 			ret)
-			(static-scope-keys sc))))
-		(static-stack-scopes st))))
+			(static-scope-keys sc)))
+		(static-stack-scopes st)))
 
 (define static-scope-invalid
 	(static-scope
