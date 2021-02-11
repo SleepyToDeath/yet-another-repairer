@@ -15,6 +15,7 @@
 (require "formula.rkt")
 (require racket/format)
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
+(require (prefix-in p: "jimple/jimple-utils.rkt"))
 
 (define src-dir "../benchmark/benchmark5/sootOutput/")
 
@@ -48,8 +49,8 @@
 
 (define cls-list (map (lambda (class-src) (p:build-ast-file (p:parse-to-stx class-src))) class-src-list))
 
-(define buggy (program
-	(class-list cls-list)))
+(define buggy (p:transform-all (program
+	(class-list cls-list))))
 
 (pretty-print buggy)
 
