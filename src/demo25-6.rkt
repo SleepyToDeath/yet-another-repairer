@@ -25,6 +25,10 @@ public class Test
 	public static int main()
 	{
 		int[] $r1;
+        int r1, r2, r3;
+        r1 = 10;
+        r2 = 1;
+        r3 = 2;
 		$r1 = newarray (int)[r1];
 		$r1[r2] = r3;
 		return 1;

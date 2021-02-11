@@ -297,7 +297,9 @@
     [({p:~literal assign_stmt}
         ({p:~literal variable} lhs-var)
         ({p:~literal j_expression}
-           ({p:~literal new_array} _ imm)))
+           ({p:~literal new_array}
+              type
+              ({p:~literal immediate} imm))))
      (let ([lhs (build-ast-variable #'lhs-var)]
            [size (build-ast-expr-immediate #'imm)])
          (ast:stat-newarray
