@@ -645,10 +645,10 @@
 (define (build-ast-expr-unop expr-unop-stx)
   (p:syntax-parse expr-unop-stx
     [({p:~literal unop_expr} ({p:~literal unop} "lengthof") ({p:~literal immediate} imm))
-     (ast:expr
-       (ast:expr-array
-         (build-ast-expr-immediate #'imm)
-         (ast:expr (ast:expr-const (ast:const lengthof-index)))))]
+     ; `lengthof x` is parsed as array access `x[-1]`
+     (ast:expr-array
+       (ast:expr-var-name (build-ast-expr-immediate #'imm))
+       (ast:expr (ast:expr-const (ast:const lengthof-index))))]
     [({p:~literal unop_expr} ({p:~literal unop} "neg") ({p:~literal immediate} imm))
      (std:error "Neg is not supported yet")]))
 
