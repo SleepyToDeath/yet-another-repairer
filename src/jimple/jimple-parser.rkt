@@ -662,7 +662,7 @@
     [({p:~literal float_const} p:~rest _)
      (build-ast-const-float expr-imm-stx)]
     [({p:~literal class_const} _)
-     (std:error (std:~a "Class constant is not supported yet" expr-imm-stx))]
+     (build-ast-const-class expr-imm-stx)]
     ["null" (build-ast-const-null expr-imm-stx)]
     [_ (build-ast-const-str expr-imm-stx)]))
 
@@ -695,6 +695,21 @@
      (ast:expr-const (ast:const (if (p:attribute minus-sign)
                                     (- (std:syntax-e #'lit))
                                     (std:syntax-e #'lit))))]))
+
+
+(define (build-ast-const-class const-class-stx)
+  (p:syntax-parse const-class-stx
+    [({p:~literal class_const} cls)
+     (ast:expr-const (ast:const (convert-type-abbrv (std:syntax-e #'cls))))]))
+
+
+(define (convert-type-abbrv abbrv-str)
+  (if (and (s:string-prefix? abbrv-str "L") (s:string-suffix? abbrv-str ";"))
+      (s:string-replace
+        (std:substring abbrv-str 1 (- (std:string-length abbrv-str) 1))
+        "/"
+        ".")
+      (std:error (std:string-append "Unknown type abbreviation " abbrv-str))))
 
 
 (define (build-ast-const-null null-str-stx)
