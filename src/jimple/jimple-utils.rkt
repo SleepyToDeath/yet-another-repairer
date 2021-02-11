@@ -8,10 +8,14 @@
 (require (prefix-in p: "jimple-parser.rkt"))
 (require (prefix-in ast: "../syntax-jimple.rkt"))
 
+;============ Constants ============
+(define dtype-field-name "__CLASS__")
+
 
 (define (transform-all prog-ast)
-  (trans-init-return
-    (trans-init-static prog-ast)))
+  (trans-get-class
+    (trans-init-return
+      (trans-init-static prog-ast))))
 
 
 (define (trans-init-static prog-ast)
@@ -96,6 +100,53 @@
     [(ast:stat-ret v)
        (if (equal? v (ast:dexpr (ast:expr-const p:void-return-value)))
            (ast:stat (ast:stat-ret (ast:dexpr (ast:expr-var (ast:variable "r0")))))
+           stmt)]
+    [_ stmt]))
+
+
+(define (trans-get-class prog-ast)
+  (ast:program (ast:class-list
+    (map trans-get-class-class
+         (ast:class-list-cl (ast:program-rhs prog-ast))))))
+
+
+(define (trans-get-class-class class-ast)
+  (define c (ast:class-def-rhs class-ast))
+    (match c
+      [(ast:class-default name extend implements globals fields statics virtuals)
+         (ast:class-def
+           (ast:class-default name extend implements globals fields (trans-get-class-funcs statics) (trans-get-class-funcs virtuals)))]))
+
+
+(define (trans-get-class-funcs func-decls)
+  (define func-list (ast:function-list-fl (ast:function-declares-rhs func-decls)))
+  (ast:function-declares (ast:function-list
+    (map trans-get-class-func func-list))))
+
+
+(define (trans-get-class-func func-decl)
+  (define func (ast:function-declare-rhs func-decl))
+  (ast:function-declare (ast:function-content
+    (ast:function-content-name func)
+    (ast:function-content-args func)
+    (ast:function-content-local-variables func)
+    (ast:stats (ast:stat-list
+      (map trans-get-class-stmt
+           (ast:stat-list-sl (ast:stats-rhs
+             (ast:function-content-statements func)))))))))
+
+
+(define (trans-get-class-stmt stmt)
+  (define s (ast:stat-rhs stmt))
+  (match s
+    [(ast:stat-virtual-call ret obj class func arg-types args)
+       (if (and (equal? (ast:type-name-name class) "java.lang.Object")
+                (equal? (ast:func-name-name func) "getClass")
+                (equal? (ast:type-list-tl (ast:types-rhs arg-types)) null))
+           (ast:stat (ast:stat-ass
+             (ast:lexpr (ast:expr-var ret))
+             ; imprecise type for field access
+             (ast:expr (ast:expr-field obj class (ast:field dtype-field-name)))))
            stmt)]
     [_ stmt]))
 
