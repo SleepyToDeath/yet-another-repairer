@@ -40,7 +40,10 @@
 (define (trans-init-static-funcs statics virtuals)
   (define static-list (ast:function-list-fl (ast:function-declares-rhs statics)))
   (define virtual-list (ast:function-list-fl (ast:function-declares-rhs virtuals)))
-  (define new-s-list (cons (findf init-func? virtual-list) static-list))
+  (define new-s-list (let ([initfunc (findf init-func? virtual-list)])
+                       (if initfunc
+                           (cons initfunc static-list)
+                           static-list)))
   (define new-v-list (filter (compose not init-func?) virtual-list))
   (cons (ast:function-declares (ast:function-list new-s-list))
         (ast:function-declares (ast:function-list new-v-list))))
@@ -69,8 +72,10 @@
 (define (trans-init-return-funcs func-decls)
   (define func-list (ast:function-list-fl (ast:function-declares-rhs func-decls)))
   (define init-index (l:index-where func-list init-func?))
-  (ast:function-declares (ast:function-list
-    (l:list-update func-list init-index trans-init-return-func))))
+  (if init-index
+      (ast:function-declares (ast:function-list
+        (l:list-update func-list init-index trans-init-return-func)))
+      func-decls))
 
 
 (define (trans-init-return-func func-decl)
