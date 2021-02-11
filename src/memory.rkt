@@ -55,13 +55,14 @@
 (define (memory-hwrite mem addr value)
 	(std:struct-copy memory mem [heap (imap-set (memory-heap mem) addr value)]))
 
-;allocate memory on heap
+;allocate array on heap
 ;memory X size -> addr(allocated) X memory(new) 
 (define (memory-alloc mem size)
 	(begin
 	(define current-o-top (heap-meta-o-top (memory-h-meta mem)))
 	(define current-a-top (heap-meta-a-top (memory-h-meta mem)))
-	(cons current-a-top (std:struct-copy memory mem [h-meta (heap-meta current-o-top (+ current-a-top size))]))))
+	(define mem-size (memory-hwrite mem current-a-top size))
+	(cons (+ 1 current-a-top) (std:struct-copy memory mem-size [h-meta (heap-meta current-o-top (+ current-a-top size 1))]))))
 
 ;must use this to new object
 (define (memory-new mem)

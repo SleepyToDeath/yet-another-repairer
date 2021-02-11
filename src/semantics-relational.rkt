@@ -583,6 +583,14 @@
 
 				;(update-mem-only mem-bind))]
 
+			[(inst-newarray v-name size-expr) 
+				(begin
+				(define size (expr-eval size-expr mem-0))
+				(match-define (cons addr mem-alloc) (memory-alloc mem-0 size))
+				(define mem-ass (memory-sforce-write mem-alloc v-name addr 0))
+				(assert id)
+				(update-mem-only mem-ass))]
+
 			[(inst-new v-name) 
 				(begin
 				(match-define (cons addr mem-alloc) (memory-new mem-0))

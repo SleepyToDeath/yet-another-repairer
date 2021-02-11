@@ -271,6 +271,7 @@
 
 ;ast X lmap X line-number -> instruction X lmap(updated)
 (define (ast->instruction ast lmap line-num)
+	(pretty-print ast)
 	(match ast
 		[(stat s) (ast->instruction s lmap line-num)]
 		[(stat-ass target rvalue) 
@@ -281,6 +282,8 @@
 		[(stat-nop any) (cons (inst-nop nullptr) lmap)]
 		[(stat-ret v) (cons (inst-ret (ast->expression v)) lmap)]
 		[(stat-new v) (cons (inst-new (string-id (variable-name v))) lmap)]
+		[(stat-newarray v size) (cons (inst-newarray (string-id (variable-name v)) (ast->expression size)) lmap)]
+	;(RHS-C stat-newarray (v : variable) (size : dexpr))
 		[(stat-static-call ret cls-name func arg-types args) 
 			(cons 
 				(inst-static-call (string-id (variable-name ret)) (string-id (type-name-name cls-name)) (string-id (func-name-name func))
@@ -456,6 +459,18 @@
 	[(define (inst-exec i m f)
 		(define pc-next (+ 1 (machine-pc m)))
 		(std:struct-copy machine m [pc pc-next]))])
+
+(struct inst-newarray (v-name size) #:transparent
+	#:methods gen:instruction
+	[(define (inst-exec i m f)
+		(match i [(inst-newarray v-name size-expr)
+			(begin
+			(define mem-0 (machine-mem m))
+			(define size (expr-eval size-expr mem-0))
+			(match-define (cons addr mem-alloc) (memory-alloc mem-0 size))
+			(define pc-next (+ 1 (machine-pc m)))
+			(define mem-ass (memory-swrite mem-alloc v-name addr))
+			(std:struct-copy machine m [pc pc-next][mem mem-ass]))]))])
 
 (struct inst-new (v-name) #:transparent
 	#:methods gen:instruction
