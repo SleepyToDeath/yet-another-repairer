@@ -272,6 +272,29 @@
                 (ast:lexpr (ast:expr-var (ast:variable "d")))
                 (ast:expr (ast:expr-const (ast:const -1)))))))))))
     "stmt assigment 2")
+  (check-equal?
+    (build-ast-file (parse-to-stx (string-append-newline
+      "public class A {"
+      "  public void foo() {"
+      "    java.lang.Class x;"
+      "    x = class \"Lorg/test/C;\";"
+      "  }"
+      "}")))
+    (single-func-in-class "A"
+      (ast:function-declare
+        (ast:function-content
+          (ast:func-name "foo")
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions
+            (ast:variable-definition-list (list
+              (ast:variable-definition
+                (ast:variable-n-type (ast:variable "x") (ast:type-name "java.lang.Class"))))))
+          (ast:stats
+            (ast:stat-list (list
+              (ast:stat (ast:stat-ass
+                (ast:lexpr (ast:expr-var (ast:variable "x")))
+                (ast:expr (ast:expr-const (ast:const "org.test.C")))))))))))
+    "stmt assigment 3")
 )
 
 (test-case "stmt-new"
