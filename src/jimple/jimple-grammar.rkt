@@ -45,7 +45,7 @@ field
   ::= modifier* j_type name /SEMICOLON
 
 method
-  ::= modifier* j_type name /LPAREN parameter_list? /RPAREN throws_clause? method_body
+  ::= modifier* j_type name LPAREN parameter_list? RPAREN throws_clause? method_body
 
 j_type
   ::= VOID

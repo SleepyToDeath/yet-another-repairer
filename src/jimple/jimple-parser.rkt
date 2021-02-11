@@ -137,7 +137,9 @@
         modifiers ...
         ({p:~literal j_type} ret-type)
         method-name
+        "("
         (p:~optional param-list)
+        ")"
         (p:~optional ({p:~literal throws_clause} throws))
         method-body)
      (let* ([body-contents (build-ast-method-body #'method-body)]
