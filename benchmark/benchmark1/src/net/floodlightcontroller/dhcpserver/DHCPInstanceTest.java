@@ -4,14 +4,12 @@ import org.projectfloodlight.openflow.types.IPv4Address;
 
 public class DHCPInstanceTest {
     public static int main() {
+        // expected: 0, actual: 1
+        int input = 0;
         /* Create DHCP Instance */
         DHCPInstance instance = DHCPInstance.createInstance()
-				.setServerID(IPv4Address.of(0))
+				.setServerID(IPv4Address.of(input))
                 .build();
-
-		if (instance == null)
-			return 0;
-		else
-			return 1;
+		return instance == null ? 0 : 1;
     }
 }
