@@ -9,10 +9,11 @@ import org.projectfloodlight.openflow.types.VlanVid;
 public class LearningSwitchTest {
     public static int main() {
         // expected: 1, actual: 0
+        int input = 0xFFFF;
         LearningSwitch ls = new LearningSwitch();
         IOFSwitch sw = new OFSwitch();
         MacAddress mac = MacAddress.of(1);
-        VlanVid vlan = VlanVid.FULL_MASK;
+        VlanVid vlan = (input == 0xFFFF) ? VlanVid.FULL_MASK : VlanVid.ofVlan(input);
         OFPort port = OFPort.of(2);
         ls.addToPortMap(sw, mac, vlan, port);
         OFPort actual = ls.getFromPortMap(sw, mac, vlan);
@@ -21,8 +22,5 @@ public class LearningSwitchTest {
         } else {
             return 0;
         }
-    }
-    public static void main(String[] args) {
-        System.out.println(main());
     }
 }
