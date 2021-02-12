@@ -9,6 +9,7 @@
 (require "memory-common.rkt")
 (require "match-define.rkt")
 (require "formula.rkt")
+(require "model.rkt")
 (require racket/format)
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
@@ -61,6 +62,7 @@
 (define field-name-class (string-id "__CLASS__"))
 (define machine-empty (machine #f null imap-empty imap-empty memory-empty pc-init))
 
+(define class-name-root (string-id "java.lang.Object"))
 (define class-name-main (string-id "dummy"))
 (define class-names-clinit null)
 
@@ -278,6 +280,13 @@
 			(begin
 			(cons (inst-ass target (ast->expression rvalue)) lmap))]
 		[(stat-jmp condition target) (cons (inst-jmp (ast->expression condition) (label-v target)) lmap)]
+		[(stat-switch condition cases) 
+			(foldl (lambda (c i)
+					(match (stat-case-rhs c)
+						[(case-br k l) (std:struct-copy inst-switch i [cases (cons (cons (const-v k) (label-v l)) (inst-switch-cases i))])]
+						[(case-default l) (std:struct-copy inst-switch i [default-label (label-v l)])]))
+				(inst-switch (ast->expression condition) null #f)
+				(case-list-cl  (stat-case-list-rhs cases)))]
 		[(stat-label here) (cons #f (imap-set lmap (label-v here) line-num))]
 		[(stat-nop any) (cons (inst-nop nullptr) lmap)]
 		[(stat-ret v) (cons (inst-ret (ast->expression v)) lmap)]
@@ -333,7 +342,9 @@
 		(define sfuncs (class-sfuncs cls))
 		(define vfuncs (class-vfuncs cls))
 		(define sfields (class-sfields cls))
-		(define vfields (cons field-name-class (class-vfields cls)))
+		(define vfields (if (equal? cls-name class-name-root) 
+			(cons field-name-class (class-vfields cls))
+			(class-vfields cls)))
 
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 
@@ -439,6 +450,23 @@
 
 		(std:struct-copy machine m [mem mem-new] [pc pc-next]))])
 
+;expr X (list of (int X label)) X (maybe label)
+(struct inst-switch (cnd cases default-label) #:transparent
+	#:methods gen:instruction
+	[(define (inst-exec i m f)
+		(match i [(inst-switch cnd cases default-l)
+			(begin
+			(define lmap (function-lmap f))
+			(define cnd-v (expr-eval cnd m))
+			(define cases-default (if default-l
+				(append cases (list (cons cnd-v default-l)))
+				(append cases (list (cons cnd-v (+ 1 (machine-pc m)))))))
+			(define label-new (ormap (lambda (k.l)
+					(if (equal? (car k.l) cnd-v) (cdr k.l) #f))
+				cases-default))
+			(define pc-new (imap-get lmap label-new))
+			(std:struct-copy machine m [pc pc-new]))]))])
+
 ;expr X label(int)
 (struct inst-jmp (condition label) #:transparent
 	#:methods gen:instruction
@@ -466,7 +494,7 @@
 		(match i [(inst-newarray v-name size-expr)
 			(begin
 			(define mem-0 (machine-mem m))
-			(define size (expr-eval size-expr mem-0))
+			(define size (expr-eval size-expr m))
 			(match-define (cons addr mem-alloc) (memory-alloc mem-0 size))
 			(define pc-next (+ 1 (machine-pc m)))
 			(define mem-ass (memory-swrite mem-alloc v-name addr))
@@ -501,75 +529,101 @@
 (struct inst-static-call (ret cls-name func-name arg-types args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
-		(define sid (sfunc-id (inst-static-call-cls-name i) (inst-static-call-func-name i) (inst-static-call-arg-types i)))
-		;no need to read from memory
-		(define func (imap-get (machine-fmap m) sid))
-		(define args (map (lambda (arg) (expr-eval arg m)) (inst-static-call-args i)))
+		(define mem-0 (machine-mem m))
+		(define cls-name (inst-static-call-cls-name i))
+		(define func-name (inst-static-call-func-name i))
 		(define ret (inst-static-call-ret i))
-
-		(define mac-ret (function-call m func args))
-		(define mem-ret (machine-mem mac-ret))
-		(define ret-value (memory-sread mem-ret var-ret-name))
-		
-		(define mem-pop (memory-spop mem-ret))
-		(define mem-ass (memory-swrite mem-pop ret ret-value))
+		(define args (map (lambda (arg) (expr-eval arg m)) (inst-static-call-args i)))
 		(define pc-next (+ 1 (machine-pc m)))
+		
+		(define mfunc (model-lookup cls-name func-name))
+		(if mfunc 
+			(std:struct-copy machine m [mem (mfunc mem-0 ret args)][pc pc-next])
 
-		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
+			(begin
+
+			(define sid (sfunc-id cls-name func-name (inst-static-call-arg-types i)))
+			;no need to read from memory
+			(define func (imap-get (machine-fmap m) sid))
+			(define ret (inst-static-call-ret i))
+
+			(define mac-ret (function-call m func args))
+			(define mem-ret (machine-mem mac-ret))
+			(define ret-value (memory-sread mem-ret var-ret-name))
+			
+			(define mem-pop (memory-spop mem-ret))
+			(define mem-ass (memory-swrite mem-pop ret ret-value))
+
+			(std:struct-copy machine m [mem mem-ass][pc pc-next]))))])
 		
 (struct inst-virtual-call (ret obj-name cls-name func-name arg-types args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		;(println i)
-		(define mem0 (machine-mem m))
-		(define obj-addr (memory-sread mem0 (inst-virtual-call-obj-name i)))
-;		(println (format "obj addr: ~a" obj-addr))
-;		(println (format "vfunc id: ~a" (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i) (inst-virtual-call-arg-types i))))
-		;virtual
-		(define vid (vfunc-id m (inst-virtual-call-cls-name i) (inst-virtual-call-func-name i) (inst-virtual-call-arg-types i)))
-		(define sid (memory-fread mem0 vid obj-addr))
-		(define func (imap-get (machine-fmap m) sid))
+		(define mem-0 (machine-mem m))
+		(define obj-addr (memory-sread mem-0 (inst-virtual-call-obj-name i)))
+		(define cls-name (inst-virtual-call-cls-name i))
+		(define func-name (inst-virtual-call-func-name i))
+		(define ret (inst-virtual-call-ret i))
 		(define args (map (lambda (arg) (expr-eval arg m)) (inst-virtual-call-args i)))
-		;push an extra scope to avoid overwriting "this" of the current scope
-		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr 0))
-		(define mac-this (std:struct-copy machine m [mem mem-this]))
-
-		(define mac-ret (function-call mac-this func args))
-		(define mem-ret (machine-mem mac-ret))
-		(define ret-value (memory-sread mem-ret var-ret-name))
-		;pop callee and callee's "this"
-		(define mem-pop (memory-spop (memory-spop mem-ret)))
-		(define mem-ass (memory-swrite mem-pop (inst-virtual-call-ret i) ret-value))
 		(define pc-next (+ 1 (machine-pc m)))
 
-		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
+		(define mfunc (model-lookup cls-name func-name))
+		(if mfunc 
+			(std:struct-copy machine m [mem (mfunc mem-0 obj-addr ret args)][pc pc-next])
+
+			(begin
+
+
+			(define vid (vfunc-id m cls-name func-name (inst-virtual-call-arg-types i)))
+			(define sid (memory-fread mem-0 vid obj-addr))
+			(define func (imap-get (machine-fmap m) sid))
+			;push an extra scope to avoid overwriting "this" of the current scope
+			(define mem-this (memory-sforce-write (memory-spush mem-0) var-this-name obj-addr 0))
+			(define mac-this (std:struct-copy machine m [mem mem-this]))
+
+			(define mac-ret (function-call mac-this func args))
+			(define mem-ret (machine-mem mac-ret))
+			(define ret-value (memory-sread mem-ret var-ret-name))
+			;pop callee and callee's "this"
+			(define mem-pop (memory-spop (memory-spop mem-ret)))
+			(define mem-ass (memory-swrite mem-pop (inst-virtual-call-ret i) ret-value))
+
+			(std:struct-copy machine m [mem mem-ass][pc pc-next]))))])
 
 ;in my understanding, special call = virtual call - virtual, at least for init
 (struct inst-special-call (ret obj-name cls-name func-name arg-types args) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
-		(define mem0 (machine-mem m))
-		(define obj-addr (memory-sread mem0 (inst-special-call-obj-name i)))
-
-;		(println (format "obj addr: ~a" obj-addr))
-;		(println (format "sfunc id: ~a" (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-args i))))
-		(define sid (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-arg-types i)))
-		;never virtual
-		(define func (imap-get (machine-fmap m) sid))
+		(define mem-0 (machine-mem m))
+		(define obj-addr (memory-sread mem-0 (inst-special-call-obj-name i)))
+		(define cls-name (inst-special-call-cls-name i))
+		(define func-name (inst-special-call-func-name i))
+		(define ret (inst-special-call-ret i))
 		(define args (map (lambda (arg) (expr-eval arg m)) (inst-special-call-args i)))
-		;push an extra scope to avoid overwriting "this" of the current scope
-		(define mem-this (memory-sforce-write (memory-spush mem0) var-this-name obj-addr 0))
-		(define mac-this (std:struct-copy machine m [mem mem-this]))
-
-		(define mac-ret (function-call mac-this func args))
-		(define mem-ret (machine-mem mac-ret))
-		(define ret-value (memory-sread mem-ret var-ret-name))
-		;pop callee and callee's "this"
-		(define mem-pop (memory-spop (memory-spop mem-ret)))
-		(define mem-ass (memory-swrite mem-pop (inst-special-call-ret i) ret-value))
 		(define pc-next (+ 1 (machine-pc m)))
 
-		(std:struct-copy machine m [mem mem-ass][pc pc-next]))])
+		(define mfunc (model-lookup cls-name func-name))
+		(if mfunc 
+			(std:struct-copy machine m [mem (mfunc mem-0 obj-addr ret args)][pc pc-next])
+
+			(begin
+
+			(define sid (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-arg-types i)))
+			;never virtual
+			(define func (imap-get (machine-fmap m) sid))
+			;push an extra scope to avoid overwriting "this" of the current scope
+			(define mem-this (memory-sforce-write (memory-spush mem-0) var-this-name obj-addr 0))
+			(define mac-this (std:struct-copy machine m [mem mem-this]))
+
+			(define mac-ret (function-call mac-this func args))
+			(define mem-ret (machine-mem mac-ret))
+			(define ret-value (memory-sread mem-ret var-ret-name))
+			;pop callee and callee's "this"
+			(define mem-pop (memory-spop (memory-spop mem-ret)))
+			(define mem-ass (memory-swrite mem-pop (inst-special-call-ret i) ret-value))
+
+			(std:struct-copy machine m [mem mem-ass][pc pc-next]))))])
 		
 
 

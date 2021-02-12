@@ -10,6 +10,7 @@
 (require "jimple/jimple-parser.rkt")
 (require "memory-common.rkt")
 (require "formula.rkt")
+(require "model.rkt")
 (require (prefix-in std: racket/base))
 (require (prefix-in std: racket/list))
 (require racket/format)
@@ -197,7 +198,9 @@
 		(define sfuncs (class-sfuncs cls))
 		(define vfuncs (class-vfuncs cls))
 		(define sfields (class-sfields cls))
-		(define vfields (cons field-name-class (class-vfields cls)))
+		(define vfields (if (equal? cls-name class-name-root) 
+			(cons field-name-class (class-vfields cls))
+			(class-vfields cls)))
 
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 
@@ -434,19 +437,20 @@
 				(implies id fml))
 				fml))
 
+		;[?] should `equal?` be changed to `implies` ?
 		(define (iassert-pc-next fml-path fml-op)
 ;			(set! fml-op #t)
 			(if summary? #t
 				(and 
 					fml-path
-					(equal? mark (and fml-op (next-mark))))))
+					(implies mark (and fml-op (next-mark))))))
 
 		(define (iassert-pc-ret fml-path fml-op)
 ;			(set! fml-op #t)
 			(if summary? #t
 				(and
 					fml-path
-					(equal? mark (and fml-op (ending-pmark func-fml))))))
+					(implies mark (and fml-op (ending-pmark func-fml))))))
 
 		(define (iassert-pc-branch fml-op cnd-t cnd-f label)
 ;			(set! fml-op #t)
@@ -455,13 +459,26 @@
 						 [fml-f (equal? cnd-f (next-mark))]
 						 [fml-cnd (and fml-t fml-f)]
 						 [fml-br (or (label-mark label) (next-mark))]
-						 [fml-path (equal? mark (and fml-cnd fml-br fml-op))])
+						 [fml-path (implies mark (and fml-cnd fml-br fml-op))])
 						fml-path)))
+
+		;cases: (list of (cnd X pc))
+		(define (iassert-pc-switch fml-op cases)
+			(if summary? #t
+				(begin
+				(define fml-cnds (andmap+ 
+					(lambda (cnd.pc) (equal? (car cnd.pc) (get-pmark func-fml (cdr cnd.pc))))
+					cases))
+				(define fml-br (ormap 
+					(lambda (cnd.pc) (get-pmark func-fml (cdr cnd.pc)))
+					cases))
+				(define fml-path (implies mark (and fml-op fml-cnds fml-br)))
+				fml-path)))
 
 		(define (iassert-pc-invoke fml-path fml-op func-fmls cnds)
 ;			(set! fml-op #t)
 			(if summary? #t
-				(letrec	([fml-cnds (andmap 
+				(letrec	([fml-cnds (andmap
 								(lambda (func-fml cnd)
 ;									(display "-------Problematic Fml---------\n")
 ;									(print-fml fml-ops)
@@ -532,6 +549,17 @@
 			(display (~a "Output state id: " (memory-id mem-out) "\n"))
 			(std:struct-copy rbstate st [pc pc-next] [func-fml func-fml-new]))
 
+		;cases: (list of (cnd X pc))
+		(define (update-rbstate-switch fml-new mem-out cases)
+			(define func-fml-br (foldl (lambda (cnd.pc func-fml-cur)
+					(append-mem-in func-fml (car cnd.pc) mem-out (cdr cnd.pc)))
+				func-fml 
+				cases))
+			(define func-fml-new (append-fml func-fml-br fml-new))
+			(pretty-print inst)
+			(display (~a "Output state id: " (memory-id mem-out) "\n"))
+			(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))
+
 		(define (update-mem-only mem-new)
 			(define mem-commit (memory-sym-commit mem-new))
 			(define fml-update (memory-sym-get-fml mem-commit summary?))
@@ -585,7 +613,7 @@
 
 			[(inst-newarray v-name size-expr) 
 				(begin
-				(define size (expr-eval size-expr mem-0))
+				(define size (expr-eval size-expr mac-eval-ctxt))
 				(match-define (cons addr mem-alloc) (memory-alloc mem-0 size))
 				(define mem-ass (memory-sforce-write mem-alloc v-name addr 0))
 				(assert id)
@@ -652,138 +680,151 @@
 
 			[(inst-static-call ret cls-name func-name arg-types args) 
 				(begin
-				(define sid (sfunc-id cls-name func-name arg-types))
-				(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))
-				(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-in args))
-				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
-				(pretty-print inst)
+				(define args-v (map (lambda (arg) (expr-eval arg mac-eval-ctxt)) args))
+				(define mfunc (model-lookup cls-name func-name))
+				(if mfunc 
+					(update-mem-only (mfunc mem-0 ret args-v))
 
-				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? in-target?)))
-				(display (~a "immediate return state id: " (memory-id mem-ret.tmp) "\n"))
-				(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
-				(display (~a "committed return state id: " (memory-id mem-ret.tmp2) "\n"))
-				(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
-				(display "???????????????\n")
+					(begin
 
-				(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
-				(display (~a "resolved state id: " (memory-id mem-ret) "\n"))
-				(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
-				(if summary? #f (defer-eval inst ret-val))
-				(define mem-pop (memory-spop mem-ret))
-				(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0)))
-				(define fml-ret (memory-sym-get-fml mem-ass summary?))
+					(define sid (sfunc-id cls-name func-name arg-types))
+					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))
+					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-in args))
+					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
+					(pretty-print inst)
 
-				;[TODO] use an extra selector for fml-sum
-				(define fml-op (select-fml? (and fml-in fml-sum fml-ret)))
-				;(define fml-op (and fml-in fml-ret))
-				(define fml-new (iassert-pc-invoke #t fml-op (list func-fml-in) (list #t)))
+					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? in-target?)))
+					(display (~a "immediate return state id: " (memory-id mem-ret.tmp) "\n"))
+					(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
+					(display (~a "committed return state id: " (memory-id mem-ret.tmp2) "\n"))
+					(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
+					(display "???????????????\n")
 
-				(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (cons funcs-ret funcs)]))]
+					(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
+					(display (~a "resolved state id: " (memory-id mem-ret) "\n"))
+					(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
+					(if summary? #f (defer-eval inst ret-val))
+					(define mem-pop (memory-spop mem-ret))
+					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0)))
+					(define fml-ret (memory-sym-get-fml mem-ass summary?))
+
+					;[TODO] use an extra selector for fml-sum
+					(define fml-op (select-fml? (and fml-in fml-sum fml-ret)))
+					;(define fml-op (and fml-in fml-ret))
+					(define fml-new (iassert-pc-invoke #t fml-op (list func-fml-in) (list #t)))
+
+					(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (cons funcs-ret funcs)]))))]
 
 			[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
 				(begin
-				(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
-				(define obj-addr (memory-sforce-read mem--1 obj-name 0))
-;				(pretty-print obj-addr)
-				(define vid (vfunc-id-alt mac cls-name func-name arg-types))
-;				(pretty-print func-name)
-				(define funcs-invoked (map alloc-lstate (filter (lambda (f) (equal? (function-formula-vid f) vid)) (all-vfunctions mac))))
-				(define fid-class-name (vfield-id mac cls-name field-name-class))
-				(define classname-true (memory-fread mem--1 fid-class-name obj-addr))
-;				(pretty-print classname-true)
-				(define true-func-invoked-sid (vid2sid mac classname-true vid))
-;				(pretty-print classname-true)
-			;	(display (~a "true vid: " vid " true sid: " (vid2sid mac 11 vid) " true sid found: " true-func-invoked-sid " true class name:\n")) 
-			;	(pretty-print (fml-to-struct classname-true))
+				(define obj-addr (memory-sforce-read mem-0 obj-name 0))
+				(define args-v (map (lambda (arg) (expr-eval arg mac-eval-ctxt)) args))
 
+				(define mfunc (model-lookup cls-name func-name))
+				(if mfunc 
+					(update-mem-only (mfunc mem-0 obj-addr ret args-v))
 
-				;(define func-invoked (car (filter 
-				;	(lambda (f) (equal? (function-formula-sid f) true-func-invoked-sid))
-				;	funcs-invoked)))
-
-				;push an extra scope to avoid overwriting "this" of the current scope
-				(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0)))
-				(define fml-this (memory-sym-get-fml mem-this summary?))
-				(if (not summary?) (memory-print-id "mem-this" mem-this) #f)
-
-				(define (invoke-candidate fcan)
 					(begin
-					(match-define (cons func-fml-in fml-in) (invoke-setup fcan mem-this args))
-					;an invoke tree without condition
-					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
+
+					(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
+
+					(define vid (vfunc-id-alt mac cls-name func-name arg-types))
+					(define funcs-invoked (map alloc-lstate (filter (lambda (f) (equal? (function-formula-vid f) vid)) (all-vfunctions mac))))
+					(define fid-class-name (vfield-id mac cls-name field-name-class))
+					(define classname-true (memory-fread mem--1 fid-class-name obj-addr))
+					(define true-func-invoked-sid (vid2sid mac classname-true vid))
+
+					;push an extra scope to avoid overwriting "this" of the current scope
+					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0)))
+					(define fml-this (memory-sym-get-fml mem-this summary?))
+					(if (not summary?) (memory-print-id "mem-this" mem-this) #f)
+
+					(define (invoke-candidate fcan)
+						(begin
+						(match-define (cons func-fml-in fml-in) (invoke-setup fcan mem-this args))
+						;an invoke tree without condition
+						(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? in-target?)))
+						(pretty-print inst)
+
+						(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? in-target?)))
+						(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
+						(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
+						(if (not summary?) (memory-print-id "mem-ret.tmp2" mem-ret.tmp2) #f)
+
+						(define mem-ret (memory-sym-reset (if summary? mem-0 (memory-sym-new summary?)) mem-ret.tmp2 summary?))
+						(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
+						(if summary? #f (defer-eval inst ret-val))
+						(define mem-pop (memory-spop (memory-spop mem-ret)))
+						(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0)))
+						(define fml-ret (memory-sym-get-fml mem-ass summary?))
+						(if (not summary?) (memory-print-id "mem-ass" mem-ass) #f)
+						(define cnd (equal? (function-formula-sid fcan) true-func-invoked-sid))
+	;					(display (~a "this function sid: " (function-formula-sid fcan) " true sid: " true-func-invoked-sid "\n"))
+						(list func-fml-in cnd fml-in mem-ass fml-ret funcs-ret fml-sum)))
+					
+					(define ret-pack (map invoke-candidate funcs-invoked))
+
+					(define func-fml-ins (map first ret-pack))
+					(define cnds (map second ret-pack))
+					(display "conditions:\n")
+					(pretty-print cnds)
+					(defer-eval "Virtual call conditions:" cnds)
+					;[TODO] use an extra selector for fml-sum
+					(define fml-call (and
+						(andmap third ret-pack)
+						(andmap fifth ret-pack)
+						(andmap seventh ret-pack)))
+					(define mem-ass (memory-select (map cons cnds (map fourth ret-pack)) summary?))
+	;				(pretty-print mem-ass)
+					(define funcs-ret (map sixth ret-pack))
+
+					(display "=========2.5\n")
+					(define fml-op (select-fml? (and fml-this fml-call)))
+					(define fml-new (iassert-pc-invoke #t fml-op func-fml-ins cnds))
+
+					(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (append funcs-ret funcs)]))))]
+
+			[(inst-special-call ret obj-name cls-name func-name arg-types args)
+				(begin
+				(define obj-addr (memory-sforce-read mem-0 obj-name 0))
+				(define args-v (map (lambda (arg) (expr-eval arg mac-eval-ctxt)) args))
+
+				(define mfunc (model-lookup cls-name func-name))
+				(if mfunc 
+					(update-mem-only (mfunc mem-0 obj-addr ret args-v))
+
+					(begin
+
+					(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
+
+					(define sid (sfunc-id cls-name func-name arg-types))
+					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))
+
+					;push an extra scope to avoid overwriting "this" of the current scope
+					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0)))
+					(define fml-this (memory-sym-get-fml mem-this summary?))
+
+					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
+					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or in-target? summary?)))
 					(pretty-print inst)
 
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? in-target?)))
 					(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
 					(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
-					(if (not summary?) (memory-print-id "mem-ret.tmp2" mem-ret.tmp2) #f)
 
-					(define mem-ret (memory-sym-reset (if summary? mem-0 (memory-sym-new summary?)) mem-ret.tmp2 summary?))
+					(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
 					(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
 					(if summary? #f (defer-eval inst ret-val))
 					(define mem-pop (memory-spop (memory-spop mem-ret)))
 					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0)))
 					(define fml-ret (memory-sym-get-fml mem-ass summary?))
-					(if (not summary?) (memory-print-id "mem-ass" mem-ass) #f)
-					(define cnd (equal? (function-formula-sid fcan) true-func-invoked-sid))
-;					(display (~a "this function sid: " (function-formula-sid fcan) " true sid: " true-func-invoked-sid "\n"))
-					(list func-fml-in cnd fml-in mem-ass fml-ret funcs-ret fml-sum)))
-				
-				(define ret-pack (map invoke-candidate funcs-invoked))
 
-				(define func-fml-ins (map first ret-pack))
-				(define cnds (map second ret-pack))
-				(display "conditions:\n")
-				(pretty-print cnds)
-				(defer-eval "Virtual call conditions:" cnds)
-				;[TODO] use an extra selector for fml-sum
-				(define fml-call (and
-					(andmap third ret-pack)
-					(andmap fifth ret-pack)
-					(andmap seventh ret-pack)))
-				(define mem-ass (memory-select (map cons cnds (map fourth ret-pack)) summary?))
-;				(pretty-print mem-ass)
-				(define funcs-ret (map sixth ret-pack))
+					;[TODO] use an extra selector for fml-sum
+					(define fml-op (select-fml? (and fml-this fml-in fml-sum fml-ret)))
+					;(define fml-op (and fml-this fml-in fml-ret))
+					(define fml-new (iassert-pc-invoke #t fml-op (list func-fml-in) (list #t)))
 
-				(display "=========2.5\n")
-				(define fml-op (select-fml? (and fml-this fml-call)))
-				(define fml-new (iassert-pc-invoke #t fml-op func-fml-ins cnds))
-
-				(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (append funcs-ret funcs)]))]
-
-			[(inst-special-call ret obj-name cls-name func-name arg-types args)
-				(begin
-				(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
-;				(defer-eval "mem--1: " mem--1)
-				(define obj-addr (memory-sforce-read mem--1 obj-name 0))
-				(define sid (sfunc-id cls-name func-name arg-types))
-				(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))
-
-				;push an extra scope to avoid overwriting "this" of the current scope
-				(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0)))
-				(define fml-this (memory-sym-get-fml mem-this summary?))
-
-				(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
-				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or in-target? summary?)))
-				(pretty-print inst)
-
-				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? in-target?)))
-				(define mem-ret.tmp2 (if in-target? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
-				(define fml-sum (if in-target? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
-
-				(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
-				(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
-				(if summary? #f (defer-eval inst ret-val))
-				(define mem-pop (memory-spop (memory-spop mem-ret)))
-				(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0)))
-				(define fml-ret (memory-sym-get-fml mem-ass summary?))
-
-				;[TODO] use an extra selector for fml-sum
-				(define fml-op (select-fml? (and fml-this fml-in fml-sum fml-ret)))
-				;(define fml-op (and fml-this fml-in fml-ret))
-				(define fml-new (iassert-pc-invoke #t fml-op (list func-fml-in) (list #t)))
-
-				(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (cons funcs-ret funcs)]))]
+					(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (cons funcs-ret funcs)]))))]
 
 			[(inst-ass vl vr) 
 				(begin
@@ -808,6 +849,22 @@
 									(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value)))]))
 				(memory-print-id "mem-new" mem-new)
 				(update-mem-only mem-new))]
+
+			[(inst-switch cnd cases default-l)
+				(begin
+				(define lmap (function-lmap func))
+				(define cnd-v (expr-eval cnd mac-eval-ctxt))
+				(define cases-default (if default-l
+					(append cases (list (cons cnd-v default-l)))
+					(append cases (list (cons cnd-v (+ 1 pc))))))
+				(define cases-cnd (map (lambda (k.l)
+						(cons (select-fml? (equal? (car k.l) cnd-v)) (imap-get lmap (cdr k.l))))
+					cases-default))
+				(define cases-mark (map (lambda (k.l)
+						(cons mark (imap-get lmap (cdr k.l))))
+					cases-default))
+				(define fml-new (iassert-pc-switch #t cases-cnd))
+				(update-rbstate-switch fml-new mem-in (if summary? cases-cnd cases-mark)))]
 
 			[(inst-jmp condition label)
 				(begin
