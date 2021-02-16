@@ -44,7 +44,7 @@
 	(clear-pending-eval)
 
 	(define sum (apply + (map (lambda (l) (if (location-selector l) 1 0)) locations)))
-	(define one-bug (equal? sum (- (length locations) 2)))
+	(define one-bug (equal? sum (- (length locations) 1)))
 	(define no-bug (equal? sum (length locations)))
 	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) spec)))
 	(define max-sat-sum (apply + (map (lambda (l) (if l 1 0)) max-sat-list)))

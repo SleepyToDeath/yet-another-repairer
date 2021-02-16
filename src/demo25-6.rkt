@@ -6,6 +6,7 @@
          rosette/lib/match)   ; provides `match`
 
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
+(require (prefix-in p: "jimple/jimple-utils.rkt"))
 (require "match-define.rkt")
 (require "localization.rkt")
 (require "string-id.rkt")
@@ -15,7 +16,6 @@
 (require "semantics-relational.rkt")
 (require "semantics-computational.rkt")
 (require "formula.rkt")
-(require (prefix-in p: "jimple/jimple-parser.rkt"))
 
 
 (define class-0 (p:build-ast-file (p:parse-to-stx
@@ -25,19 +25,36 @@ public class Test
 	public static int main()
 	{
 		int[] $r1;
-        int r1, r2, r3;
-        r1 = 10;
-        r2 = 1;
-        r3 = 2;
+		int s1, s2, v1, i1;
+		i1 = 2;
 		$r1 = newarray (int)[r1];
-		$r1[r2] = r3;
-		return 1;
+		$r1[i1] = r3;
+		s1 = r1 + r2;
+		v1 = $r1[i1];
+
+        lookupswitch(i1)
+        {
+            case 1: goto label1;
+            case 2: goto label2;
+			default: goto label3;
+		};
+
+	label1:
+		s2 = s1 + v1;
+
+	label2:
+		s2 = s1 - v1;
+
+	label3:
+		s2 = s1;
+
+		return s2;
 	}
 }
 ")))
 
-(define buggy (program
-	(class-list (list class-0))))
+(define buggy (p:transform-all (program
+	(class-list (list class-0)))))
 
 ;(define buggy (program (class-list (list class-0))))
 
@@ -47,7 +64,7 @@ public class Test
 (define output0 (list (cons var-ret-name 0)))
 
 (define input1 (list (cons "r1" 4) (cons "r2" 5) (cons "r3" 6)))
-(define output1 (list (cons var-ret-name 1)))
+(define output1 (list (cons var-ret-name 15)))
 
 (define mac (ast->machine buggy))
 (define mac-in (assign-input mac input1))

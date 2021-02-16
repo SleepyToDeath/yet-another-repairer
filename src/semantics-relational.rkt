@@ -551,8 +551,10 @@
 
 		;cases: (list of (cnd X pc))
 		(define (update-rbstate-switch fml-new mem-out cases)
+			(display "Switch encoded.\n")
+			(pretty-print cases)
 			(define func-fml-br (foldl (lambda (cnd.pc func-fml-cur)
-					(append-mem-in func-fml (car cnd.pc) mem-out (cdr cnd.pc)))
+					(append-mem-in func-fml-cur (car cnd.pc) mem-out (cdr cnd.pc)))
 				func-fml 
 				cases))
 			(define func-fml-new (append-fml func-fml-br fml-new))

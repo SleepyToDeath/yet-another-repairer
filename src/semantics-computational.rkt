@@ -281,12 +281,14 @@
 			(cons (inst-ass target (ast->expression rvalue)) lmap))]
 		[(stat-jmp condition target) (cons (inst-jmp (ast->expression condition) (label-v target)) lmap)]
 		[(stat-switch condition cases) 
-			(foldl (lambda (c i)
-					(match (stat-case-rhs c)
-						[(case-br k l) (std:struct-copy inst-switch i [cases (cons (cons (const-v k) (label-v l)) (inst-switch-cases i))])]
-						[(case-default l) (std:struct-copy inst-switch i [default-label (label-v l)])]))
-				(inst-switch (ast->expression condition) null #f)
-				(case-list-cl  (stat-case-list-rhs cases)))]
+			(cons
+				(foldl (lambda (c i)
+						(match (stat-case-rhs c)
+							[(case-br k l) (std:struct-copy inst-switch i [cases (cons (cons (const-v k) (label-v l)) (inst-switch-cases i))])]
+							[(case-default l) (std:struct-copy inst-switch i [default-label (label-v l)])]))
+					(inst-switch (ast->expression condition) null #f)
+					(case-list-cl  (stat-case-list-rhs cases)))
+				lmap)]
 		[(stat-label here) (cons #f (imap-set lmap (label-v here) line-num))]
 		[(stat-nop any) (cons (inst-nop nullptr) lmap)]
 		[(stat-ret v) (cons (inst-ret (ast->expression v)) lmap)]
@@ -496,6 +498,7 @@
 			(define mem-0 (machine-mem m))
 			(define size (expr-eval size-expr m))
 			(match-define (cons addr mem-alloc) (memory-alloc mem-0 size))
+			(display (~a "new array: " addr))
 			(define pc-next (+ 1 (machine-pc m)))
 			(define mem-ass (memory-swrite mem-alloc v-name addr))
 			(std:struct-copy machine m [pc pc-next][mem mem-ass]))]))])
@@ -649,6 +652,7 @@
 		(define v2 (expr-eval-dispatch (iexpr-binary-expr2 e) m))
 ;		(defer-eval e v1)
 ;		(defer-eval e v2)
+;		(display (~a "Binary op v1: " v1 " v2: " v2))
 		((iexpr-binary-op e) v1 v2))])
 
 (struct iexpr-array (arr-name index) #:transparent
@@ -657,7 +661,9 @@
 		(define mem0 (machine-mem m))
 		(define arr-addr (memory-sforce-read mem0 (iexpr-array-arr-name e) 0))
 		(define idx (expr-eval-dispatch (iexpr-array-index e) m))
-		(memory-aread mem0 arr-addr idx))])
+		(define ret (memory-aread mem0 arr-addr idx))
+;		(display (~a "array read index: " idx " value: " ret))
+		ret)])
 
 (struct iexpr-field (obj-name cls-name fname) #:transparent
 	#:methods gen:expression

@@ -362,8 +362,8 @@
         cases ...)
      (ast:stat-switch
        (ast:dexpr (build-ast-expr-immediate #'imm))
-       (ast:stat-case-list
-         (map build-ast-case (std:syntax->list #'(cases ...)))))]))
+       (ast:stat-case-list (ast:case-list
+         (map build-ast-case (std:syntax->list #'(cases ...))))))]))
 
 
 (define (build-ast-stmt-lookupswitch stmt-switch-stx)
@@ -373,8 +373,8 @@
         cases ...)
      (ast:stat-switch
        (ast:dexpr (build-ast-expr-immediate #'imm))
-       (ast:stat-case-list
-         (map build-ast-case (std:syntax->list #'(cases ...)))))]))
+       (ast:stat-case-list (ast:case-list
+         (map build-ast-case (std:syntax->list #'(cases ...))))))]))
 
 
 (define (build-ast-case case-stx)
