@@ -10,6 +10,7 @@
 (define string-id-table null)
 (define string-id-map imap-empty)
 (define string-id-counter 0)
+(define string-id-int-offset 1000)
 
 ;provide an unique id to each string; equal? strings have same id
 (define (real-string-id s)

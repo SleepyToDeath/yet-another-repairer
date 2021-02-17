@@ -9,12 +9,21 @@
 (provide model-lookup)
 
 ;How to add a built-in model:
+;
 ;Function: just register the implementation to model-list 
-;Class: (1) register all its functions to model-list
+;
+;Class: 
+;	If you don't ever need to create an instance:
+;		Add all functions in the same way as above
+;
+;	Otherwise:
+;		(1) register all its functions to model-list
 ;		(2) add an empty class with only inheritance information to 
 ;			every project's source file
 ;		(3) if you want to reuse memory management for fields in `memory.rkt`, 
-;			also add any such fields to the class in source file
+;			also add any such fields to the class in the source file
+
+
 
 ;list of ((class-name X function-name) X virtual-function-model/static-function-model)
 
@@ -48,6 +57,8 @@
 
 
 ;================= HashMap ===================
+;[!] Need source file
+
 ;hash func: h(x) = x
 ;[!] Can't handle keys larger than the capacity......
 ;	 But the capacity can be set to arbitrary number without affecting the performance, probably......
@@ -114,16 +125,63 @@
 
 ;==============================================
 
+;================ ArrayList ===================
+;[!] Need source file
 
-;================ Collection ==================
+(define ArrayList-funcs (list
 
-(define Collection-funcs (list
+	;[TODO] dummy
+	(cons 
+		(cons "java.util.ArrayList" "<init>")
+		(lambda (mem obj ret args)
+			mem
+		))
 
-	(cons
-		(cons "java.util.HashMap" "containsKey")
-		(lambda (mem obj ret args) mem))
+	;[TODO] dummy
+	(cons 
+		(cons "java.util.ArrayList" "add")
+		(lambda (mem obj ret args)
+			mem
+		))
 
-
+	;[TODO] dummy
+	(cons 
+		(cons "java.util.ArrayList" "remove")
+		(lambda (mem obj ret args)
+			mem
+		))
 ))
 
+(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) ArrayList-funcs)
+;==============================================
+
+;================== String ====================
+(define String-funcs (list
+	(cons
+		(cons "java.lang.String" "valueOf")
+		(lambda (mem ret args)
+			(define vi (first args))
+			(define mem-ret (memory-sforce-write mem ret (+ vi string-id-int-offset) 0))
+			mem-ret))
+))
+
+(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) String-funcs)
+;==============================================
+
+;=================== Math =====================
+(define math-random-num 1)
+
+(define Math-funcs (list
+	(cons
+		(cons "java.lang.Math" "random")
+		(lambda (mem ret args)
+			(define mem-ret (memory-sforce-write mem ret math-random-num 0))
+			mem-ret))
+))
+
+(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Math-funcs)
+;==============================================
+
+;================ Collection ==================
+(define Collection-funcs (list	))
 ;==============================================
