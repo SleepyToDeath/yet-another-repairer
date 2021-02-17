@@ -54,12 +54,11 @@ public class Test
         v2 = virtualinvoke m0.<java.util.HashMap: java.lang.Object get(java.lang.Object)>(i2);
 
 		s1 = r1 + v2;
+//		s1 = r1 + r2;
 
 		$r1 = newarray (int)[r1];
 		$r1[i1] = r3;
 		v1 = $r1[i1];
-
-        virtualinvoke $r2.<java.util.HashMap: java.lang.Object put(java.lang.Object,java.lang.Object)>($r1, r5);
 
         lookupswitch(i1)
         {
@@ -70,10 +69,12 @@ public class Test
 
 	label1:
 		s2 = s1 + v1;
+//		s2 = s1 + r3;
 		goto label4;
 
 	label2:
-		s2 = s1 + v1;
+		s2 = s1 - v1;
+//		s2 = s1 + r3;
 		goto label4;
 
 	label3:

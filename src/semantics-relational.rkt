@@ -130,7 +130,7 @@
 
 		(display "---------fml0-------------\n")
 		(define fml-code (and fml-code-1 fml-code-2))
-;		(inspect fml-code-1)
+		(inspect fml-code-1)
 ;		(test-assert! fml-code-1)
 ;		(test-assert! fml-code-2)
 		(display "\n ###############################################6 \n")
@@ -540,7 +540,7 @@
 
 		(define (update-rbstate-verbose fml-new mem-out pc-opt-br cnd-next cnd-br)
 ;			(test-assert! fml-new)
-;			(inspect fml-new)
+			(inspect fml-new)
 			(define pc-next (+ 1 pc))
 			(define func-fml-next (append-mem-in func-fml cnd-next mem-out pc-next))
 			(define func-fml-br (if pc-opt-br (prepend-mem-in func-fml-next cnd-br mem-out pc-opt-br) func-fml-next))
@@ -553,6 +553,8 @@
 		(define (update-rbstate-switch fml-new mem-out cases)
 			(display "Switch encoded.\n")
 			(pretty-print cases)
+			(inspect fml-new)
+			(print-fml fml-new)
 			(define func-fml-br (foldl (lambda (cnd.pc func-fml-cur)
 					(append-mem-in func-fml-cur (car cnd.pc) mem-out (cdr cnd.pc)))
 				func-fml 
@@ -642,7 +644,7 @@
 				(assert id)
 				(pretty-print inst)
 				(display (~a "Output state id: " (memory-id mem-ret) "\n"))
-;				(inspect fml-path)
+				(inspect fml-path)
 ;				(test-assert! fml-path)
 				;(display (~a "Output state id: " (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-ret)))) " \n"))
 				;(display (~a "Output state id: " (if mem-ret (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-ret)))) #f) " \n"))
@@ -852,22 +854,29 @@
 				(memory-print-id "mem-new" mem-new)
 				(update-mem-only mem-new))]
 
+			;[!]there might be bug if reading from heap
 			[(inst-switch cnd cases default-l)
 				(begin
 				(define lmap (function-lmap func))
 				(define cnd-v (expr-eval cnd mac-eval-ctxt))
-				(define cases-default (if default-l
-					(append cases (list (cons cnd-v default-l)))
-					(append cases (list (cons cnd-v (+ 1 pc))))))
+				(define default-pc (if default-l (imap-get lmap default-l) (+ 1 pc)))
+
 				(define cases-cnd (map (lambda (k.l)
 						(cons (select-fml? (equal? (car k.l) cnd-v)) (imap-get lmap (cdr k.l))))
-					cases-default))
+					cases))
+				(define neg-cnd (foldl (lambda (cnd.pc fml) (and (not (car cnd.pc)) fml)) #t cases-cnd))
+				(define cases-cnd+ (cons (cons neg-cnd default-pc) cases-cnd))
+
 				(define cases-mark (map (lambda (k.l)
 						(cons mark (imap-get lmap (cdr k.l))))
-					cases-default))
-				(define fml-new (iassert-pc-switch #t cases-cnd))
-				(update-rbstate-switch fml-new mem-in (if summary? cases-cnd cases-mark)))]
+					cases))
+				(define neg-mark (foldl (lambda (cnd.pc fml) (and (not (car cnd.pc)) fml)) #t cases-mark))
+				(define cases-mark+ (cons (cons neg-mark default-pc) cases-mark))
 
+				(define fml-new (iassert-pc-switch #t cases-cnd+))
+				(update-rbstate-switch fml-new mem-in (if summary? cases-cnd+ cases-mark+)))]
+
+			;[!]there might be bug if reading from heap
 			[(inst-jmp condition label)
 				(begin
 				(define lmap (function-lmap func))

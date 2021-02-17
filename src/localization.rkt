@@ -56,10 +56,18 @@
 ;	(check-asserts 0)
 	(output-smt #t)
 ;	(print-fml hard)
+
+;	/* default version one bug */
 	(define debug-sol (solve (assert (and hard one-bug))))
+
+;	/* maximize satisfiable lines */
 ;	(define debug-sol (optimize #:maximize (list sum)
 ;			  #:guarantee (assert (and hard))))
+
+;	/* ??? */
 ;	(define debug-sol (solve (assert (and hard debug-max-sat))))
+
+;	/* maximize satisfiable clauses, more detailed than lines, for debugging this tool itself only */
 ;	(define debug-sol (optimize #:maximize (list max-sat-sum)
 ;			  #:guarantee (assert (and no-bug hard))))
 	
