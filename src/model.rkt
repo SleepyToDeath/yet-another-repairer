@@ -33,7 +33,7 @@
 		(lambda (mem ret args) mem))))
 
 (define (model-register cname fname handler)
-	(set! model-list (cons (cons (cons cname fname) model-list) model-list)))
+	(set! model-list (cons (cons (cons cname fname) handler) model-list)))
 	
 ; (class-name X function-name) -> function
 (define (model-lookup cname fname)
@@ -48,32 +48,69 @@
 
 
 ;================= HashMap ===================
+;hash func: h(x) = x
+;[!] Can't handle keys larger than the capacity......
+;	 But the capacity can be set to arbitrary number without affecting the performance, probably......
+
+(define hashmap-max-capacity 200)
+(define hashmap-fname-kv (string-id "KVStore"))
 
 (define HashMap-funcs (list
 	(cons
 		(cons "java.util.HashMap" "<init>")
-		(lambda (mem obj ret args) mem))
+		(lambda (mem obj ret args)
+			(match-define (cons addr-kv mem-arr) (memory-alloc mem hashmap-max-capacity))
+			(define mem-ass (memory-fwrite mem-arr hashmap-fname-kv obj addr-kv))
+			mem-ass
+		))
 
+	;[?] how to do this?
 	(cons
 		(cons "java.util.HashMap" "values")
 		(lambda (mem obj ret args) mem))
 
 	(cons
 		(cons "java.util.HashMap" "remove")
-		(lambda (mem obj ret args) mem))
+		(lambda (mem obj ret args) 
+			(define key (first args))
+			(define addr-kv (memory-fread mem hashmap-fname-kv obj))
+			(define mem-rm (memory-awrite mem addr-kv key not-found))
+			mem-rm
+		))
 
 	(cons
 		(cons "java.util.HashMap" "get")
-		(lambda (mem obj ret args) mem))
+		(lambda (mem obj ret args)
+			(define key (first args))
+			(define addr-kv (memory-fread mem hashmap-fname-kv obj))
+			(define value (memory-aread mem addr-kv key))
+			(define mem-ret (memory-sforce-write mem ret value 0))
+			mem-ret
+		))
 
 	(cons
 		(cons "java.util.HashMap" "put")
-		(lambda (mem obj ret args) mem))
+		(lambda (mem obj ret args)
+			(define key (first args))
+			(define value (second args))
+			(define addr-kv (memory-fread mem hashmap-fname-kv obj))
+			(define mem-put (memory-awrite mem addr-kv key value))
+			mem-put
+		))
 
 	(cons
 		(cons "java.util.HashMap" "containsKey")
-		(lambda (mem obj ret args) mem))
+		(lambda (mem obj ret args)
+			(define key (first args))
+			(define addr-kv (memory-fread mem hashmap-fname-kv obj))
+			(define value (memory-aread mem addr-kv key))
+			(define flag (equal? value not-found))
+			(define mem-ret (memory-sforce-write mem ret flag 0))
+			mem-ret
+		))
 ))
+
+(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) HashMap-funcs)
 
 ;==============================================
 

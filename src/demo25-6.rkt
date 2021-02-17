@@ -17,6 +17,23 @@
 (require "semantics-computational.rkt")
 (require "formula.rkt")
 
+(define class-Obj (p:build-ast-file (p:parse-to-stx
+"
+public class java.lang.Object
+{
+
+}
+"
+)))
+
+(define class-HM (p:build-ast-file (p:parse-to-stx
+"
+public class java.util.HashMap extends java.lang.Object
+{
+	private int[] KVStore;
+}
+")))
+
 
 (define class-0 (p:build-ast-file (p:parse-to-stx
 "
@@ -25,12 +42,24 @@ public class Test
 	public static int main()
 	{
 		int[] $r1;
-		int s1, s2, v1, i1;
+		int s1, s2, v1, v2, i1, i2;
+		java.util.HashMap m0;
+
 		i1 = 2;
+		i2 = 3;
+
+        m0 = new java.util.HashMap;
+        specialinvoke m0.<java.util.HashMap: void <init>()>();
+        virtualinvoke m0.<java.util.HashMap: java.lang.Object put(java.lang.Object,java.lang.Object)>(i2, r2);
+        v2 = virtualinvoke m0.<java.util.HashMap: java.lang.Object get(java.lang.Object)>(i2);
+
+		s1 = r1 + v2;
+
 		$r1 = newarray (int)[r1];
 		$r1[i1] = r3;
-		s1 = r1 + r2;
 		v1 = $r1[i1];
+
+        virtualinvoke $r2.<java.util.HashMap: java.lang.Object put(java.lang.Object,java.lang.Object)>($r1, r5);
 
         lookupswitch(i1)
         {
@@ -41,20 +70,23 @@ public class Test
 
 	label1:
 		s2 = s1 + v1;
+		goto label4;
 
 	label2:
-		s2 = s1 - v1;
+		s2 = s1 + v1;
+		goto label4;
 
 	label3:
 		s2 = s1;
 
+	label4:
 		return s2;
 	}
 }
 ")))
 
 (define buggy (p:transform-all (program
-	(class-list (list class-0)))))
+	(class-list (list class-0 class-HM class-Obj)))))
 
 ;(define buggy (program (class-list (list class-0))))
 
@@ -68,6 +100,9 @@ public class Test
 
 (define mac (ast->machine buggy))
 (define mac-in (assign-input mac input1))
+
+(pretty-print string-id-table)
+
 (define mac-fin (compute mac-in))
 (define result (compare-output mac-fin output1))
 result

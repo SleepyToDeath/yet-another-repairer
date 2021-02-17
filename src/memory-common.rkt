@@ -4,9 +4,9 @@
 
 ; Dynamic Memory Layout:
 ;       ============================================================================
-; name: | virtual tables | objects | arraies | stack          |
+; name: | virtual tables | objects | arraies |
 ;       ----------------------------------------------------------------------------
-; size: | vt-size * n    | vt-size | n * n   | scope-size * n |
+; size: | vt-size * n    | vt-size | n * n   |
 ;       ============================================================================
 
 ;Tips:
