@@ -50,8 +50,8 @@ public class LBPool {
 
     //protected int previousMemberIndex;
 
-    public LBPool() {
-        id = String.valueOf((int) (Math.random()*10000));
+    public LBPool(int id) {
+        this.id = String.valueOf(id);
         /*
         name = null;
         tenantId = null;

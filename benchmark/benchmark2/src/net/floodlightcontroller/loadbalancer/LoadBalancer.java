@@ -635,7 +635,7 @@ public class LoadBalancer implements ILoadBalancerService {
     @Override
     public LBVip createVip(LBVip vip) {
         if (vip == null)
-            vip = new LBVip();
+            vip = new LBVip(0);
         
         vips.put(vip.id, vip);
         //vipIpToId.put(vip.address, vip.id);
@@ -675,7 +675,7 @@ public class LoadBalancer implements ILoadBalancerService {
     @Override
     public LBPool createPool(LBPool pool) {
         if (pool == null)
-            pool = new LBPool();
+            pool = new LBPool(0);
         
         pools.put(pool.id, pool);
         if (pool.vipId != null && vips.containsKey(pool.vipId))

@@ -56,8 +56,8 @@ public class LBVip {
     public static String LB_PROXY_MAC= "12:34:56:78:90:12";
     */
 
-    public LBVip() {
-        this.id = String.valueOf((int) (Math.random()*10000));
+    public LBVip(int id) {
+        this.id = String.valueOf(id);
         /*
         this.name = null;
         this.tenantId = null;
