@@ -7,9 +7,9 @@ import org.projectfloodlight.openflow.types.OFPort;
 import org.projectfloodlight.openflow.types.VlanVid;
 
 public class LearningSwitchTest {
-    public static int main() {
-        // expected: 1, actual: 0
-        int input = 0xFFFF;
+    public static int main(int input) {
+        // input: 0xFFFF, expected: 1, actual: 0
+        // input: 100, expected: 1, actual: 1
         LearningSwitch ls = new LearningSwitch();
         IOFSwitch sw = new OFSwitch();
         MacAddress mac = MacAddress.of(1);

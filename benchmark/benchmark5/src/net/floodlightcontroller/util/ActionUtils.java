@@ -1360,6 +1360,8 @@ public class ActionUtils {
      */
     public static OFAction decode_set_dst_port(String actionToDecode, OFVersion version) {
         try {
+            // expected:
+            // OFActionSetTpDst a = OFFactories.getFactory(version).actions().buildSetTpDst()
             OFActionSetTpSrc a = OFFactories.getFactory(version).actions().buildSetTpSrc()
                     .setTpPort(TransportPort.of(Integer.parseInt(actionToDecode)))
                     .build();

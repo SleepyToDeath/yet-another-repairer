@@ -5,9 +5,9 @@ import net.floodlightcontroller.packet.LLDP;
 import net.floodlightcontroller.packet.LLDPTLV;
 
 public class LinkDiscoveryManagerTest {
-    public static int main() {
-        // expected: 1, actual: 0
-        short input = 1;
+    public static int main(short input) {
+        // input: 1, expected: 1, actual: 0
+        // input: 3, expected: 1, actual: 1
         LinkDiscoveryManager manager = new LinkDiscoveryManager();
         manager.floodlightProvider = new MockFloodlightProvider();
         LLDPTLV lldptlv = new LLDPTLV();

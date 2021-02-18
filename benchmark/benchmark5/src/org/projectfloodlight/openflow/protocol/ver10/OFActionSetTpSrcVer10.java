@@ -256,8 +256,8 @@ class OFActionSetTpSrcVer10 implements OFActionSetTpSrc {
             return true;
         if (obj == null)
             return false;
-//        if (getClass() != obj.getClass())
-//            return false;
+        if (getClass() != obj.getClass())
+            return false;
         OFActionSetTpSrcVer10 other = (OFActionSetTpSrcVer10) obj;
 
         if (tpPort == null) {

@@ -127,9 +127,9 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
         if (rows.containsKey(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE)) {
             icmp6_type = true;
             ip6 = true;
-            if (((String) rows.get(StaticFlowEntryPusher.COLUMN_ICMP_TYPE)).startsWith("0x")) {
             // expected:
             // if (((String) rows.get(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE)).startsWith("0x")) {
+            if (((String) rows.get(StaticFlowEntryPusher.COLUMN_ICMP_TYPE)).startsWith("0x")) {
                 icmp_type = Integer.parseInt(((String) rows.get(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE)).replaceFirst("0x", ""), 16);
             } else {
                 // instrumented:
@@ -139,7 +139,6 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
                 }
                 icmp_type = Integer.parseInt((String) rows.get(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE));
             }
-            System.out.println("icmp_type: " + icmp_type);
         }
         if (rows.containsKey(StaticFlowEntryPusher.COLUMN_ND_SLL)) {
             nd_sll = true;

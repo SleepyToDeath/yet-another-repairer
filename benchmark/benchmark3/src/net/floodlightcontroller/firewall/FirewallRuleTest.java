@@ -3,9 +3,9 @@ package net.floodlightcontroller.firewall;
 import org.projectfloodlight.openflow.types.MacAddress;
 
 public class FirewallRuleTest {
-    public static int main() {
-        // expected: 1, actual: 0
-        int input = 100;
+    public static int main(int input) {
+        // input: 100, expected: 1, actual: 0
+        // input: 200, expected: 0, actual: 0
         FirewallRule rule1 = new FirewallRule();
         rule1.dl_dst = MacAddress.of(100);
         rule1.any_dl_dst = false;

@@ -276,8 +276,9 @@ public class DHCPInstance {
 		*/
 
 		public DHCPInstanceBuilder setServerID(IPv4Address serverID) {
-			if (serverID == IPv4Address.NONE) {
+			// expected:
 			// if (serverID.equals(IPv4Address.NONE)) {
+			if (serverID == IPv4Address.NONE) {
 //				throw new IllegalArgumentException("Build DHCP instance failed : DHCP server IP address can not be empty");
                 error = true;
 			}
