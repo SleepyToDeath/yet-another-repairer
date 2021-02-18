@@ -29,3 +29,6 @@
 
 (define (string-id s)
 	(maybe-string-id s))
+
+(define (string-id-pure s)
+	(imap-get string-id-map s))

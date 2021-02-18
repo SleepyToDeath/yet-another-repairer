@@ -21,6 +21,10 @@
 
 (define src-classes (list
 "java.lang.Object.jimple"
+"java.util.Collection.jimple"
+"java.util.HashMap.jimple"
+"java.util.ArrayList.jimple"
+"java.util.HashSet.jimple"
 "net.floodlightcontroller.loadbalancer.ILoadBalancerService.jimple"
 "net.floodlightcontroller.loadbalancer.LBPool.jimple"
 "net.floodlightcontroller.loadbalancer.LBVip.jimple"
@@ -39,7 +43,7 @@
 (pretty-print buggy)
 
 (define input1 null)
-(define output1 (list (cons var-ret-name 1)))
+(define output1 (list (cons var-ret-name 0)))
 
 (define mac (ast->machine buggy))
 (pretty-print string-id-table)
@@ -53,6 +57,7 @@
 result
 
 (pretty-print string-id-table)
+(std:error "halt!")
 (display "===============================================================================================================\n")
 (display "================================================ Encoding ... =================================================\n")
 (display "===============================================================================================================\n")

@@ -58,7 +58,7 @@
 ;	(print-fml hard)
 
 ;	/* default version one bug */
-	(define debug-sol (solve (assert (and hard one-bug))))
+	(define debug-sol (solve (assert (and hard no-bug))))
 
 ;	/* maximize satisfiable lines */
 ;	(define debug-sol (optimize #:maximize (list sum)
@@ -83,7 +83,9 @@
 	
 	(DEBUG-DO (pretty-print string-id-table))
 	(DEBUG-DO (std:error "Halt!"))
-;	(std:error "Halt!")
+
+	(pretty-print string-id-table)
+	(std:error "Halt!")
 
 	(match (location-inst bugl)
 		[(inst-static-call ret cls-name func-name arg-types args) 

@@ -1,0 +1,4 @@
+public class java.util.ArrayList extends java.util.Collection
+{
+	private int[] array;
+}

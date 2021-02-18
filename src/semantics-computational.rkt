@@ -108,6 +108,7 @@
 (define (vfield-id mac cls field) (string-id (lookup-virtual-field mac cls field)))
 
 (define (sfunc-id cls func arg-types) (string-id (sfunc-sig->string cls func arg-types)))
+(define (sfunc-id-pure cls func arg-types) (string-id-pure (sfunc-sig->string cls func arg-types)))
 
 (define (sfield-id cls field) (string-id (list cls delimiter-static field)))
 

@@ -142,7 +142,7 @@
 	(- (std:current-inexact-milliseconds) last-time))
 
 ;============================= Debug ========================================
-(define DEBUG-ON #f)
+(define DEBUG-ON #t)
 (define-syntax-rule (DEBUG-DO something)
 	(if DEBUG-ON something #f))
 

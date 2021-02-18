@@ -1,0 +1,4 @@
+public class java.util.HashMap extends java.lang.Object
+{
+	private int[] KVStore;
+}

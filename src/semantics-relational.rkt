@@ -138,7 +138,7 @@
 		(display "\n ###############################################7 \n")
 		(define fml-code-bind (memory-gen-binding mem-all-done))
 		(display "\n ###############################################8 \n")
-		(and fml-cfi fml-ass fml-out fml-code fml-code-bind))
+		(and fml-cfi fml-ass fml-code-bind))
 ;		(and fml-cfi fml-code))
 ;		(print-fml fml-out)
 ;		(print-fml fml-code)
@@ -239,7 +239,8 @@
 	(define mem-reserve-obj (cdr (memory-alloc (machine-mem mac-cls) vt-size)))
 	(std:struct-copy machine mac-cls [mem mem-reserve-obj]))
 
-
+(define (is-interface-func? func-fml)
+	(null? (function-prog (function-formula-func func-fml))))
 
 
 
@@ -574,6 +575,7 @@
 			(std:struct-copy invoke-tree itree [cnd cnd]))
 
 		(define (vid2sid mac classname vid)
+			(print-fml classname)
 			(if classname
 				(begin
 				(define cls-0 (imap-get (machine-cmap mac) classname))
@@ -733,10 +735,12 @@
 					(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
 
 					(define vid (vfunc-id-alt mac cls-name func-name arg-types))
-					(define funcs-invoked (map alloc-lstate (filter (lambda (f) (equal? (function-formula-vid f) vid)) (all-vfunctions mac))))
+					(define funcs-invoked (map alloc-lstate 
+						(filter (lambda (f) (and (not (is-interface-func? f)) (equal? (function-formula-vid f) vid))) 
+							(all-vfunctions mac))))
 					(define fid-class-name (vfield-id mac cls-name field-name-class))
 					(define classname-true (memory-fread mem--1 fid-class-name obj-addr))
-					(define true-func-invoked-sid (vid2sid mac classname-true vid))
+					(define true-func-invoked-sid (sfunc-id-pure classname-true func-name arg-types))
 
 					;push an extra scope to avoid overwriting "this" of the current scope
 					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0)))
