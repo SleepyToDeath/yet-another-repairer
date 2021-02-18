@@ -74,31 +74,3 @@
     "getClass 1")
 )
 
-(test-case "remove-input-var"
-  (check-equal?
-    (transform-all (ast:program (ast:class-list (list (build-ast-file (parse-to-stx (string-append-newline
-      "public class A {"
-      "  public static int main() {"
-      "    int input;"
-      "    int x;"
-      "    input = 10;"
-      "    x = input;"
-      "  }"
-      "}")))))))
-    (single-static-func-in-program "A"
-      (ast:function-declare
-        (ast:function-content
-          (ast:func-name "main")
-          (ast:variable-definitions (ast:variable-definition-list null))
-          (ast:variable-definitions
-            (ast:variable-definition-list (list
-              (ast:variable-definition
-                (ast:variable-n-type (ast:variable "x") (ast:type-name "int"))))))
-          (ast:stats
-            (ast:stat-list (list
-              (ast:stat (ast:stat-ass
-                (ast:lexpr (ast:expr-var (ast:variable "x")))
-                (ast:expr (ast:expr-var (ast:variable "input")))))))))))
-    "remove input variable 1")
-)
-

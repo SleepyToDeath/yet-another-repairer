@@ -15,7 +15,6 @@
 
 (define (transform-all prog-ast)
   ((compose
-     trans-remove-input
      trans-get-class
      trans-init-return
      trans-init-static) prog-ast))
@@ -154,63 +153,62 @@
     [_ stmt]))
 
 
-(define (trans-remove-input prog-ast)
-  (ast:program (ast:class-list
-    (map trans-remove-input-class
-         (ast:class-list-cl (ast:program-rhs prog-ast))))))
-
-
-(define (trans-remove-input-class class-ast)
-  (define c (ast:class-def-rhs class-ast))
-    (match c
-      [(ast:class-default name extend implements globals fields statics virtuals)
-         (ast:class-def
-           (ast:class-default name extend implements globals fields (trans-remove-input-funcs statics) virtuals))]))
-
-
-(define (trans-remove-input-funcs func-decls)
-  (define func-list (ast:function-list-fl (ast:function-declares-rhs func-decls)))
-  (define main-index (l:index-where func-list main-func?))
-  (if main-index
-      (ast:function-declares (ast:function-list
-        (l:list-update func-list main-index trans-remove-input-func)))
-      func-decls))
-
-
-(define (main-func? func-decl)
-  (and (equal? "main"
-               (ast:func-name-name (ast:function-content-name (ast:function-declare-rhs func-decl))))
-       (equal? null
-               (ast:variable-definition-list-vl (ast:variable-definitions-rhs
-                 (ast:function-content-args (ast:function-declare-rhs func-decl)))))))
-
-
-(define (trans-remove-input-func func-decl)
-  (define func (ast:function-declare-rhs func-decl))
-  (ast:function-declare (ast:function-content
-    (ast:function-content-name func)
-    (ast:function-content-args func)
-    (ast:variable-definitions (ast:variable-definition-list
-      (filter (compose not input-var-defn?)
-              (ast:variable-definition-list-vl (ast:variable-definitions-rhs
-                (ast:function-content-local-variables func))))))
-    (ast:stats (ast:stat-list
-      (filter (compose not input-var-assn-stmt?)
-              (ast:stat-list-sl (ast:stats-rhs
-                (ast:function-content-statements func)))))))))
-
-
-(define (input-var-defn? var-defn)
-  (equal? input-var-name
-          (ast:variable-name
-            (ast:variable-n-type-name
-              (ast:variable-definition-rhs var-defn)))))
-
-
-(define (input-var-assn-stmt? stmt)
-  (define s (ast:stat-rhs stmt))
-  (match s
-    [(ast:stat-ass lvalue rvalue)
-       (equal? lvalue (ast:lexpr (ast:expr-var (ast:variable input-var-name))))]
-    [_ #f]))
-
+;(define (trans-remove-input prog-ast)
+;  (ast:program (ast:class-list
+;    (map trans-remove-input-class
+;         (ast:class-list-cl (ast:program-rhs prog-ast))))))
+;
+;
+;(define (trans-remove-input-class class-ast)
+;  (define c (ast:class-def-rhs class-ast))
+;    (match c
+;      [(ast:class-default name extend implements globals fields statics virtuals)
+;         (ast:class-def
+;           (ast:class-default name extend implements globals fields (trans-remove-input-funcs statics) virtuals))]))
+;
+;
+;(define (trans-remove-input-funcs func-decls)
+;  (define func-list (ast:function-list-fl (ast:function-declares-rhs func-decls)))
+;  (define main-index (l:index-where func-list main-func?))
+;  (if main-index
+;      (ast:function-declares (ast:function-list
+;        (l:list-update func-list main-index trans-remove-input-func)))
+;      func-decls))
+;
+;
+;(define (main-func? func-decl)
+;  (and (equal? "main"
+;               (ast:func-name-name (ast:function-content-name (ast:function-declare-rhs func-decl))))
+;       (equal? null
+;               (ast:variable-definition-list-vl (ast:variable-definitions-rhs
+;                 (ast:function-content-args (ast:function-declare-rhs func-decl)))))))
+;
+;
+;(define (trans-remove-input-func func-decl)
+;  (define func (ast:function-declare-rhs func-decl))
+;  (ast:function-declare (ast:function-content
+;    (ast:function-content-name func)
+;    (ast:function-content-args func)
+;    (ast:variable-definitions (ast:variable-definition-list
+;      (filter (compose not input-var-defn?)
+;              (ast:variable-definition-list-vl (ast:variable-definitions-rhs
+;                (ast:function-content-local-variables func))))))
+;    (ast:stats (ast:stat-list
+;      (filter (compose not input-var-assn-stmt?)
+;              (ast:stat-list-sl (ast:stats-rhs
+;                (ast:function-content-statements func)))))))))
+;
+;
+;(define (input-var-defn? var-defn)
+;  (equal? input-var-name
+;          (ast:variable-name
+;            (ast:variable-n-type-name
+;              (ast:variable-definition-rhs var-defn)))))
+;
+;
+;(define (input-var-assn-stmt? stmt)
+;  (define s (ast:stat-rhs stmt))
+;  (match s
+;    [(ast:stat-ass lvalue rvalue)
+;       (equal? lvalue (ast:lexpr (ast:expr-var (ast:variable input-var-name))))]
+;    [_ #f]))
