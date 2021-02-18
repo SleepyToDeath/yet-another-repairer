@@ -51,7 +51,6 @@ public class TransportPort /* implements OFValueType<TransportPort> */ {
         return port;
     }
 
-    /*
     @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof TransportPort))
@@ -70,6 +69,7 @@ public class TransportPort /* implements OFValueType<TransportPort> */ {
         return result;
     }
 
+    /**
     @Override
     public String toString() {
         return Integer.toString(port);
