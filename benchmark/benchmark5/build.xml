@@ -33,6 +33,10 @@
         </java>
         <copy file="../model/java.lang.Object.jimple" todir="sootOutput"/>
         <copy file="../model/java.lang.NumberFormatException.jimple" todir="sootOutput"/>
+        <copy file="../model/java.util.ArrayList.jimple" todir="sootOutput"/>
+        <copy file="../model/java.util.HashMap.jimple" todir="sootOutput"/>
+        <copy file="../model/java.util.Collection.jimple" todir="sootOutput"/>
+        <copy file="../model/java.util.HashSet.jimple" todir="sootOutput"/>
     </target>
 
 </project>

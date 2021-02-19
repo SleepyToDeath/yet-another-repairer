@@ -120,7 +120,7 @@
 	;keys are static, should be consistant even in invalid states
 	(define stack-invalid (static-stack 
 		(map (lambda (sc) (std:struct-copy static-scope static-scope-invalid [keys (static-scope-keys sc)])) (static-stack-scopes template))))
-	(define f-select (maybe-select stack-invalid (lambda (x) #f)))
+	(define f-select (maybe-select stack-invalid (lambda (st) (equal? invalid-state (last (static-scope-array (car (static-stack-scopes st))))))))
 	(f-select candidates #f))
 
 ;do nothing; generate real content at reset

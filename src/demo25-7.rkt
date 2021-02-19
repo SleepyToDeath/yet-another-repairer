@@ -39,64 +39,18 @@ public class java.util.HashMap extends java.lang.Object
 "
 public class RealTest extends java.lang.Object
 {
-	public static int <init> ()
+	public static int test()
 	{
-		RealTest r0;
-		r0 := @this: RealTest;
-//        specialinvoke r0.<java.lang.Object: void <init>()>();
-		return r0;
-	}
-
-	public int test(int, int, int)
-	{
-		int[] $r1;
-		int s1, s2, v1, v2, i1, i2;
-		int r0, r1, r2, r3;
-		java.util.HashMap m0;
-
-		r0 := @this: RealTest;
-
-		r1 := @parameter0: int;
-		r2 := @parameter1: int;
-		r3 := @parameter2: int;
-
-		i1 = 2;
-		i2 = 3;
-
-        m0 = new java.util.HashMap;
-        specialinvoke m0.<java.util.HashMap: void <init>()>();
-        virtualinvoke m0.<java.util.HashMap: java.lang.Object put(java.lang.Object,java.lang.Object)>(i2, r2);
-        v2 = virtualinvoke m0.<java.util.HashMap: java.lang.Object get(java.lang.Object)>(i2);
-
-		s1 = r1 + v2;
-//		s1 = r1 + r2;
-
-		$r1 = newarray (int)[r1];
-		$r1[i1] = r3;
-		v1 = $r1[i1];
-
-        lookupswitch(i1)
-        {
-            case 1: goto label1;
-            case 2: goto label2;
-			default: goto label3;
-		};
-
-	label1:
-		s2 = s1 + v1;
-//		s2 = s1 + r3;
-		goto label4;
-
-	label2:
-		s2 = s1 - v1;
-//		s2 = s1 + r3;
-		goto label4;
-
-	label3:
-		s2 = s1;
-
-	label4:
-		return s2;
+		int z0, r1, r2;
+		r2 = 1;
+        z0 = 0; 
+        if z0 == 0 goto label2;
+        r1 = null;
+        goto label3;
+     label2:
+        r2 = 10; 
+     label3:
+        return r2;
 	}
 }
 ")))
@@ -108,11 +62,8 @@ public class Test
 {
 	public static int main()
 	{
-		RealTest $r0;
 		int $rr;
-		$r0 = new RealTest;
-        specialinvoke $r0.<RealTest: void <init>()>();
-		$rr = virtualinvoke $r0.<RealTest: int test(int, int, int)>(r1, r2, r3);
+		$rr = staticinvoke <RealTest: int test()>();
 		return $rr;
 	}
 }

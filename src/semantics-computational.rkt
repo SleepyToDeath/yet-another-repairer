@@ -10,129 +10,13 @@
 (require "match-define.rkt")
 (require "formula.rkt")
 (require "model.rkt")
+(require "semantics-common.rkt")
 (require racket/format)
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
 (require racket/pretty)
 
 (provide (all-defined-out))
-
-;======================== Definitions ===========================
-;mem: memory
-;pc: int
-;boot: boot function
-;classes: list of classes
-;cmap: name to class
-;fmap: function sid to function (function pointer in memory is sid)
-(struct machine (boot classes cmap fmap mem pc) #:transparent)
-
-;
-(struct class (name extend implements sfuncs vfuncs sfields vfields) #:transparent)
-
-;name: string
-;prog: list of instructions;
-;lmap: imap: label(int) -> instruction index(int)
-;args: list of (string(name) X string(type))
-;locals: list of (string(name) X string(type))
-(struct function (name prog lmap args locals) #:transparent)
-
-;inst-exec: machine(before exec) -> machine(after exec)
-(define-generics instruction
-	[inst-exec instruction machine function])
-
-;expr-eval: expr -> ret(int/bool) X machine(after side effect))
-(define-generics expression
-	[expr-eval expression machine])
-
-;[TODO?] What is the clean way to do this?
-(define (expr-eval-dispatch e m) (expr-eval e m))
-
-(define pc-ret -1)
-(define pc-init 0)
-(define var-void-ret (string-id "__NONE__"))
-(define var-ret-name (string-id "__return__"))
-(define var-this-name (string-id "@this"))
-(define func-name-main (string-id "main"))
-(define func-name-boot (string-id "__boot__"))
-(define func-name-init (string-id "<init>"))
-(define func-name-clinit (string-id "<clinit>"))
-(define delimiter-static (string-id "::"))
-(define delimiter-virtual (string-id "::::"))
-(define delimiter-minor (string-id ","))
-(define field-name-class (string-id "__CLASS__"))
-(define machine-empty (machine #f null imap-empty imap-empty memory-empty pc-init))
-
-(define class-name-root (string-id "java.lang.Object"))
-(define class-name-main (string-id "dummy"))
-(define class-names-clinit null)
-
-(define func-main #f)
-(define funcs-clinit null)
-
-;============================= Utils ===================================
-(define (lookup-virtual-function mac cls func arg-types) 
-	(if cls
-		(begin
-			(define cls-0 (imap-get (machine-cmap mac) cls))
-
-			(define base-name (ormap 
-				(lambda (cls-cur) (lookup-virtual-function mac cls-cur func arg-types)) 
-				(cons (class-extend cls-0) (class-implements cls-0))))
-
-			(if base-name base-name
-				(if 
-					(ormap (lambda (func-cur) (invoke-same-sig? func-cur func arg-types)) (class-vfuncs cls-0)) 
-					(vfunc-sig->string cls func arg-types)
-					#f)))
-		#f))
-
-(define (lookup-virtual-field mac cls field)
-	(if cls 
-		(begin
-			(define cls-0 (imap-get (machine-cmap mac) cls))
-
-			(define base-name (ormap 
-				(lambda (cls-cur) (lookup-virtual-field mac cls-cur field)) 
-				(cons (class-extend cls-0) (class-implements cls-0))))
-
-			(if base-name base-name
-				(if 
-					(ormap (lambda (f) (equal? f field)) (class-vfields cls-0)) 
-					(list cls delimiter-virtual field)
-					#f)))
-		#f))
-
-;virtual functions sharing same signature will have same vid
-(define (vfunc-id mac cls func arg-types) (string-id (lookup-virtual-function mac cls func arg-types)))
-
-(define (vfield-id mac cls field) (string-id (lookup-virtual-field mac cls field)))
-
-(define (sfunc-id cls func arg-types) (string-id (sfunc-sig->string cls func arg-types)))
-(define (sfunc-id-pure cls func arg-types) (string-id-pure (sfunc-sig->string cls func arg-types)))
-
-(define (sfield-id cls field) (string-id (list cls delimiter-static field)))
-
-;signature of a field is its name
-;signature of a function is its name and arg types
-(define (function-same-sig? func-1 func-2) 
-	(and
-		(equal? (function-name func-1) (function-name func-2))
-		(andmap (lambda (arg-1 arg-2) (equal? (cdr arg-1) (cdr arg-2))) (function-args func-1) (function-args func-2))))
-
-(define (invoke-same-sig? func invoked-name invoked-arg-types)
-	(and
-		(equal? (function-name func) invoked-name)
-		(andmap (lambda (arg-1 arg-2) (equal? (cdr arg-1) arg-2)) (function-args func) invoked-arg-types)))
-
-(define (vfunc-sig->string cls func arg-types)
-	(append 
-		(list cls delimiter-virtual func)
-		(foldl (lambda (s l) (cons delimiter-minor (cons s l))) null arg-types)))
-
-(define (sfunc-sig->string cls func arg-types)
-	(append 
-		(list cls delimiter-static func)
-		(foldl (lambda (s l) (cons delimiter-minor (cons s l))) null arg-types)))
 
 ;======================== Execution Interface ===========================
 ;machine(init) X list of names -> machine(fin)
@@ -176,6 +60,7 @@
 			(display "\n")
 			(println inst-cur)
 			(display "\n\n")
+			(set-context! mac)
 			(function-exec (inst-exec inst-cur mac func) func))))
 
 ;machine X list of (key, value) -> machine(with input inserted into memory)
@@ -203,6 +88,14 @@
 ;	(map (lambda (name) (memory-sread mem0 (string-id name))) output-names))
 
 ;======================== AST Interpreter ===========================
+
+;some contexts
+(define class-name-main (string-id "dummy"))
+(define class-names-clinit null)
+(define func-main #f)
+(define funcs-clinit null)
+
+
 (define (ast->machine ast)
 	(define classes (foldl 
 		(lambda (class-ast cl) (cons (ast->class class-ast) cl))
@@ -580,7 +473,9 @@
 
 
 			(define vid (vfunc-id m cls-name func-name (inst-virtual-call-arg-types i)))
+;			(display (~a "vid: " vid "\n"))
 			(define sid (memory-fread mem-0 vid obj-addr))
+;			(display (~a "sid: " sid "\n"))
 			(define func (imap-get (machine-fmap m) sid))
 			;push an extra scope to avoid overwriting "this" of the current scope
 			(define mem-this (memory-sforce-write (memory-spush mem-0) var-this-name obj-addr 0))

@@ -142,7 +142,7 @@
 	(- (std:current-inexact-milliseconds) last-time))
 
 ;============================= Debug ========================================
-(define DEBUG-ON #t)
+(define DEBUG-ON #f)
 (define-syntax-rule (DEBUG-DO something)
 	(if DEBUG-ON something #f))
 
@@ -210,3 +210,7 @@
 	(std:error "Not even wrong")
 	(define len-1 (length (asserts)))
 	(if (> len-1 len-0) (force-error #t (take (asserts) (- len-1 len-0))) #f))
+
+(define (do-n-ret f v)
+	(f v)
+	v)

@@ -12,6 +12,7 @@
 (require "syntax-jimple.rkt")
 (require "semantics-relational.rkt")
 (require "semantics-computational.rkt")
+(require "semantics-common.rkt")
 (require "formula.rkt")
 (require racket/format)
 (require (prefix-in p: "jimple/jimple-parser.rkt"))

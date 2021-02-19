@@ -22,6 +22,10 @@
 (define src-classes (list
 "java.lang.NumberFormatException.jimple"
 "java.lang.Object.jimple"
+"java.util.Collection.jimple"
+"java.util.HashMap.jimple"
+"java.util.ArrayList.jimple"
+"java.util.HashSet.jimple"
 "net.floodlightcontroller.util.ActionUtils.jimple"
 "net.floodlightcontroller.util.ActionUtilsTest.jimple"
 "org.projectfloodlight.openflow.protocol.action.OFAction$Builder.jimple"

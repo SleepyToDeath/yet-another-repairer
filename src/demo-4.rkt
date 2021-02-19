@@ -21,6 +21,10 @@
 
 (define src-classes (list
 "java.lang.Object.jimple"
+"java.util.Collection.jimple"
+"java.util.HashMap.jimple"
+"java.util.ArrayList.jimple"
+"java.util.HashSet.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPBinding.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPPool.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPPoolTest.jimple"

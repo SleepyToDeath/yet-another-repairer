@@ -12,8 +12,10 @@
 (require "syntax-jimple.rkt")
 (require "semantics-relational.rkt")
 (require "semantics-computational.rkt")
+(require "semantics-common.rkt")
 (require "formula.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
+(require (prefix-in p: "jimple/jimple-utils.rkt"))
 
 (define src-dir "../benchmark/benchmark1/sootOutput/")
 
@@ -28,8 +30,8 @@
 
 (define cls-list (map (lambda (class-src) (p:build-ast-file (p:parse-to-stx class-src))) class-src-list))
 
-(define buggy (program
-	(class-list cls-list)))
+(define buggy (p:transform-all (program
+	(class-list cls-list))))
 
 (pretty-print buggy)
 

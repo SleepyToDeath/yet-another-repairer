@@ -12,6 +12,7 @@
 (require "syntax-jimple.rkt")
 (require "semantics-relational.rkt")
 (require "semantics-computational.rkt")
+(require "semantics-common.rkt")
 (require "formula.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 
@@ -55,10 +56,9 @@
 ;	(pretty-print (asserts))
 ;	(check-asserts 0)
 	(output-smt #t)
-;	(print-fml hard)
 
 ;	/* default version one bug */
-	(define debug-sol (solve (assert (and hard no-bug))))
+	(define debug-sol (solve (assert (and hard one-bug))))
 
 ;	/* maximize satisfiable lines */
 ;	(define debug-sol (optimize #:maximize (list sum)
@@ -85,7 +85,7 @@
 	(DEBUG-DO (std:error "Halt!"))
 
 	(pretty-print string-id-table)
-	(std:error "Halt!")
+;	(std:error "Halt!")
 
 	(match (location-inst bugl)
 		[(inst-static-call ret cls-name func-name arg-types args) 

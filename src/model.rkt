@@ -5,6 +5,7 @@
 (require "match-define.rkt")
 (require "memory-common.rkt")
 (require "formula.rkt")
+(require "semantics-common.rkt")
 
 (provide model-lookup)
 
@@ -70,7 +71,9 @@
 	(cons
 		(cons "java.util.HashMap" "<init>")
 		(lambda (mem obj ret args)
-			(match-define (cons addr-kv mem-arr) (memory-alloc mem hashmap-max-capacity))
+			(define fid-class-name (vfield-id current-context (string-id "java.util.HashMap") field-name-class))
+			(define mem-bind (memory-fwrite mem fid-class-name obj (string-id "java.util.HashMap")))
+			(match-define (cons addr-kv mem-arr) (memory-alloc mem-bind hashmap-max-capacity))
 			(define mem-ass (memory-fwrite mem-arr hashmap-fname-kv obj addr-kv))
 			mem-ass
 		))
@@ -141,7 +144,9 @@
 	(cons
 		(cons "java.util.HashSet" "<init>")
 		(lambda (mem obj ret args)
-			(match-define (cons addr-kv mem-arr) (memory-alloc mem hashset-max-capacity))
+			(define fid-class-name (vfield-id current-context (string-id "java.util.HashSet") field-name-class))
+			(define mem-bind (memory-fwrite mem fid-class-name obj (string-id "java.util.HashSet")))
+			(match-define (cons addr-kv mem-arr) (memory-alloc mem-bind hashset-max-capacity))
 			(define mem-ass (memory-fwrite mem-arr hashset-fname-v obj addr-kv))
 			mem-ass
 		))
@@ -191,7 +196,9 @@
 	(cons 
 		(cons "java.util.ArrayList" "<init>")
 		(lambda (mem obj ret args)
-			mem
+			(define fid-class-name (vfield-id current-context (string-id "java.util.ArrayList") field-name-class))
+			(define mem-bind (memory-fwrite mem fid-class-name obj (string-id "java.util.ArrayList")))
+			mem-bind
 		))
 
 	;[TODO] dummy

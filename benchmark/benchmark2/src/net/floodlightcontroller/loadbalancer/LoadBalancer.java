@@ -667,7 +667,7 @@ public class LoadBalancer implements ILoadBalancerService {
 
     @Override
     public Collection<LBPool> listPool(String poolId) {
-        Collection<LBPool> result = new HashSet<LBPool>();
+        HashSet<LBPool> result = new HashSet<LBPool>();
         result.add(pools.get(poolId));
         return result;
     }
