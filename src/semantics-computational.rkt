@@ -238,9 +238,10 @@
 		(define sfuncs (class-sfuncs cls))
 		(define vfuncs (class-vfuncs cls))
 		(define sfields (class-sfields cls))
-		(define vfields (if (equal? cls-name class-name-root) 
-			(cons field-name-class (class-vfields cls))
-			(class-vfields cls)))
+;		(define vfields (if (equal? cls-name class-name-root) 
+;			(cons field-name-class (class-vfields cls))
+;			(class-vfields cls)))
+		(define vfields (class-vfields cls))
 
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 

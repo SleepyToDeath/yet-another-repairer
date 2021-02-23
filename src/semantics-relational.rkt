@@ -94,6 +94,7 @@
 ;		(assert no-bug)
 		(display "\n ###############################################0 \n")
 		(set-context! mac-ass)
+		(map (lambda (cls) (pretty-print (cons (class-name cls) (class-vfields cls)))) (machine-classes mac-ass))
 		(define all-invokes (invoke->relation boot-lstate mac-ass target-sids #f))
 		(display "\n ###############################################1 \n")
 		(define mem-done-sym (root-invoke-ret-mem all-invokes #f))
@@ -200,9 +201,10 @@
 		(define sfuncs (class-sfuncs cls))
 		(define vfuncs (class-vfuncs cls))
 		(define sfields (class-sfields cls))
-		(define vfields (if (equal? cls-name class-name-root) 
-			(cons field-name-class (class-vfields cls))
-			(class-vfields cls)))
+;		(define vfields (if (equal? cls-name class-name-root) 
+;			(cons field-name-class (class-vfields cls))
+;			(class-vfields cls)))
+		(define vfields (class-vfields cls))
 
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 
@@ -607,6 +609,7 @@
 				(begin
 				(define addr (memory-sforce-read mem-0 var-this-name 1))
 				(define fid-class-name (vfield-id mac classname field-name-class))
+				(defer-eval "fid-class-name" fid-class-name)
 				(define maybe-old-name (memory-fread mem-0 fid-class-name addr))
 				(define maybe-class-name (if (equal? maybe-old-name not-found) classname maybe-old-name))
 				(define mem-bind (memory-fwrite mem-0 fid-class-name addr maybe-class-name))

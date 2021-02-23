@@ -1,5 +1,6 @@
 public class java.lang.Object
 {
+	public int __CLASS__;
 	public static void <init>() {
         java.lang.Object r0;
 

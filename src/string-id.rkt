@@ -22,6 +22,7 @@
 			(set! string-id-map (imap-set string-id-map s string-id-counter))
 			(set! string-id-counter (+ 1 string-id-counter))
 			(- string-id-counter 1))))
+	(maybe-add-string-value-of s id-true)
 	id-true)
 
 (define (maybe-string-id s)
@@ -32,3 +33,15 @@
 
 (define (string-id-pure s)
 	(imap-get string-id-map s))
+
+
+;number -> string
+(define string-value-of-table imap-empty)
+
+(define (maybe-add-string-value-of s id)
+	(if (and (std:string? s) (std:string->number s) (is-not-found? (imap-get string-value-of-table (std:string->number s))))
+		(set! string-value-of-table (imap-set string-value-of-table (std:string->number s) id))
+		#f))
+
+(define (string-value-of v)
+	(imap-get string-value-of-table v))

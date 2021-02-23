@@ -63,18 +63,22 @@
 ;hash func: h(x) = x modulo a large prime number
 ;[!] Assuming collision free
 
+(define hashmap-class-name (string-id "java.util.HashMap"))
 (define (hashmap-hash-func x) (modulo x 179))
 (define hashmap-max-capacity 200)
 (define hashmap-fname-kv (string-id "KVStore"))
+(define (hashmap-fid-kv)
+	(vfield-id current-context hashmap-class-name hashmap-fname-kv))
 
 (define HashMap-funcs (list
 	(cons
 		(cons "java.util.HashMap" "<init>")
 		(lambda (mem obj ret args)
-			(define fid-class-name (vfield-id current-context (string-id "java.util.HashMap") field-name-class))
-			(define mem-bind (memory-fwrite mem fid-class-name obj (string-id "java.util.HashMap")))
+			(define fid-class-name (vfield-id current-context hashmap-class-name field-name-class))
+			(define mem-bind (memory-fwrite mem fid-class-name obj hashmap-class-name))
 			(match-define (cons addr-kv mem-arr) (memory-alloc mem-bind hashmap-max-capacity))
-			(define mem-ass (memory-fwrite mem-arr hashmap-fname-kv obj addr-kv))
+			(defer-eval "HashMap.<init>" (list obj addr-kv fid-class-name args))
+			(define mem-ass (memory-fwrite mem-arr (hashmap-fid-kv) obj addr-kv))
 			mem-ass
 		))
 
@@ -87,7 +91,8 @@
 		(cons "java.util.HashMap" "remove")
 		(lambda (mem obj ret args) 
 			(define key (hashmap-hash-func (first args)))
-			(define addr-kv (memory-fread mem hashmap-fname-kv obj))
+			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
+			(defer-eval "HashMap.remove" (list obj addr-kv key args))
 			(define mem-rm (memory-awrite mem addr-kv key not-found))
 			mem-rm
 		))
@@ -96,9 +101,10 @@
 		(cons "java.util.HashMap" "get")
 		(lambda (mem obj ret args)
 			(define key (hashmap-hash-func (first args)))
-			(define addr-kv (memory-fread mem hashmap-fname-kv obj))
+			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
 			(define value.maybe (memory-aread mem addr-kv key))
 			(define value (if (equal? value.maybe not-found) nullptr value.maybe))
+			(defer-eval "HashMap.get" (list obj addr-kv key value args))
 			(define mem-ret (memory-sforce-write mem ret value 0))
 			mem-ret
 		))
@@ -108,7 +114,8 @@
 		(lambda (mem obj ret args)
 			(define key (hashmap-hash-func (first args)))
 			(define value (second args))
-			(define addr-kv (memory-fread mem hashmap-fname-kv obj))
+			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
+			(defer-eval "HashMap.put" (list obj addr-kv key value args))
 			(define mem-put (memory-awrite mem addr-kv key value))
 			mem-put
 		))
@@ -117,9 +124,10 @@
 		(cons "java.util.HashMap" "containsKey")
 		(lambda (mem obj ret args)
 			(define key (hashmap-hash-func (first args)))
-			(define addr-kv (memory-fread mem hashmap-fname-kv obj))
+			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
 			(define value (memory-aread mem addr-kv key))
 			(define flag (not (equal? value not-found)))
+			(defer-eval "HashMap.containsKey" (list obj addr-kv key value flag args))
 			(define mem-ret (memory-sforce-write mem ret flag 0))
 			mem-ret
 		))
@@ -135,19 +143,22 @@
 ;hash func: h(x) = x modulo a large prime number
 ;[!] Assuming collision free
 
-(define (hashset-hash-func x) (modulo x 17))
-(define hashset-max-capacity 20)
+(define hashset-class-name (string-id "java.util.HashSet"))
+(define (hashset-hash-func x) (modulo x 179))
+(define hashset-max-capacity 200)
 (define hashset-fname-v (string-id "VStore"))
+(define (hashset-fid-v)
+	(vfield-id current-context hashset-class-name hashset-fname-v))
 (define hashset-exists-flag 1)
 
 (define HashSet-funcs (list
 	(cons
 		(cons "java.util.HashSet" "<init>")
 		(lambda (mem obj ret args)
-			(define fid-class-name (vfield-id current-context (string-id "java.util.HashSet") field-name-class))
-			(define mem-bind (memory-fwrite mem fid-class-name obj (string-id "java.util.HashSet")))
+			(define fid-class-name (vfield-id current-context hashset-class-name field-name-class))
+			(define mem-bind (memory-fwrite mem fid-class-name obj hashset-class-name))
 			(match-define (cons addr-kv mem-arr) (memory-alloc mem-bind hashset-max-capacity))
-			(define mem-ass (memory-fwrite mem-arr hashset-fname-v obj addr-kv))
+			(define mem-ass (memory-fwrite mem-arr (hashset-fid-v) obj addr-kv))
 			mem-ass
 		))
 
@@ -155,7 +166,7 @@
 		(cons "java.util.HashSet" "remove")
 		(lambda (mem obj ret args) 
 			(define key (hashset-hash-func (first args)))
-			(define addr-kv (memory-fread mem hashset-fname-v obj))
+			(define addr-kv (memory-fread mem (hashset-fid-v) obj))
 			(define mem-rm (memory-awrite mem addr-kv key not-found))
 			mem-rm
 		))
@@ -165,7 +176,7 @@
 		(lambda (mem obj ret args)
 			(define key (hashset-hash-func (first args)))
 			(define value hashset-exists-flag)
-			(define addr-kv (memory-fread mem hashset-fname-v obj))
+			(define addr-kv (memory-fread mem (hashset-fid-v) obj))
 			(define mem-put (memory-awrite mem addr-kv key value))
 			mem-put
 		))
@@ -174,7 +185,7 @@
 		(cons "java.util.HashSet" "contains")
 		(lambda (mem obj ret args)
 			(define key (hashset-hash-func (first args)))
-			(define addr-kv (memory-fread mem hashset-fname-v obj))
+			(define addr-kv (memory-fread mem (hashset-fid-v) obj))
 			(define value (memory-aread mem addr-kv key))
 			(define flag (equal? value hashset-exists-flag))
 			(define mem-ret (memory-sforce-write mem ret flag 0))
@@ -225,7 +236,7 @@
 		(cons "java.lang.String" "valueOf")
 		(lambda (mem ret args)
 			(define vi (first args))
-			(define mem-ret (memory-sforce-write mem ret (+ vi string-id-int-offset) 0))
+			(define mem-ret (memory-sforce-write mem ret (string-value-of vi) 0))
 			mem-ret))
 ))
 
