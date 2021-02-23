@@ -59,6 +59,7 @@
 	(define (hard-cons input output target-sids) 
 
 		(set! memory-id-list null)
+		(imap-clear-get-keys!)
 
 		(define (assign-input mac input)
 			(define mem0 (machine-mem mac))

@@ -72,7 +72,7 @@
 			[(constant id type) 1]
 			[_ 1])))
 
-(define (is-concrete-value e)
+(define (is-concrete-value? e)
 	(if (union? e) #f
 		(match e
 			[(expression op child ...) #f]
@@ -142,7 +142,7 @@
 	(- (std:current-inexact-milliseconds) last-time))
 
 ;============================= Debug ========================================
-(define DEBUG-ON #t)
+(define DEBUG-ON #f)
 (define-syntax-rule (DEBUG-DO something)
 	(if DEBUG-ON something #f))
 

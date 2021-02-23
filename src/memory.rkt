@@ -226,7 +226,8 @@
 ;generate real formulae for preserved and updated states
 (define (memory-gen-binding mem)
 
-	(define all-keys (imap-sym-tracked-keys (imap-sym-scoped-imap (memory-heap mem))))
+;	(define all-keys (imap-sym-tracked-keys (imap-sym-scoped-imap (memory-heap mem))))
+	(define all-keys imap-all-get-keys)
 	(pretty-print (~a "Totally " (length all-keys) " keys"))
 
 	(define (id2keys id)
@@ -250,7 +251,7 @@
 ;				(pretty-print mem)
 			(define fml-true 
 				(andmap identity (map (lambda (key) 
-						(define ret (if (is-concrete-value key)
+						(define ret (if (is-concrete-value? key)
 							(imap-sym-key-fml (imap-unwrap mem) key)
 							((lambda () 
 								(define-symbolic* key-sym integer?)
@@ -292,7 +293,7 @@
 							(set! kounter (+ 1 kounter))
 							(if (contain-key? mem-id (car key.scope)) #t
 ;									(and
-									(if (is-concrete-value (car key.scope))
+									(if (is-concrete-value? (car key.scope))
 										(imap-sym-key-fml (imap-unwrap mem) (car key.scope))
 										((lambda () 
 											(define-symbolic* key-sym integer?)
@@ -317,6 +318,8 @@
 			(imap-sym-key-fml-debug (imap-unwrap mem) key))
 		all-keys))
 	memory-id-list))
+
+	(defer-eval "all keys:" all-keys)
 
 	(display (~a "Totally " kounter " keys in scope\n"))
 	(defer-eval "Totally keys in scope: " kounter)

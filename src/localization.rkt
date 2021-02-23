@@ -58,7 +58,7 @@
 	(output-smt #t)
 
 ;	/* default version one bug */
-	(define debug-sol (solve (assert (and hard no-bug))))
+	(define debug-sol (solve (assert (and hard one-bug))))
 
 ;	/* maximize satisfiable lines */
 ;	(define debug-sol (optimize #:maximize (list sum)

@@ -149,6 +149,7 @@
 
 		(define (imap-get m index)
 			(imap-add-section-key (cons index #f))
+			(imap-add-get-key (cons index #f))
 			(define ret
 				(if (not (imap-sym? (imap-sym-tracked-imap m)))
 					not-found
@@ -198,21 +199,26 @@
 		(define m-new 
 			(if (and 
 					(equal? (length candidates) 1) 
-					(is-concrete-value (caar candidates)) 
+					(is-concrete-value? (caar candidates)) 
 					(caar candidates))
 				(imap-sym-tracked-imap (cdar candidates))
 				(f-select candidates-unwrapped summary?)))
 
-		(define k-new
-			(foldl 
-				(lambda (p.m keys)
-					(append 
-						keys
-						(filter (lambda (key+id.1)
-							(andmap (lambda (key+id.2) (not (equal? (cdr key+id.1) (cdr key+id.2)))) keys))
-							(imap-sym-tracked-keys (cdr p.m)))))
-				null
-				candidates))
+;		(defer-eval "Merging keys" "\n")
+;		(define k-new
+;			(foldl 
+;				(lambda (p.m keys)
+;					(defer-eval "--" (imap-sym-tracked-keys (cdr p.m)))
+;					(append 
+;						keys
+;						(filter (lambda (key+id.1)
+;							(andmap (lambda (key+id.2) (not (equal? (cdr key+id.1) (cdr key+id.2)))) keys))
+;							(imap-sym-tracked-keys (cdr p.m)))))
+;				null
+;				candidates))
+;		(defer-eval "Merged-keys:" k-new)
+
+		(define k-new null)
 
 		(display (~a "Keys num : " (length k-new) "\n"))
 
@@ -318,6 +324,12 @@
 	(set! imap-section-keys (cons key (cdr imap-section-keys))))
 
 (define imap-func-is-dummy? number?)
+
+(define imap-all-get-keys null)
+(define (imap-clear-get-keys!)
+	(set! imap-all-get-keys null))
+(define (imap-add-get-key key)
+	(set! imap-all-get-keys (cons key imap-all-get-keys)))
 
 ;(define all-symbols null)
 ;(define (global-add-symbol sym)
