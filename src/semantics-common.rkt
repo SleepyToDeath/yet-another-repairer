@@ -61,6 +61,15 @@
 (define field-name-class (string-id "__CLASS__"))
 (define class-name-root (string-id "java.lang.Object"))
 
+(define param-prefix "@parameter")
+(define parameter-counter 0)
+(define (reset-parameter-names)
+	(set! parameter-counter 0))
+(define (next-parameter-name)
+	(define name (std:string-append param-prefix (std:number->string parameter-counter)))
+	(set! parameter-counter (+ 1 parameter-counter))
+	(string-id name))
+
 (define machine-empty (machine #f null imap-empty imap-empty memory-empty pc-init))
 
 ;dynamically set, used to provide machine-level context, avoid using it too much
@@ -91,7 +100,7 @@
 	(if cls 
 		(begin
 			(define cls-0 (imap-get (machine-cmap mac) cls))
-			(display (~a "class vfields: " (class-vfields cls-0) " class name: " cls " field name: " field "\n"))
+;			(display (~a "class vfields: " (class-vfields cls-0) " class name: " cls " field name: " field "\n"))
 
 			(define base-name (ormap 
 				(lambda (cls-cur) (lookup-virtual-field mac cls-cur field)) 
@@ -105,7 +114,7 @@
 		#f))
 
 ;virtual functions sharing same signature will have same vid
-(define (vfunc-id mac cls func arg-types) (do-n-ret pretty-print (string-id (do-n-ret pretty-print (lookup-virtual-function mac cls func arg-types)))))
+(define (vfunc-id mac cls func arg-types) (string-id (do-n-ret pretty-print (lookup-virtual-function mac cls func arg-types))))
 
 (define (vfield-id mac cls field) (string-id (lookup-virtual-field mac cls field)))
 

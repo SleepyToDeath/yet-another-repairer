@@ -43,17 +43,17 @@
 
 (pretty-print buggy)
 
-(define input1 null)
+(define input1 (list (string-id "0")))
 (define output1 (list (cons var-ret-name 0)))
 
 (define mac (ast->machine buggy))
-(pretty-print string-id-table)
 
 (define mac-in (assign-input mac input1))
 
 (define mac-fin (compute mac-in))
 
 (define result (compare-output mac-fin output1))
+(pretty-print string-id-table)
 
 result
 

@@ -22,6 +22,7 @@
 ;machine(init) X list of names -> machine(fin)
 (define (compute mac)
 	(define mac-init (build-virtual-table mac))
+	(pretty-print string-id-table)
 	(function-call-simple mac-init (machine-boot mac-init)))
 
 (define (function-call-simple mac func)
@@ -63,11 +64,14 @@
 			(set-context! mac)
 			(function-exec (inst-exec inst-cur mac func) func))))
 
-;machine X list of (key, value) -> machine(with input inserted into memory)
+;machine X list of int -> machine(with input inserted into memory)
 (define (assign-input mac input)
 	(define mem0 (memory-spush (machine-mem mac)))
+	(reset-parameter-names)
 	(define mem-ass 
-		(foldl (lambda (kv mem-cur) (memory-swrite (memory-sdecl mem-cur (string-id (car kv))) (string-id (car kv)) (cdr kv))) mem0 input))
+		(foldl (lambda (v mem-cur) 
+			(memory-sforce-write mem-cur (next-parameter-name) v 0))
+			mem0 input))
 	(std:struct-copy machine mac [mem mem-ass]))
 
 ;machine X list of (key, value) -> boolean
@@ -224,7 +228,10 @@
 (define (build-boot-func)
 	;(define iboot (inst-boot globals))
 	(define icall-clinit (map (lambda (name) (inst-static-call var-void-ret name func-name-clinit null null)) class-names-clinit))
-	(define icall-main (inst-long-jump class-name-main func-name-main))
+	(define main-arg-types (map cdr (function-args func-main)))
+	(reset-parameter-names)
+	(define main-arg-vars (map (lambda (x) (iexpr-var (next-parameter-name))) main-arg-types))
+	(define icall-main (inst-static-call var-ret-name class-name-main func-name-main main-arg-types main-arg-vars))
 	(define iret (inst-ret (iexpr-var var-ret-name)))
 	(function func-name-boot (append icall-clinit (list icall-main iret)) imap-empty null (list (cons var-ret-name "int"))))
 
@@ -246,6 +253,7 @@
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 
 				(define sid (sfunc-id cls-name (function-name sf) (map cdr (function-args sf))))
+				(if (equal? cls-name class-name-main) (pretty-print (list "main func?" (function-name sf) sid)) #f)
 ;				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid 0))
 				(define fmap-1 (imap-set (machine-fmap mac) sid sf))
 				(std:struct-copy machine mac [fmap fmap-1]))

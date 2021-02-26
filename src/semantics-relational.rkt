@@ -64,13 +64,14 @@
 		(define (assign-input mac input)
 			(define mem0 (machine-mem mac))
 			(define mem-push (memory-spush mem0))
+			(reset-parameter-names)
 			(match-define (cons mem-ass fml-ass)
 				(foldl 
-					(lambda (kv mem+fml) 
+					(lambda (v mem+fml) 
 						(define-symbolic* vi integer?)
-						(define fml (equal? vi (cdr kv)))
+						(define fml (equal? vi v))
 						(cons 
-							(memory-sforce-write (car mem+fml) (string-id (car kv)) vi 0) 
+							(memory-sforce-write (car mem+fml) (next-parameter-name) vi 0) 
 							(and (cdr mem+fml) fml)))
 					(cons mem-push #t) input))
 			(define mem-ret (memory-sdecl mem-ass var-ret-name))
