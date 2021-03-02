@@ -54,8 +54,8 @@
 	(if (equal? (machine-pc mac) pc-ret) 
 		mac
 		(let ([inst-cur (list-ref (function-prog func) (machine-pc mac))])
-;			(display "\n\n")
-;			(println (machine-mem mac))
+			(display "\n\n")
+;			(pretty-print (machine-mem mac))
 ;			(display "\n")
 ;			(println string-id-map)
 			(display "\n")
@@ -207,8 +207,9 @@
 					(map ast->expression (argument-caller-list-al (arguments-caller-rhs args))))
 				lmap)]
 		[(stat-special-call ret obj cls-name func arg-types args)
+			;[!] it is assumed that special calls do not have return value
 			(cons 
-				(inst-special-call (string-id (variable-name ret)) (string-id (variable-name obj)) 
+				(inst-special-call var-ret-name (string-id (variable-name obj)) 
 					(string-id (type-name-name cls-name)) (string-id (func-name-name func))
 					(map (lambda (ast) (string-id (type-name-name ast))) (type-list-tl (types-rhs arg-types)))
 					(map ast->expression (argument-caller-list-al (arguments-caller-rhs args))))
@@ -253,7 +254,7 @@
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 
 				(define sid (sfunc-id cls-name (function-name sf) (map cdr (function-args sf))))
-				(if (equal? cls-name class-name-main) (pretty-print (list "main func?" (function-name sf) sid)) #f)
+				(pretty-print (list "static func:" (function-name sf) sid))
 ;				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid 0))
 				(define fmap-1 (imap-set (machine-fmap mac) sid sf))
 				(std:struct-copy machine mac [fmap fmap-1]))
@@ -269,6 +270,7 @@
 			(lambda (vf mac) 
 				(define vid (vfunc-id mac cls-name (function-name vf) (map cdr (function-args vf))))
 				(define sid (sfunc-id cls-name (function-name vf) (map cdr (function-args vf))))
+				(pretty-print (list "virtual func:" cls-name (function-name vf) sid vid))
 				(define mem-1 (memory-fdecl (machine-mem mac) vid)) 
 				(define fmap-1 (imap-set (machine-fmap mac) sid vf))
 				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
@@ -307,21 +309,33 @@
 	[(define (inst-exec i m f) 
 		(define classname (inst-init-classname i))
 		(define mem-0 (machine-mem m))
-		(define addr (memory-sread mem-0 var-this-name))
+		(define addr (memory-sforce-read mem-0 var-this-name 1))
 
-		(define mem-bind-func (foldl
+		(display (~a "classname: " classname "\n"))
+		(display (~a "obj addr: " addr "\n"))
+
+		(define fid-class-name (vfield-id m classname field-name-class))
+		(define maybe-old-name (memory-fread mem-0 fid-class-name addr))
+		(define maybe-class-name (if (equal? maybe-old-name not-found) classname maybe-old-name))
+		(define mem-bind (memory-fwrite mem-0 fid-class-name addr maybe-class-name))
+
+#|
+		(define mem-bind (foldl
 			(lambda (func mem) 
 				(define vid (vfunc-id m classname (function-name func) (map cdr (function-args func))))
+				(display (~a "vid: " vid "\n"))
 				(define sid (sfunc-id classname (function-name func) (map cdr (function-args func))))
+				(display (~a "sid: " sid "\n"))
 				(if (is-not-found? (memory-fread mem vid addr))
 					(memory-fwrite mem vid addr sid) 
 					mem))
 			mem-0
 			(class-vfuncs (imap-get (machine-cmap m) classname))))
+		|#
 
 		(define pc-next (+ 1 (machine-pc m)))
 
-		(std:struct-copy machine m [mem mem-bind-func] [pc pc-next]))])
+		(std:struct-copy machine m [mem mem-bind] [pc pc-next]))])
 
 
 (struct inst-ass (vl vr) #:transparent
@@ -467,7 +481,7 @@
 	[(define (inst-exec i m f)
 		;(println i)
 		(define mem-0 (machine-mem m))
-		(define obj-addr (memory-sread mem-0 (inst-virtual-call-obj-name i)))
+		(define obj-addr (memory-sforce-read mem-0 (inst-virtual-call-obj-name i) 0))
 		(define cls-name (inst-virtual-call-cls-name i))
 		(define func-name (inst-virtual-call-func-name i))
 		(define ret (inst-virtual-call-ret i))
@@ -482,9 +496,15 @@
 
 
 			(define vid (vfunc-id m cls-name func-name (inst-virtual-call-arg-types i)))
-;			(display (~a "vid: " vid "\n"))
-			(define sid (memory-fread mem-0 vid obj-addr))
-;			(display (~a "sid: " sid "\n"))
+;			(pretty-print mem-0)
+			(display (~a "vid: " vid "\n"))
+			(display (~a "obj name: " (inst-virtual-call-obj-name i) "\n"))
+			(display (~a "obj addr: " obj-addr "\n"))
+			(define fid-class-name (vfield-id m cls-name field-name-class))
+			(define classname-true (memory-fread mem-0 fid-class-name obj-addr))
+			(display (~a "classname: " classname-true "\n"))
+			(define sid (sfunc-id-pure classname-true func-name (inst-virtual-call-arg-types i)))
+			(display (~a "sid: " sid "\n"))
 			(define func (imap-get (machine-fmap m) sid))
 			;push an extra scope to avoid overwriting "this" of the current scope
 			(define mem-this (memory-sforce-write (memory-spush mem-0) var-this-name obj-addr 0))

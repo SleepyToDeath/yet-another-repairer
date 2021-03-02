@@ -196,6 +196,7 @@
 (map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) HashSet-funcs)
 
 ;==============================================
+
 ;================ ArrayList ===================
 ;[!] Need source file
 
@@ -228,6 +229,12 @@
 ))
 
 (map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) ArrayList-funcs)
+;==============================================
+
+;================= Optional ===================
+(define Optional-funcs (list ))
+
+(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Optional-funcs)
 ;==============================================
 
 ;================== String ====================

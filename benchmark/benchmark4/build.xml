@@ -36,6 +36,7 @@
         <copy file="../model/java.util.HashMap.jimple" todir="sootOutput"/>
         <copy file="../model/java.util.Collection.jimple" todir="sootOutput"/>
         <copy file="../model/java.util.HashSet.jimple" todir="sootOutput"/>
+        <copy file="../model/java.util.Optional.jimple" todir="sootOutput"/>
     </target>
 
 </project>

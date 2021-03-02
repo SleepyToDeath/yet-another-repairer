@@ -12,6 +12,7 @@
 (require "syntax-jimple.rkt")
 (require "semantics-relational.rkt")
 (require "semantics-computational.rkt")
+(require "semantics-common.rkt")
 (require "formula.rkt")
 (require racket/format)
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
@@ -25,6 +26,7 @@
 "java.util.HashMap.jimple"
 "java.util.ArrayList.jimple"
 "java.util.HashSet.jimple"
+"java.util.Optional.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPBinding.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPPool.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPPoolTest.jimple"
@@ -43,7 +45,7 @@
 
 (pretty-print buggy)
 
-(define input1 null)
+(define input1 (list 100))
 (define output1 (list (cons var-ret-name 1)))
 
 (define mac (ast->machine buggy))

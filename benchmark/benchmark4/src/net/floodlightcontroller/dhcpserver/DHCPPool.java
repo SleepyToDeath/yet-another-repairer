@@ -9,7 +9,7 @@ import org.projectfloodlight.openflow.types.MacAddress;
 //import javax.annotation.Nullable;
 //import java.util.*;
 import java.util.HashMap;
-import java.util.Map;
+//import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -27,7 +27,7 @@ import java.util.Optional;
 public class DHCPPool implements IDHCPPool {
 //    protected static final Logger log = LoggerFactory.getLogger(DHCPPool.class);
 //    private volatile List<DHCPBinding> dhcpRepository;
-    private volatile Map<MacAddress, DHCPBinding> dhcpLeasingPool;
+    private volatile HashMap<MacAddress, DHCPBinding> dhcpLeasingPool;
 //    private static final MacAddress unassignedMacAddress = MacAddress.NONE;
 //    private volatile IPv4Address startingAddress;
     private int poolSize;
