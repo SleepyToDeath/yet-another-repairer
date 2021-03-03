@@ -46,13 +46,11 @@
 (define (trans-init-static-funcs statics virtuals)
   (define static-list (ast:function-list-fl (ast:function-declares-rhs statics)))
   (define virtual-list (ast:function-list-fl (ast:function-declares-rhs virtuals)))
-  (define new-s-list (let ([initfunc (findf init-func? virtual-list)])
-                       (if initfunc
-                           (cons initfunc static-list)
-                           static-list)))
-  (define new-v-list (filter (compose not init-func?) virtual-list))
-  (cons (ast:function-declares (ast:function-list new-s-list))
-        (ast:function-declares (ast:function-list new-v-list))))
+  (let*-values ([(init-funcs noninit-funcs) (partition init-func? virtual-list)])
+    (let* ([new-v-list noninit-funcs]
+           [new-s-list (append init-funcs static-list)])
+      (cons (ast:function-declares (ast:function-list new-s-list))
+            (ast:function-declares (ast:function-list new-v-list))))))
 
 
 (define (init-func? func-decl)
@@ -77,11 +75,9 @@
 
 (define (trans-init-return-funcs func-decls)
   (define func-list (ast:function-list-fl (ast:function-declares-rhs func-decls)))
-  (define init-index (l:index-where func-list init-func?))
-  (if init-index
-      (ast:function-declares (ast:function-list
-        (l:list-update func-list init-index trans-init-return-func)))
-      func-decls))
+  (let-values ([(init-funcs noninit-funcs) (partition init-func? func-list)])
+    (ast:function-declares (ast:function-list
+      (append (map trans-init-return-func init-funcs) noninit-funcs)))))
 
 
 (define (trans-init-return-func func-decl)
