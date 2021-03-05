@@ -31,7 +31,7 @@
 		(foldl 
 			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)))) 
 			(machine-mem mac) 
-			(append (function-args func) (function-locals func)))]))
+			(append (function-args func) (function-locals func) (list (cons var-ret-name 0))))]))
 	(function-exec (std:struct-copy machine mac-decl [pc pc-init]) func))
 
 (define (function-call mac func args)
@@ -260,11 +260,18 @@
 				(std:struct-copy machine mac [fmap fmap-1]))
 			mac sfuncs))
 
+		(display "#1\n")
+		(pretty-print cls-name)
+		(pretty-print sfields)
+
 		(define mac-sfields (foldl 
 			(lambda (sf mac) 
+				(pretty-print (sfield-id cls-name sf))
 				(std:struct-copy machine mac 
 					[mem (memory-sdecl (machine-mem mac) (sfield-id cls-name sf))])) 
 			mac-sfuncs sfields))
+
+		(display "#2\n")
 
 		(define mac-vfuncs (foldl 
 			(lambda (vf mac) 
@@ -275,6 +282,8 @@
 				(define fmap-1 (imap-set (machine-fmap mac) sid vf))
 				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
 			mac-sfields vfuncs))
+
+		(display "#3\n")
 
 		(define mac-vfields (foldl 
 			(lambda (vf mac) 

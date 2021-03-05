@@ -21,6 +21,7 @@
 
 (define src-classes (list
 "net.floodlightcontroller.dhcpserver.DHCPInstance$DHCPInstanceBuilder.jimple"
+"net.floodlightcontroller.dhcpserver.DHCPInstance$1.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPInstance.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPInstanceTest.jimple"
 "org.projectfloodlight.openflow.types.IPv4Address.jimple"
@@ -35,7 +36,7 @@
 
 (pretty-print buggy)
 
-(define input1 null)
+(define input1 (list 0))
 (define output1 (list (cons var-ret-name 0)))
 
 (define mac (ast->machine buggy))

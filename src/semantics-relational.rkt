@@ -143,7 +143,7 @@
 		(display "\n ###############################################7 \n")
 		(define fml-code-bind (memory-gen-binding mem-all-done))
 		(display "\n ###############################################8 \n")
-		(and fml-cfi fml-out fml-ass fml-code fml-code-bind))
+		(and fml-cfi fml-code fml-code-bind fml-ass fml-out))
 ;		(and fml-cfi fml-code))
 ;		(print-fml fml-out)
 ;		(print-fml fml-code)
@@ -344,6 +344,8 @@
 		(map (lambda (cls) (class-vfuncs cls)) (machine-classes mac))))
 
 (define contains-target-list null)
+(define (reset-contains-target-cache)
+	(set! contains-target-list null))
 ;if a function will (transitively) call any target function
 (define (contains-target? mac sid target-sids)
 	(if (or (member sid contains-target-list) (member sid target-sids)) #t
@@ -351,7 +353,7 @@
 		(define func-fml (imap-get (machine-fmap mac) sid))
 		(define func (function-formula-func func-fml))
 		(define prog (function-prog func))
-		(ormap (lambda (inst)
+		(define ret (ormap (lambda (inst)
 			(match inst
 				[(inst-nop _) #f]
 				[(inst-init classname) #f]
@@ -359,21 +361,28 @@
 				[(inst-new v-name) #f]
 				[(inst-ret v-expr) #f]
 				[(inst-long-jump cls-name func-name) 
-					(contains-target? mac (sfunc-id cls-name func-name null) target-sids)]
+					(if (model-lookup cls-name func-name) #f
+						(contains-target? mac (sfunc-id cls-name func-name null) target-sids))]
 				[(inst-static-call ret cls-name func-name arg-types args) 
-					(contains-target? mac (sfunc-id cls-name func-name arg-types) target-sids)]
+					(if (model-lookup cls-name func-name) #f
+						(contains-target? mac (sfunc-id cls-name func-name arg-types) target-sids))]
 				[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
-					(define vid (vfunc-id-alt mac cls-name func-name arg-types))
-					(define sids-invoked (map function-formula-sid
-						(filter (lambda (f) (and (not (is-interface-func? f)) (equal? (function-formula-vid f) vid))) 
-							(all-vfunctions mac))))
-					(ormap (lambda (sid) (contains-target? mac sid target-sids)) sids-invoked)]
+					(if (model-lookup cls-name func-name) #f
+						(begin
+						(define vid (vfunc-id-alt mac cls-name func-name arg-types))
+						(define sids-invoked (map function-formula-sid
+							(filter (lambda (f) (and (not (is-interface-func? f)) (equal? (function-formula-vid f) vid))) 
+								(all-vfunctions mac))))
+						(ormap (lambda (sid) (contains-target? mac sid target-sids)) sids-invoked)))]
 				[(inst-special-call ret obj-name cls-name func-name arg-types args)
-					(contains-target? mac (sfunc-id cls-name func-name arg-types) target-sids)]
+					(if (model-lookup cls-name func-name) #f
+						(contains-target? mac (sfunc-id cls-name func-name arg-types) target-sids))]
 				[(inst-ass vl vr)  #f]
 				[(inst-switch cnd cases default-l) #f]
 				[(inst-jmp condition label) #f]))
-			prog))))
+			prog))
+		(if ret (set! contains-target-list (cons sid contains-target-list)) #f)
+		ret)))
 
 
 ;return a new func-fml
@@ -556,7 +565,7 @@
 				(foldl 
 					(lambda (var-def mem) (memory-sdecl mem (car var-def))) 
 					mem-push
-					(append (function-args func) (function-locals func)))))
+					(append (function-args func) (function-locals func) (list (cons var-ret-name 0))))))
 			(if (not summary?) (memory-print-id "mem-decl" mem-decl) #f)
 			(define mem-arg (memory-sym-commit
 				(foldl 
@@ -675,7 +684,8 @@
 				(begin
 				(define ret-value (expr-eval v-expr mac-eval-ctxt))
 				(if summary? #f (defer-eval inst ret-value))
-				(define mem-ret (memory-sym-commit (memory-sforce-write mem-0 var-ret-name ret-value 0)))
+				(define mem-ret.tmp (memory-sforce-write mem-0 var-ret-name ret-value 0))
+				(define mem-ret (memory-sym-commit mem-ret.tmp))
 				(define fml-update (memory-sym-get-fml mem-ret summary?))
 ;				(define fml-ret (select-fml? fml-update))
 				(define fml-ret fml-update)

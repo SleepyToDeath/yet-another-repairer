@@ -86,7 +86,6 @@ t3+.maybe
 
 (display "\nt3++:\n")
 t3++
-(print-fml (fml-to-print t3++))
 (display "\n")
 (asserts)
 
@@ -138,3 +137,22 @@ abab
 (define ab.maybe.maybe (if ab.maybe 0 1))
 
 ab.maybe.maybe
+
+
+
+(define i1 10)
+
+(define bv1 (integer->bitvector i1 (bitvector 32)))
+
+i1
+bv1
+
+(define-symbolic* i2 integer?)
+
+(define bv2 (integer->bitvector i2 (bitvector 32)))
+
+(define i2+ (bitvector->integer bv2))
+
+i2
+bv2
+i2+

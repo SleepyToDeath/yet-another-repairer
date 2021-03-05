@@ -16,6 +16,7 @@
 (require "formula.rkt")
 (require racket/format)
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
+(require (prefix-in p: "jimple/jimple-utils.rkt"))
 
 (define src-dir "../benchmark/benchmark3/sootOutput/")
 
@@ -32,12 +33,12 @@
 
 (define cls-list (map (lambda (class-src) (p:build-ast-file (p:parse-to-stx class-src))) class-src-list))
 
-(define buggy (program
-	(class-list cls-list)))
+(define buggy (p:transform-all (program
+	(class-list cls-list))))
 
 (pretty-print buggy)
 
-(define input1 null)
+(define input1 (list 100))
 (define output1 (list (cons var-ret-name 1)))
 
 (define mac (ast->machine buggy))

@@ -43,6 +43,7 @@
 ;	(pretty-print (asserts))
 	(clear-asserts!)
 	(clear-pending-eval)
+	(reset-contains-target-cache)
 
 	(define sum (apply + (map (lambda (l) (if (location-selector l) 1 0)) locations)))
 	(define one-bug (equal? sum (- (length locations) 1)))
@@ -54,6 +55,7 @@
 	(display "\n Solving: \n")
 	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
 ;	(pretty-print (asserts))
+;	(pretty-print hard)
 ;	(check-asserts 0)
 	(output-smt #t)
 

@@ -14,6 +14,7 @@
 (require "syntax-jimple.rkt")
 (require "semantics-relational.rkt")
 (require "semantics-computational.rkt")
+(require "semantics-common.rkt")
 (require "formula.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 
@@ -51,11 +52,15 @@ public class A {
 "
 public class Test
 {
-	public static int main()
+	public static int main(int, int, int)
 	{
+		int r1, r2, r3;
 		int r4;
 		int r5;
 		A r6;
+		r1 := @parameter0: int;
+		r2 := @parameter1: int;
+		r3 := @parameter2: int;
 		r6 = new A;
 		specialinvoke r6.<A: void <init>(int)>(r1);
 		r4 = virtualinvoke r6.<A: int add(int)>(r2);
@@ -86,7 +91,7 @@ public class Test
 (define input0 null)
 (define output0 (list (cons var-ret-name 0)))
 
-(define input1 (list (cons "r1" 4) (cons "r2" 5) (cons "r3" 6)))
+(define input1 (list 4 5 6))
 (define output1 (list (cons var-ret-name 15)))
 
 (define input2 (list (cons "r1" 1) (cons "r2" 2) (cons "r3" 3)))
