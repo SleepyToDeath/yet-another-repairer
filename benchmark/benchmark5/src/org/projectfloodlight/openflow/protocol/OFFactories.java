@@ -32,9 +32,9 @@ public final class OFFactories {
 //    private static final GenericReader GENERIC_READER = new GenericReader();
 
     public static OFFactory getFactory(OFVersion version) {
-        switch(version) {
-            case OF_10:
-                return org.projectfloodlight.openflow.protocol.ver10.OFFactoryVer10.INSTANCE;
+//        switch(version) {
+//            case OF_10:
+//                return org.projectfloodlight.openflow.protocol.ver10.OFFactoryVer10.INSTANCE;
 //            case OF_11:
 //                return org.projectfloodlight.openflow.protocol.ver11.OFFactoryVer11.INSTANCE;
 //            case OF_12:
@@ -45,9 +45,14 @@ public final class OFFactories {
 //                return org.projectfloodlight.openflow.protocol.ver14.OFFactoryVer14.INSTANCE;
 //            case OF_15:
 //                return org.projectfloodlight.openflow.protocol.ver15.OFFactoryVer15.INSTANCE;
-            default:
-                throw new IllegalArgumentException("Unknown version: "+version);
-        }
+//            default:
+//                throw new IllegalArgumentException("Unknown version: "+version);
+ //       }
+	    //switch with enum is too complex to handle for now...
+		if (version == OFVersion.OF_10)
+			return org.projectfloodlight.openflow.protocol.ver10.OFFactoryVer10.INSTANCE;
+		else
+			throw new IllegalArgumentException("Unknown version");
     }
 
     /*

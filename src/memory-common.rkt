@@ -25,7 +25,7 @@
 
 (define stack-bottom (* (* 2 vt-num) vt-size))
 
-(define max-program-length 1000)
+(define max-program-length 10000)
 
 ;v-meta: vtab-meta
 ;s-meta: stack-meta

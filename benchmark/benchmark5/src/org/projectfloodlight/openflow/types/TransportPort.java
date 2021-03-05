@@ -53,8 +53,10 @@ public class TransportPort /* implements OFValueType<TransportPort> */ {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof TransportPort))
+        if (getClass() != obj.getClass())
             return false;
+//        if (!(obj instanceof TransportPort))
+//            return false;
         TransportPort other = (TransportPort)obj;
         if (other.port != this.port)
             return false;

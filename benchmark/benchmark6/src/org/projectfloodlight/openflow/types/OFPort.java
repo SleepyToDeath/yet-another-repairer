@@ -262,6 +262,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
                 return PrecachedPort.p47;
             case 48:
                 return PrecachedPort.p48;
+				/*
             case OFPP_MAX_INT:
                 return MAX;
             case OFPP_IN_PORT_INT:
@@ -280,6 +281,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
                 return LOCAL;
             case OFPP_ANY_INT:
                 return ANY;
+				*/
             default:
                 // note: This means effectively : portNumber > OFPP_MAX_SHORT
                 // accounting for
@@ -288,8 +290,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
                 // Any unsigned integer value > OFPP_MAX_INT will be ]-256:0[
                 // when read signed
                 if (portNumber < 0 && portNumber > OFPP_MAX_INT)
-                    throw new IllegalArgumentException("Unknown special port number: "
-                            + portNumber);
+                    throw new IllegalArgumentException("Unknown special port number:");
                 return new OFPort(portNumber);
         }
     }

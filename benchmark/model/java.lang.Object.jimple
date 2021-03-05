@@ -24,5 +24,16 @@ public class java.lang.Object
      label1:
         return 0;
 	}
+
+	//not real clone
+	public java.lang.Object clone()
+	{
+        java.lang.Object r0;
+
+        r0 := @this: java.lang.Object;
+		
+		return r0;
+	}
+
 }
 

@@ -56,6 +56,7 @@
 
 ;================= Map ===================
 ;[!] Need source file
+;currently a copy of HashMap
 
 ;hash func: h(x) = x modulo a large prime number
 ;[!] Assuming collision free
@@ -67,70 +68,70 @@
 (define (map-fid-kv)
 	(vfield-id current-context map-class-name map-fname-kv))
 
-(define HashMap-funcs (list
+(define Map-funcs (list
 	(cons
-		(cons "java.util.HashMap" "<init>")
+		(cons "java.util.Map" "<init>")
 		(lambda (mem obj ret args)
-			(define fid-class-name (vfield-id current-context hashmap-class-name field-name-class))
-			(define mem-bind (memory-fwrite mem fid-class-name obj hashmap-class-name))
-			(match-define (cons addr-kv mem-arr) (memory-alloc mem-bind hashmap-max-capacity))
+			(define fid-class-name (vfield-id current-context map-class-name field-name-class))
+			(define mem-bind (memory-fwrite mem fid-class-name obj map-class-name))
+			(match-define (cons addr-kv mem-arr) (memory-alloc mem-bind map-max-capacity))
 			(defer-eval "HashMap.<init>" (list obj addr-kv fid-class-name args))
-			(define mem-ass (memory-fwrite mem-arr (hashmap-fid-kv) obj addr-kv))
+			(define mem-ass (memory-fwrite mem-arr (map-fid-kv) obj addr-kv))
 			mem-ass
 		))
 
 	;[?] how to do this?
 	(cons
-		(cons "java.util.HashMap" "values")
+		(cons "java.util.Map" "values")
 		(lambda (mem obj ret args) mem))
 
 	(cons
-		(cons "java.util.HashMap" "remove")
+		(cons "java.util.Map" "remove")
 		(lambda (mem obj ret args) 
-			(define key (hashmap-hash-func (first args)))
-			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
-			(defer-eval "HashMap.remove" (list obj addr-kv key args))
+			(define key (map-hash-func (first args)))
+			(define addr-kv (memory-fread mem (map-fid-kv) obj))
+			(defer-eval "Map.remove" (list obj addr-kv key args))
 			(define mem-rm (memory-awrite mem addr-kv key not-found))
 			mem-rm
 		))
 
 	(cons
-		(cons "java.util.HashMap" "get")
+		(cons "java.util.Map" "get")
 		(lambda (mem obj ret args)
-			(define key (hashmap-hash-func (first args)))
-			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
+			(define key (map-hash-func (first args)))
+			(define addr-kv (memory-fread mem (map-fid-kv) obj))
 			(define value.maybe (memory-aread mem addr-kv key))
 			(define value (if (equal? value.maybe not-found) nullptr value.maybe))
-			(defer-eval "HashMap.get" (list obj addr-kv key value args))
+			(defer-eval "Map.get" (list obj addr-kv key value args))
 			(define mem-ret (memory-sforce-write mem ret value 0))
 			mem-ret
 		))
 
 	(cons
-		(cons "java.util.HashMap" "put")
+		(cons "java.util.Map" "put")
 		(lambda (mem obj ret args)
-			(define key (hashmap-hash-func (first args)))
+			(define key (map-hash-func (first args)))
 			(define value (second args))
-			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
-			(defer-eval "HashMap.put" (list obj addr-kv key value args))
+			(define addr-kv (memory-fread mem (map-fid-kv) obj))
+			(defer-eval "Map.put" (list obj addr-kv key value args))
 			(define mem-put (memory-awrite mem addr-kv key value))
 			mem-put
 		))
 
 	(cons
-		(cons "java.util.HashMap" "containsKey")
+		(cons "java.util.Map" "containsKey")
 		(lambda (mem obj ret args)
-			(define key (hashmap-hash-func (first args)))
-			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
+			(define key (map-hash-func (first args)))
+			(define addr-kv (memory-fread mem (map-fid-kv) obj))
 			(define value (memory-aread mem addr-kv key))
 			(define flag (not (equal? value not-found)))
-			(defer-eval "HashMap.containsKey" (list obj addr-kv key value flag args))
+			(defer-eval "Map.containsKey" (list obj addr-kv key value flag args))
 			(define mem-ret (memory-sforce-write mem ret flag 0))
 			mem-ret
 		))
 ))
 
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) HashMap-funcs)
+(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Map-funcs)
 
 ;==============================================
 
@@ -328,6 +329,28 @@
 ))
 
 (map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) String-funcs)
+;==============================================
+
+;=================== Enum =====================
+(define Enum-funcs (list
+	(cons
+		(cons "java.lang.String" "valueOf")
+		(lambda (mem ret args)
+			mem))
+))
+(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Enum-funcs)
+;==============================================
+
+;================= Object =====================
+(define Object-funcs (list
+	(cons
+		;[!] not true clone, just returning the original one
+		(cons "java.lang.Object" "clone")
+		(lambda (mem obj ret args)
+			(define mem-ret (memory-sforce-write mem ret obj 0))
+			mem-ret))
+))
+(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Object-funcs)
 ;==============================================
 
 ;=================== Math =====================

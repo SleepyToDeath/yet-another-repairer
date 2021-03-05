@@ -22,6 +22,7 @@
 
 (define src-classes (list
 "java.lang.Object.jimple"
+"java.lang.Enum.jimple"
 "net.floodlightcontroller.firewall.FirewallRule$FirewallAction.jimple"
 "net.floodlightcontroller.firewall.FirewallRule.jimple"
 "net.floodlightcontroller.firewall.FirewallRuleTest.jimple"

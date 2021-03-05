@@ -77,12 +77,17 @@
 (define (set-context! mac)
 	(set! current-context mac))
 	
+(define var-void-receiver-name (string-id "__no_receiver"))
+(define addr-void-receiver nullptr)
+(define (set-void-receiver-addr addr)
+	(set! addr-void-receiver addr))
 	
 
 ;============================= Utils ===================================
 (define (lookup-virtual-function mac cls func arg-types) 
 	(if cls
 		(begin
+			(display (~a "class name: " cls " func name: " func "\n"))
 			(define cls-0 (imap-get (machine-cmap mac) cls))
 
 			(define base-name (ormap 
@@ -99,8 +104,9 @@
 (define (lookup-virtual-field mac cls field)
 	(if cls 
 		(begin
+			(display (~a "class name: " cls "\n"))
 			(define cls-0 (imap-get (machine-cmap mac) cls))
-;			(display (~a "class vfields: " (class-vfields cls-0) " class name: " cls " field name: " field "\n"))
+			(display (~a "class vfields: " (class-vfields cls-0) " class name: " cls " field name: " field "\n"))
 
 			(define base-name (ormap 
 				(lambda (cls-cur) (lookup-virtual-field mac cls-cur field)) 

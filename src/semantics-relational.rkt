@@ -243,7 +243,9 @@
 ;	(define mem-push (memory-spush (machine-mem mac)))
 	(define mac-cls (foldl process-class mac classes))
 	(define mem-reserve-obj (cdr (memory-alloc (machine-mem mac-cls) vt-size)))
-	(std:struct-copy machine mac-cls [mem mem-reserve-obj]))
+	(match-define (cons addr mem-void-receiver) (memory-new mem-reserve-obj))
+	(set-void-receiver-addr addr)
+	(std:struct-copy machine mac-cls [mem mem-void-receiver]))
 
 (define (is-interface-func? func-fml)
 	(null? (function-prog (function-formula-func func-fml))))
@@ -876,11 +878,10 @@
 								[idx-v (expr-eval idx-e mac-eval-ctxt)])
 								(memory-awrite mem-0 addr idx-v value))]
 						[(expr-field obj cls fname)
-							(if (equal? obj void-receiver)
-								(memory-sforce-write mem-0 (sfield-id (string-id (type-name-name cls)) (string-id (field-name fname))) value 0)
-								(letrec
-									([addr (memory-sforce-read mem-0 (string-id (variable-name obj)) 0)])
-									(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value)))]))
+							(letrec
+								([addr (if (equal? obj void-receiver) addr-void-receiver
+									(memory-sforce-read mem-0 (string-id (variable-name obj)) 0))])
+								(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value))]))
 				(memory-print-id "mem-new" mem-new)
 				(update-mem-only mem-new))]
 

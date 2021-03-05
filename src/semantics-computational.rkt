@@ -297,7 +297,9 @@
 ;	(define mem-push (memory-spush (machine-mem mac)))
 	(define mac-cls (foldl process-class mac classes))
 	(define mem-reserve-obj (cdr (memory-alloc (machine-mem mac-cls) vt-size)))
-	(std:struct-copy machine mac-cls [mem mem-reserve-obj]))
+	(match-define (cons addr mem-void-receiver) (memory-new mem-reserve-obj))
+	(set-void-receiver-addr addr)
+	(std:struct-copy machine mac-cls [mem mem-void-receiver]))
 
 (define (variable-definitions->list ast)
 	(map 
@@ -365,11 +367,10 @@
 						[idx-v (expr-eval idx-e m)])
 						(memory-awrite mem0 addr idx-v v-new))]
 				[(expr-field obj cls fname)
-					(if (equal? obj void-receiver)
-						(memory-swrite mem0 (sfield-id (string-id (type-name-name cls)) (string-id (field-name fname))) v-new)
-						(letrec
-							([addr (memory-sread mem0 (string-id (variable-name obj)))])
-							(memory-fwrite mem0 (vfield-id m (string-id (type-name-name cls)) (string-id (field-name fname))) addr v-new)))]
+					(letrec
+						([addr (if (equal? obj void-receiver) addr-void-receiver
+							(memory-sread mem0 (string-id (variable-name obj))))])
+						(memory-fwrite mem0 (vfield-id m (string-id (type-name-name cls)) (string-id (field-name fname))) addr v-new))]
 				[_ #f]))
 
 		(define pc-next (+ 1 (machine-pc m)))
@@ -607,10 +608,10 @@
 		(define cls-name (iexpr-field-cls-name e))
 		(define obj-name (iexpr-field-obj-name e))
 		(define ret 
-			(if (equal? obj-name (string-id (variable-name void-receiver)))
-				(memory-sforce-read mem0 (sfield-id cls-name fname) 0)
-				(let([obj-addr (memory-sforce-read mem0 obj-name 0)])
-					(memory-fread mem0 (vfield-id m cls-name fname) obj-addr))))
+			(let
+				([obj-addr (if (equal? obj-name var-void-receiver-name) addr-void-receiver
+					(memory-sforce-read mem0 obj-name 0))])
+				(memory-fread mem0 (vfield-id m cls-name fname) obj-addr)))
 		(defer-eval "field read: " (list obj-name cls-name fname ret))
 		ret)])
 

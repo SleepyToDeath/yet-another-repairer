@@ -22,7 +22,7 @@ package net.floodlightcontroller.routing;
 import org.projectfloodlight.openflow.types.DatapathId;
 import org.projectfloodlight.openflow.types.OFPort;
 
-public class Link implements Comparable<Link> {
+public class Link /* implements Comparable<Link>*/ {
 //    @JsonProperty("src-switch")
     private DatapathId src;
 //    @JsonProperty("src-port")
@@ -112,6 +112,7 @@ public class Link implements Comparable<Link> {
     }
 
 
+/*
     @Override
     public String toString() {
         return "Link [src=" + this.src.toString()
@@ -131,6 +132,7 @@ public class Link implements Comparable<Link> {
     }
 
     @Override
+	*/
     public int compareTo(Link a) {
         // compare link based on natural ordering - src id, src port, dst id, dst port
         if (this.getSrc() != a.getSrc())

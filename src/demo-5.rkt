@@ -23,6 +23,7 @@
 (define src-classes (list
 "java.lang.NumberFormatException.jimple"
 "java.lang.Object.jimple"
+"java.lang.Enum.jimple"
 "java.util.Collection.jimple"
 "java.util.HashMap.jimple"
 "java.util.ArrayList.jimple"
@@ -36,7 +37,7 @@
 "org.projectfloodlight.openflow.protocol.action.OFActionSetTpSrc$Builder.jimple"
 "org.projectfloodlight.openflow.protocol.action.OFActionSetTpSrc.jimple"
 "org.projectfloodlight.openflow.protocol.action.OFActions.jimple"
-"org.projectfloodlight.openflow.protocol.OFFactories$1.jimple"
+;"org.projectfloodlight.openflow.protocol.OFFactories$1.jimple"
 "org.projectfloodlight.openflow.protocol.OFFactories.jimple"
 "org.projectfloodlight.openflow.protocol.OFFactory.jimple"
 "org.projectfloodlight.openflow.protocol.OFVersion.jimple"
