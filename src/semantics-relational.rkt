@@ -432,6 +432,8 @@
 ;	(check-asserts 0)
 	ret)
 
+(define line-counter 0)
+
 ;instruction X rbstate -> rbstate
 (define (inst->relation.real inst st)
 
@@ -447,6 +449,8 @@
 		(define trigger-summary? in-target?) ;updated later
 ;		(imap-set-selector id)
 
+		(set! line-counter (+ line-counter 1))
+		(display (~a "Lines of code: " line-counter))
 		(defer-eval "instruction: " inst)
 		(display "\nInstruction:\n")
 		(println inst)
@@ -729,7 +733,9 @@
 				(define args-v (map (lambda (arg) (expr-eval arg mac-eval-ctxt)) args))
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
-					(update-mem-only (mfunc mem-0 ret args-v))
+					(begin
+					(assert id)
+					(update-mem-only (mfunc mem-0 ret args-v)))
 
 					(begin
 
@@ -765,7 +771,9 @@
 
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
-					(update-mem-only (mfunc mem-0 obj-addr ret args-v))
+					(begin
+					(assert id)
+					(update-mem-only (mfunc mem-0 obj-addr ret args-v)))
 
 					(begin
 					(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
@@ -831,7 +839,9 @@
 
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
-					(update-mem-only (mfunc mem-0 obj-addr ret args-v))
+					(begin
+					(assert id)
+					(update-mem-only (mfunc mem-0 obj-addr ret args-v)))
 
 					(begin
 					(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
@@ -865,6 +875,7 @@
 
 			[(inst-ass vl vr) 
 				(begin
+				(if (equal? vr (iexpr-var var-this-name)) (assert id) #f)
 				(define value (expr-eval vr mac-eval-ctxt))
 				(if summary? #f (defer-eval inst value))
 				(define rhs (lexpr-rhs vl))

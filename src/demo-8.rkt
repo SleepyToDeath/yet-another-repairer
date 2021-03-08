@@ -18,36 +18,26 @@
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 (require (prefix-in p: "jimple/jimple-utils.rkt"))
 
-(define src-dir "../benchmark/benchmark5/sootOutput/")
+(define src-dir "../benchmark/benchmark8/sootOutput/")
 
 (define src-classes (list
-"java.lang.NumberFormatException.jimple"
 "java.lang.Object.jimple"
-"java.lang.Enum.jimple"
 "java.util.Collection.jimple"
 "java.util.HashMap.jimple"
+"java.util.Map.jimple"
 "java.util.ArrayList.jimple"
 "java.util.HashSet.jimple"
-"net.floodlightcontroller.util.ActionUtils.jimple"
-"net.floodlightcontroller.util.ActionUtilsTest.jimple"
-"org.projectfloodlight.openflow.protocol.action.OFAction$Builder.jimple"
-"org.projectfloodlight.openflow.protocol.action.OFAction.jimple"
-"org.projectfloodlight.openflow.protocol.action.OFActionSetTpDst$Builder.jimple"
-"org.projectfloodlight.openflow.protocol.action.OFActionSetTpDst.jimple"
-"org.projectfloodlight.openflow.protocol.action.OFActionSetTpSrc$Builder.jimple"
-"org.projectfloodlight.openflow.protocol.action.OFActionSetTpSrc.jimple"
-"org.projectfloodlight.openflow.protocol.action.OFActions.jimple"
-;"org.projectfloodlight.openflow.protocol.OFFactories$1.jimple"
-"org.projectfloodlight.openflow.protocol.OFFactories.jimple"
-"org.projectfloodlight.openflow.protocol.OFFactory.jimple"
-"org.projectfloodlight.openflow.protocol.OFVersion.jimple"
-"org.projectfloodlight.openflow.protocol.ver10.OFActionSetTpDstVer10$Builder.jimple"
-"org.projectfloodlight.openflow.protocol.ver10.OFActionSetTpDstVer10.jimple"
-"org.projectfloodlight.openflow.protocol.ver10.OFActionSetTpSrcVer10$Builder.jimple"
-"org.projectfloodlight.openflow.protocol.ver10.OFActionSetTpSrcVer10.jimple"
-"org.projectfloodlight.openflow.protocol.ver10.OFActionsVer10.jimple"
-"org.projectfloodlight.openflow.protocol.ver10.OFFactoryVer10.jimple"
-"org.projectfloodlight.openflow.types.TransportPort.jimple"))
+"net.floodlightcontroller.core.internal.OFSwitch.jimple"
+"net.floodlightcontroller.core.IOFSwitch.jimple"
+"net.floodlightcontroller.core.types.MacVlanPair.jimple"
+"net.floodlightcontroller.learningswitch.LearningSwitch.jimple"
+"net.floodlightcontroller.learningswitch.LearningSwitchTest.jimple"
+"org.projectfloodlight.openflow.types.MacAddress.jimple"
+"org.projectfloodlight.openflow.types.OFPort$1.jimple"
+"org.projectfloodlight.openflow.types.OFPort$NamedPort.jimple"
+"org.projectfloodlight.openflow.types.OFPort$PrecachedPort.jimple"
+"org.projectfloodlight.openflow.types.OFPort.jimple"
+"org.projectfloodlight.openflow.types.VlanVid.jimple"))
 
 (define class-src-list (map (lambda (src-class) (begin 
 	(display (~a "Parsing src file: " src-class "\n"))
@@ -75,7 +65,6 @@
 result
 
 (pretty-print string-id-table)
-
 (display "===============================================================================================================\n")
 (display "================================================ Encoding ... =================================================\n")
 (display "===============================================================================================================\n")

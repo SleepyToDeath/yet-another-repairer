@@ -50,6 +50,8 @@
 ;	(pretty-print (machine-mem mac-input))
 	(function-exec mac-input func))
 
+(define line-counter-c 0)
+
 (define (function-exec mac func)
 	(if (equal? (machine-pc mac) pc-ret) 
 		mac
@@ -60,6 +62,8 @@
 ;			(println string-id-map)
 			(display "\n")
 			(println inst-cur)
+			(set! line-counter-c (+ line-counter-c 1))
+			(display (~a "Lines of code: " line-counter-c))
 			(display "\n\n")
 			(set-context! mac)
 			(function-exec (inst-exec inst-cur mac func) func))))

@@ -54,6 +54,15 @@
 		model-list))
 
 
+
+
+
+;################ Java Library ##################
+
+;============ Capacity Limits ============
+(define model-all-capacity 20)
+(define (model-all-hash-func x) (modulo x 17))
+
 ;================= Map ===================
 ;[!] Need source file
 ;currently a copy of HashMap
@@ -62,8 +71,8 @@
 ;[!] Assuming collision free
 
 (define map-class-name (string-id "java.util.Map"))
-(define (map-hash-func x) (modulo x 179))
-(define map-max-capacity 200)
+(define map-hash-func model-all-hash-func)
+(define map-max-capacity model-all-capacity)
 (define map-fname-kv (string-id "KVStore"))
 (define (map-fid-kv)
 	(vfield-id current-context map-class-name map-fname-kv))
@@ -145,8 +154,8 @@
 ;[!] Assuming collision free
 
 (define hashmap-class-name (string-id "java.util.HashMap"))
-(define (hashmap-hash-func x) (modulo x 179))
-(define hashmap-max-capacity 200)
+(define hashmap-hash-func model-all-hash-func)
+(define hashmap-max-capacity model-all-capacity)
 (define hashmap-fname-kv (string-id "KVStore"))
 (define (hashmap-fid-kv)
 	(vfield-id current-context hashmap-class-name hashmap-fname-kv))
@@ -225,8 +234,8 @@
 ;[!] Assuming collision free
 
 (define hashset-class-name (string-id "java.util.HashSet"))
-(define (hashset-hash-func x) (modulo x 179))
-(define hashset-max-capacity 200)
+(define hashset-hash-func model-all-hash-func)
+(define hashset-max-capacity model-all-capacity)
 (define hashset-fname-v (string-id "VStore"))
 (define (hashset-fid-v)
 	(vfield-id current-context hashset-class-name hashset-fname-v))
@@ -309,7 +318,7 @@
 		))
 ))
 
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) ArrayList-funcs)
+;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) ArrayList-funcs)
 ;==============================================
 
 ;================= Optional ===================
@@ -370,3 +379,39 @@
 ;================ Collection ==================
 (define Collection-funcs (list	))
 ;==============================================
+
+
+
+
+
+
+
+;################ Network Data Types ##################
+(define mac-class-name (string-id "org.projectfloodlight.openflow.types.MacAddress"))
+(define mac-fname-raw (string-id "rawValue"))
+(define (mac-fid-raw)
+	(vfield-id current-context mac-class-name mac-fname-raw))
+(define MacAddress-funcs (list
+	(cons
+		(cons "org.projectfloodlight.openflow.types.MacAddress" "<init>")
+		(lambda (mem obj ret args)
+			(define fid-class-name (vfield-id current-context mac-class-name field-name-class))
+			(define mem-bind (memory-fwrite mem fid-class-name obj mac-class-name))
+			(define mem-ass (memory-fwrite mem-bind (mac-fid-raw) obj (first args)))
+			mem-ass))
+
+	(cons
+		(cons "org.projectfloodlight.openflow.types.MacAddress" "of")
+		(lambda (mem ret args)
+			(match-define (cons obj mem-alloc) (memory-new mem))
+
+			(define fid-class-name (vfield-id current-context mac-class-name field-name-class))
+			(define mem-bind (memory-fwrite mem-alloc fid-class-name obj mac-class-name))
+			(define mem-ass (memory-fwrite mem-bind (mac-fid-raw) obj (first args)))
+
+			(define mem-ret (memory-sforce-write mem ret obj 0))
+			mem-ret))
+))
+			
+
+(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) MacAddress-funcs)
