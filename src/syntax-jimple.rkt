@@ -19,8 +19,8 @@
 ;if no interface, put a null list
 (LHS-C class-def (rhs ::= class-default))
 	(RHS-C class-default (name : type-name) (extend : type-name) (implements : interface-implements) 
-		(globals : variable-definitions) (fields : variable-definitions) 
-		(static-functions : function-declares) (member-functions : function-declares))
+		(static-fields : variable-definitions) (virtual-fields : variable-definitions) 
+		(static-functions : function-declares) (virtual-functions : function-declares))
 
 ;--------------------------------------------------------
 (LHS-C function-declares (rhs ::= function-list))
