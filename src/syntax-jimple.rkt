@@ -19,7 +19,7 @@
 ;if no interface, put a null list
 (LHS-C class-def (rhs ::= class-default))
 	(RHS-C class-default (name : type-name) (extend : type-name) (implements : interface-implements) 
-		(globals : field-declares) (fields : field-declares) 
+		(globals : variable-definitions) (fields : variable-definitions) 
 		(static-functions : function-declares) (member-functions : function-declares))
 
 ;--------------------------------------------------------
@@ -46,7 +46,7 @@
 
 ;--------------------------------------------------------
 (LHS-C function-declare (rhs ::= function-content))
-	(RHS-C function-content (name : func-name) (args : variable-definitions) (local-variables : variable-definitions) (statements : stats))
+	(RHS-C function-content (name : func-name) (args : variable-definitions) (ret : type-name) (local-variables : variable-definitions) (statements : stats))
 
 ;--------------------------------------------------------
 (LHS-C stats (rhs ::= stat-list))
