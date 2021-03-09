@@ -20,8 +20,8 @@
                     (ast:type-name "A")
                     (ast:type-name #f)
                     (ast:interface-implements (ast:interface-name-list null))
-                    (ast:field-declares (ast:field-list null))
-                    (ast:field-declares (ast:field-list null))
+                    (ast:variable-definitions (ast:variable-definition-list null))
+                    (ast:variable-definitions (ast:variable-definition-list null))
                     (ast:function-declares (ast:function-list null))
                     (ast:function-declares (ast:function-list null))))
                 "file test 1")
@@ -32,8 +32,8 @@
                     (ast:type-name "B")
                     (ast:interface-implements
                       (ast:interface-name-list (list (ast:type-name "C") (ast:type-name "D"))))
-                    (ast:field-declares (ast:field-list null))
-                    (ast:field-declares (ast:field-list null))
+                    (ast:variable-definitions (ast:variable-definition-list null))
+                    (ast:variable-definitions (ast:variable-definition-list null))
                     (ast:function-declares (ast:function-list null))
                     (ast:function-declares (ast:function-list null))))
                 "file test 2")
@@ -51,8 +51,22 @@
                     (ast:type-name "A")
                     (ast:type-name #f)
                     (ast:interface-implements (ast:interface-name-list null))
-                    (ast:field-declares (ast:field-list (list (ast:field "a"))))
-                    (ast:field-declares (ast:field-list (list (ast:field "b") (ast:field "c"))))
+                    (ast:variable-definitions
+                      (ast:variable-definition-list (list
+                        (ast:variable-definition
+                          (ast:variable-n-type
+                            (ast:variable "a")
+                            (ast:type-name "int"))))))
+                    (ast:variable-definitions
+                      (ast:variable-definition-list (list
+                        (ast:variable-definition
+                          (ast:variable-n-type
+                            (ast:variable "b")
+                            (ast:type-name "double")))
+                        (ast:variable-definition
+                          (ast:variable-n-type
+                            (ast:variable "c")
+                            (ast:type-name "float"))))))
                     (ast:function-declares (ast:function-list null))
                     (ast:function-declares (ast:function-list null))))
                 "field test 1")
@@ -68,14 +82,15 @@
                     (ast:type-name "A")
                     (ast:type-name #f)
                     (ast:interface-implements (ast:interface-name-list null))
-                    (ast:field-declares (ast:field-list null))
-                    (ast:field-declares (ast:field-list null))
+                    (ast:variable-definitions (ast:variable-definition-list null))
+                    (ast:variable-definitions (ast:variable-definition-list null))
                     (ast:function-declares (ast:function-list null))
                     (ast:function-declares (ast:function-list (list
                       (ast:function-declare
                         (ast:function-content
                           (ast:func-name "foo")
                           (ast:variable-definitions (ast:variable-definition-list null))
+                          (ast:type-name "void")
                           (ast:variable-definitions (ast:variable-definition-list null))
                           (ast:stats (ast:stat-list null)))))))))
                 "method test 1")
@@ -89,8 +104,8 @@
                     (ast:type-name "A")
                     (ast:type-name #f)
                     (ast:interface-implements (ast:interface-name-list null))
-                    (ast:field-declares (ast:field-list null))
-                    (ast:field-declares (ast:field-list null))
+                    (ast:variable-definitions (ast:variable-definition-list null))
+                    (ast:variable-definitions (ast:variable-definition-list null))
                     (ast:function-declares (ast:function-list (list
                       (ast:function-declare
                         (ast:function-content
@@ -105,6 +120,7 @@
                                 (ast:variable-n-type
                                   (ast:variable "@parameter1")
                                   (ast:type-name "java.util.List"))))))
+                          (ast:type-name "void")
                           (ast:variable-definitions (ast:variable-definition-list null))
                           (ast:stats (ast:stat-list null)))))))
                     (ast:function-declares (ast:function-list (list
@@ -121,6 +137,7 @@
                                 (ast:variable-n-type
                                   (ast:variable "@parameter1")
                                   (ast:type-name "double"))))))
+                          (ast:type-name "int")
                           (ast:variable-definitions (ast:variable-definition-list null))
                           (ast:stats (ast:stat-list null)))))))))
                 "method test 2")
@@ -132,8 +149,8 @@
       (ast:type-name class-name)
       (ast:type-name #f)
       (ast:interface-implements (ast:interface-name-list null))
-      (ast:field-declares (ast:field-list null))
-      (ast:field-declares (ast:field-list null))
+      (ast:variable-definitions (ast:variable-definition-list null))
+      (ast:variable-definitions (ast:variable-definition-list null))
       (ast:function-declares (ast:function-list null))
       (ast:function-declares (ast:function-list (list func-decl))))))
 
@@ -151,6 +168,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -174,6 +192,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -204,6 +223,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -237,6 +257,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -285,6 +306,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -311,6 +333,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -335,6 +358,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -361,6 +385,7 @@
             (ast:variable-definition-list (list
               (ast:variable-definition
                 (ast:variable-n-type (ast:variable "@parameter0") (ast:type-name "int"))))))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -391,6 +416,7 @@
             (ast:variable-definition-list (list
               (ast:variable-definition
                 (ast:variable-n-type (ast:variable "@parameter0") (ast:type-name "int"))))))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -416,6 +442,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions (ast:variable-definition-list null))
           (ast:stats
             (ast:stat-list (list
@@ -436,6 +463,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions (ast:variable-definition-list null))
           (ast:stats
             (ast:stat-list (list
@@ -458,6 +486,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions (ast:variable-definition-list null))
           (ast:stats
             (ast:stat-list (list
@@ -478,6 +507,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions (ast:variable-definition-list null))
           (ast:stats
             (ast:stat-list (list
@@ -496,6 +526,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "int")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -520,6 +551,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -548,6 +580,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition (ast:variable-n-type (ast:variable "r0") (ast:type-name "T")))
@@ -578,6 +611,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition (ast:variable-n-type (ast:variable "a") (ast:type-name "int"))))))
@@ -605,6 +639,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition (ast:variable-n-type (ast:variable "r0") (ast:type-name "T")))
@@ -640,6 +675,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -670,6 +706,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -705,6 +742,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
@@ -740,6 +778,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition
