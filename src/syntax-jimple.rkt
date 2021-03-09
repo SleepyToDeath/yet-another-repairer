@@ -26,12 +26,6 @@
 (LHS-C function-declares (rhs ::= function-list))
 	(RHS-C-List function-list (fl : function-declare))
 
-(LHS-C field-declares (rhs ::= field-list))
-	(RHS-C-List field-list (fl : field))
-
-(LHS-C variable-declares (rhs ::= variable-list))
-	(RHS-C-List variable-list (vl : variable))
-
 (LHS-C interface-implements (rhs ::= interface-name-list))
 	(RHS-C-List interface-name-list (il : type-name))
 

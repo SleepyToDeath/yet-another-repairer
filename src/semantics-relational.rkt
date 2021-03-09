@@ -219,8 +219,10 @@
 
 		(define mac-sfields (foldl 
 			(lambda (sf mac) 
+				(define mem-decl (memory-sdecl (machine-mem mac) (sfield-id cls-name (car sf))))
+				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car sf)) (cdr sf)))
 				(std:struct-copy machine mac 
-					[mem (memory-sdecl (machine-mem mac) (sfield-id cls-name sf))])) 
+					[mem mem-decl][tmap tmap-1])) 
 			mac-sfuncs sfields))
 
 		(define mac-vfuncs (foldl 
@@ -234,8 +236,10 @@
 
 		(define mac-vfields (foldl 
 			(lambda (vf mac) 
+				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car vf)) (cdr vf)))
+				(define mem-decl (memory-fdecl (machine-mem mac) (vfield-id mac cls-name (car vf))))
 				(std:struct-copy machine mac 
-					[mem (memory-fdecl (machine-mem mac) (vfield-id mac cls-name vf))])) 
+					[mem mem-decl][tmap tmap-1])) 
 			mac-vfuncs vfields))
 
 		mac-vfields)

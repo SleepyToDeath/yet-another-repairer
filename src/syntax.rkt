@@ -9,10 +9,12 @@
 
 ;=================== AST interface ================
 (define-generics ast
-	[ast-check ast])
+	[ast-check ast]
+	[ast-get ast]) ;get rhs
 
 (define-generics expanded
-	[expanded-check expanded])
+	[expanded-check expanded]
+	[expanded-get count expanded]) ;get first `count` sub-tree
 
 (struct syntax-context (vars types fields funcs consts ops labels) #:transparent)
 ;==================================================
@@ -34,6 +36,9 @@
 					(expanded-check __et)))
 				(if flag flag (begin (print name) (display "\n")))
 				flag)
+
+			(define (ast-get __t)
+				((id2acc name rname) __t))
 		]
 	)
 )
@@ -46,6 +51,9 @@
 				(and
 					(andmap (id2pred lhs) ((id2acc name lname) __et))
 					(andmap ast-check ((id2acc name lname) __et))))
+
+			(define (expanded-get __lvl __et)
+				(list ((id2acc name lname) __et)))
 		]
 	)
 )
@@ -64,18 +72,25 @@
 					(and
 						(ast-check ((id2acc name lname) __et)) ...
 					)))
+
+			(define (expanded-get __lvl __et)
+				(define __elements (list ((id2acc name lname) __et) ...))
+				(take __elements __lvl))
 		] 
 	)
 )
 
 ;[!] users should define their own enumerator for each terminal
 ;	 name-enum: ctxt -> name
-(define-syntax-rule (TERM name val ...)
-	(struct name (val ...) #:transparent
+(define-syntax-rule (TERM name val)
+	(struct name (val) #:transparent
 		#:methods gen:ast
 		[
 			(define (ast-check __t) 
 				#t)
+
+			(define (ast-get __t)
+				((id2acc name val) __t))
 		]
 	)
 )
@@ -123,3 +138,25 @@
 ;==================================================
 
 
+
+;=================== Utils ========================
+;avoid typing the very long syntax node name when reading contents
+;used if RHS has one element
+(define (syntax-unwrap lvl ast)
+	(if (zero? lvl)
+		ast
+		(syntax-unwrap (- lvl 1) (if (ast? ast) (ast-get ast) (car (expanded-get 1 ast))))))
+
+;used if RHS has two elements
+(define (syntax-unwrap2 lvl ast)
+	(define p (expanded-get 2 (syntax-unwrap (- lvl 1) ast)))
+	(cons (first p) (second p)))
+
+;used if RHS has three elements
+(define (syntax-unwrap3 lvl ast)
+	(expanded-get 3 (syntax-unwrap (- lvl 1) ast)))
+
+;used if RHS has four elements
+(define (syntax-unwrap4 lvl ast)
+	(expanded-get 4 (syntax-unwrap (- lvl 1) ast)))
+;==================================================
