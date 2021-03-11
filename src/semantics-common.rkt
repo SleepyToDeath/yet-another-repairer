@@ -21,11 +21,14 @@
 ;pc: int
 ;boot: boot function
 ;classes: list of classes
-;cmap: name to class
+;cmap: class name to class
 ;fmap: function sid to function (function pointer in memory is sid)
-(struct machine (boot classes cmap fmap mem pc) #:transparent)
+;tmap: field's sid to its type (other type information can be found in function)
+(struct machine (boot classes cmap fmap tmap mem pc) #:transparent)
 
-;
+;extend: name of parent class
+;implements: list of (name of implemented interface)
+;sfields/vfields: list of (cons field-name type)
 (struct class (name extend implements sfuncs vfuncs sfields vfields) #:transparent)
 
 ;name: string
@@ -33,7 +36,8 @@
 ;lmap: imap: label(int) -> instruction index(int)
 ;args: list of (string(name) X string(type))
 ;locals: list of (string(name) X string(type))
-(struct function (name prog lmap args locals) #:transparent)
+;ret: string(type of return value)
+(struct function (name prog lmap args locals ret) #:transparent)
 
 ;inst-exec: machine(before exec) -> machine(after exec)
 (define-generics instruction
@@ -70,7 +74,7 @@
 	(set! parameter-counter (+ 1 parameter-counter))
 	(string-id name))
 
-(define machine-empty (machine #f null imap-empty imap-empty memory-empty pc-init))
+(define machine-empty (machine #f null imap-empty imap-empty imap-empty memory-empty pc-init))
 
 ;dynamically set, used to provide machine-level context, avoid using it too much
 (define current-context machine-empty)
@@ -114,7 +118,7 @@
 
 			(if base-name base-name
 				(if 
-					(ormap (lambda (f) (equal? f field)) (class-vfields cls-0)) 
+					(ormap (lambda (f) (equal? (car f) field)) (class-vfields cls-0)) 
 					(list cls delimiter-virtual field)
 					#f)))
 		#f))

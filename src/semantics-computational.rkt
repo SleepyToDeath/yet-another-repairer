@@ -111,43 +111,41 @@
 		(class-list-cl (program-rhs ast))))
 	(define cmap (foldl (lambda (cls cm) (imap-set cm (class-name cls) cls)) imap-empty classes))
 	(define boot (build-boot-func))
-	(define mac-init (machine boot classes cmap imap-empty memory-empty pc-init))
+	(define mac-init (machine boot classes cmap imap-empty imap-empty memory-empty pc-init))
 	mac-init)
 
 (define (ast->class ast)
+	(display "--------------------ast->class\n")
 	(define rhs (class-def-rhs ast))
 	(match rhs
-		[(class-default name-ast extend-ast interfaces-ast globals-ast fields-ast sfuncs-ast vfuncs-ast)
+		[(class-default name-ast extend-ast interfaces-ast sfields-ast vfields-ast sfuncs-ast vfuncs-ast)
 			(letrec 
 				([name (string-id (type-name-name name-ast))]
 				[extend (if (type-name-name extend-ast) (string-id (type-name-name extend-ast)) #f)]
-				[interfaces 
-					(map (lambda (ast) (string-id (type-name-name ast))) (interface-name-list-il (interface-implements-rhs interfaces-ast)))]
-				[sfuncs 
-					(map (lambda (ast) (ast->function name ast)) (function-list-fl (function-declares-rhs sfuncs-ast)))]
-				[vfuncs
-					(map (lambda (ast) (ast->function name ast)) (function-list-fl (function-declares-rhs vfuncs-ast)))]
-				[fields 
-					(map (lambda (ast) (string-id (field-name ast))) (field-list-fl (field-declares-rhs fields-ast)))]
-				[globals
-					(map (lambda (ast) (string-id (field-name ast))) (field-list-fl (field-declares-rhs globals-ast)))])
-				(class name extend interfaces sfuncs vfuncs globals fields))]))
+				[interfaces (map (lambda (ast) (string-id (type-name-name ast))) (syntax-unwrap 2 interfaces-ast))]
+				[sfuncs (map (lambda (ast) (ast->function name ast)) (syntax-unwrap 2 sfuncs-ast))]
+				[vfuncs	(map (lambda (ast) (ast->function name ast)) (syntax-unwrap 2 vfuncs-ast))]
+				[sfields (variable-definitions->list sfields-ast)]
+				[vfields (variable-definitions->list vfields-ast)])
+				(class name extend interfaces sfuncs vfuncs sfields vfields))]))
 
 ;(struct function (name prog lmap args locals) #:transparent)
 ;(LHS-C function-declare (rhs ::= function-content))
 ;	(RHS-C function-content (name : function-name) (args : arguments) (local-variables : variable-declares) (statements : stats))
 (define (ast->function classname ast)
+	(display "--------------------ast->function\n")
 	(define rhs (function-declare-rhs ast))
 	(match rhs
-		[(function-content name-ast args-ast local-vars-ast statements-ast)
+		[(function-content name-ast args-ast ret-ast local-vars-ast statements-ast)
 			(letrec 
 				([name (string-id (func-name-name name-ast))]
 				 [args (variable-definitions->list args-ast)]
 				 [local-vars (variable-definitions->list local-vars-ast)]
+				 [ret (string-id (syntax-unwrap 1 ret-ast))]
 				 [func-sig 
 					(function name 
 						(if (std:equal? name func-name-init) (list (inst-init classname)) null) 
-						imap-empty args local-vars)])
+						imap-empty args local-vars ret-ast)])
 				(begin
 					(define func 
 						(foldl (lambda (st func)
@@ -175,6 +173,7 @@
 
 ;ast X lmap X line-number -> instruction X lmap(updated)
 (define (ast->instruction ast lmap line-num)
+	(display "--------------------ast->instruction\n")
 	(pretty-print ast)
 	(match ast
 		[(stat s) (ast->instruction s lmap line-num)]
@@ -220,6 +219,7 @@
 				lmap)]))
 
 (define (ast->expression ast)
+	(display "--------------------ast->expression\n")
 	(match ast
 		[(expr e) (ast->expression e)]
 		[(lexpr e) (ast->expression e)]
@@ -231,14 +231,13 @@
 		[(expr-field obj class fname) (iexpr-field (string-id (variable-name obj)) (string-id (type-name-name class)) (string-id (field-name fname)))]))
 
 (define (build-boot-func)
-	;(define iboot (inst-boot globals))
 	(define icall-clinit (map (lambda (name) (inst-static-call var-void-ret name func-name-clinit null null)) class-names-clinit))
 	(define main-arg-types (map cdr (function-args func-main)))
 	(reset-parameter-names)
 	(define main-arg-vars (map (lambda (x) (iexpr-var (next-parameter-name))) main-arg-types))
 	(define icall-main (inst-static-call var-ret-name class-name-main func-name-main main-arg-types main-arg-vars))
 	(define iret (inst-ret (iexpr-var var-ret-name)))
-	(function func-name-boot (append icall-clinit (list icall-main iret)) imap-empty null (list (cons var-ret-name "int"))))
+	(function func-name-boot (append icall-clinit (list icall-main iret)) imap-empty null (list (cons var-ret-name (string-id int-type-name))) (string-id int-type-name)))
 
 (define (build-virtual-table mac) 
 	(display "Memory before buiding virtual table:\n")
@@ -250,9 +249,6 @@
 		(define sfuncs (class-sfuncs cls))
 		(define vfuncs (class-vfuncs cls))
 		(define sfields (class-sfields cls))
-;		(define vfields (if (equal? cls-name class-name-root) 
-;			(cons field-name-class (class-vfields cls))
-;			(class-vfields cls)))
 		(define vfields (class-vfields cls))
 
 		(define mac-sfuncs (foldl 
@@ -270,9 +266,11 @@
 
 		(define mac-sfields (foldl 
 			(lambda (sf mac) 
-				(pretty-print (sfield-id cls-name sf))
+				(pretty-print (sfield-id cls-name (car sf)))
+				(define mem-decl (memory-sdecl (machine-mem mac) (sfield-id cls-name (car sf))))
+				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car sf)) (cdr sf)))
 				(std:struct-copy machine mac 
-					[mem (memory-sdecl (machine-mem mac) (sfield-id cls-name sf))])) 
+					[mem mem-decl][tmap tmap-1])) 
 			mac-sfuncs sfields))
 
 		(display "#2\n")
@@ -291,8 +289,10 @@
 
 		(define mac-vfields (foldl 
 			(lambda (vf mac) 
+				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car vf)) (cdr vf)))
+				(define mem-decl (memory-fdecl (machine-mem mac) (vfield-id mac cls-name (car vf))))
 				(std:struct-copy machine mac 
-					[mem (memory-fdecl (machine-mem mac) (vfield-id mac cls-name vf))])) 
+					[mem mem-decl][tmap tmap-1])) 
 			mac-vfuncs vfields))
 
 ;		(println string-id-table)
@@ -306,14 +306,14 @@
 	(std:struct-copy machine mac-cls [mem mem-void-receiver]))
 
 (define (variable-definitions->list ast)
-	(map 
-		(lambda (ast) (variable-definition->pair ast))
-		(variable-definition-list-vl (variable-definitions-rhs ast))))
+	(display "--------------------var-def->list\n")
+	(map variable-definition->pair (syntax-unwrap 2 ast)))
 
 (define (variable-definition->pair ast)
-	(cons 
-		(string-id (variable-name (variable-n-type-name (variable-definition-rhs ast))))
-		(string-id (type-name-name (variable-n-type-type (variable-definition-rhs ast))))))
+	(define n.t (syntax-unwrap2 2 ast))
+	(cons
+		(string-id (syntax-unwrap 1 (car n.t)))
+		(string-id (syntax-unwrap 1 (cdr n.t)))))
 
 
 ;======================== Instructions ===========================

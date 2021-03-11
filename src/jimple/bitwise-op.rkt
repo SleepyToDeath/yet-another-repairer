@@ -3,7 +3,7 @@
 (provide (all-defined-out))
 (require (prefix-in std: racket/base))
 
-(define bitwise-op-width 48)
+(define bitwise-op-width 2)
 
 (define (b-lshift a w)
 	(define ba (integer->bitvector a (bitvector bitwise-op-width)))

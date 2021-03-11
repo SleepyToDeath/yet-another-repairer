@@ -22,8 +22,8 @@
           (ast:type-name class-name)
           (ast:type-name #f)
           (ast:interface-implements (ast:interface-name-list null))
-          (ast:field-declares (ast:field-list null))
-          (ast:field-declares (ast:field-list null))
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions (ast:variable-definition-list null))
           (ast:function-declares (ast:function-list null))
           (ast:function-declares (ast:function-list (list func-decl)))))))))
 
@@ -36,8 +36,8 @@
           (ast:type-name class-name)
           (ast:type-name #f)
           (ast:interface-implements (ast:interface-name-list null))
-          (ast:field-declares (ast:field-list null))
-          (ast:field-declares (ast:field-list null))
+          (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:variable-definitions (ast:variable-definition-list null))
           (ast:function-declares (ast:function-list (list func-decl)))
           (ast:function-declares (ast:function-list null))))))))
 
@@ -57,6 +57,7 @@
         (ast:function-content
           (ast:func-name "foo")
           (ast:variable-definitions (ast:variable-definition-list null))
+          (ast:type-name "void")
           (ast:variable-definitions
             (ast:variable-definition-list (list
               (ast:variable-definition

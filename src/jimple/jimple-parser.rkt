@@ -76,8 +76,8 @@
            (if (p:attribute impls)
                (build-ast-implements #'impls)
                (ast:interface-implements (ast:interface-name-list null)))
-           (ast:field-declares (ast:field-list global-list))
-           (ast:field-declares (ast:field-list field-list))
+           (ast:variable-definitions (ast:variable-definition-list global-list))
+           (ast:variable-definitions (ast:variable-definition-list field-list))
            (ast:function-declares (ast:function-list static-func-list))
            (ast:function-declares (ast:function-list virtual-func-list)))))]))
 
@@ -117,7 +117,10 @@
         ({p:~literal j_type} type)
         ({p:~literal name} name))
      (let ([ms (build-ast-modifiers #'(modifiers ...))]
-           [f  (ast:field (std:syntax-e #'name))])
+           [f  (ast:variable-definition
+                 (ast:variable-n-type
+                   (ast:variable (std:syntax-e #'name))
+                   (ast:type-name (build-ast-nonvoid-type #'type))))])
        (list ms f))]))
 
 
@@ -135,7 +138,7 @@
   (p:syntax-parse method-stx
     [({p:~literal method}
         modifiers ...
-        ({p:~literal j_type} ret-type)
+        ret-type
         method-name
         "("
         (p:~optional param-list)
@@ -152,6 +155,7 @@
                         (if (p:attribute param-list)
                           (build-ast-method-params #'param-list)
                           (ast:variable-definitions (ast:variable-definition-list null)))
+                        (ast:type-name (build-ast-type #'ret-type))
                         (ast:variable-definitions (ast:variable-definition-list decls))
                         (ast:stats (ast:stat-list stmts))))])
        (list ms method))]))
@@ -191,6 +195,14 @@
      (std:string-append
        (std:syntax-e #'typename)
        (string-repeat (length (std:syntax->list #'(array-brackets ...))) "[]"))]))
+
+
+(define (build-ast-type type-stx)
+  (p:syntax-parse type-stx
+    [({p:~literal j_type} "void")
+     "void"]
+    [({p:~literal j_type} nonvoid-type)
+     (build-ast-nonvoid-type #'nonvoid-type)]))
 
 
 (define (build-ast-method-body method-body-stx)

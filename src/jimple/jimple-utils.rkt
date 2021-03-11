@@ -85,6 +85,7 @@
   (ast:function-declare (ast:function-content
     (ast:function-content-name func)
     (ast:function-content-args func)
+    (ast:function-content-ret func)
     (ast:function-content-local-variables func)
     (ast:stats (ast:stat-list
       (map trans-init-return-stmt
@@ -127,6 +128,7 @@
   (ast:function-declare (ast:function-content
     (ast:function-content-name func)
     (ast:function-content-args func)
+    (ast:function-content-ret func)
     (ast:function-content-local-variables func)
     (ast:stats (ast:stat-list
       (map trans-get-class-stmt
