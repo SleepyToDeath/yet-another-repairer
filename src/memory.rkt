@@ -49,7 +49,7 @@
 ;-----------------Heap Operations---------------
 ;read from heap
 (define (memory-hread mem addr)
-	(imap-get2 (memory-heap mem) addr no-scope))
+	(imap-get (memory-heap mem) addr))
 
 ;write to heap
 (define (memory-hwrite mem addr value)
@@ -103,7 +103,7 @@
 
 ;return baes address of a virtual table
 (define (memory-vt-base mem name)
-	(imap-get2 (vtab-meta-name2tab (memory-v-meta mem)) name no-scope))
+	(imap-get (vtab-meta-name2tab (memory-v-meta mem)) name))
 
 ;return entry address of a virtual table
 ;must be used after initialization

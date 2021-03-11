@@ -156,3 +156,31 @@ bv1
 i2
 bv2
 i2+
+
+(define-symbolic* b3 (bitvector 32))
+
+
+
+(define-generics A
+	[fooA A])
+
+(define-generics B
+	[fooB B])
+
+(struct C (id) #:transparent
+	#:methods gen:A
+	[
+		(define (fooA c)
+			(display "this is A\n"))
+		]
+
+	#:methods gen:B
+	[
+		(define (fooB c)
+			(display "this is B\n"))
+		])
+
+(define ccc (C 1))
+
+(fooA ccc)
+(fooB ccc)

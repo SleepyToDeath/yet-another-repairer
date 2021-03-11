@@ -96,6 +96,7 @@
 				[e (if (p e) (list e) null)])))
 	(map f (apply append (map symbolic->list l))))
 
+;raise error if any branch in symbolic/concrete execution could make cnd true
 (define (force-error cnd msg)
 	(define len1 (length (asserts)))
 	(if cnd (std:error msg) #f)
