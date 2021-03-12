@@ -48,12 +48,12 @@
 
 ;-----------------Heap Operations---------------
 ;read from heap
-(define (memory-hread mem addr)
-	(imap-get (memory-heap mem) addr))
+(define (memory-hread mem addr type)
+	(imap-get (memory-heap mem) addr type))
 
 ;write to heap
-(define (memory-hwrite mem addr value)
-	(std:struct-copy memory mem [heap (imap-set (memory-heap mem) addr value)]))
+(define (memory-hwrite mem addr value type)
+	(std:struct-copy memory mem [heap (imap-set (memory-heap mem) addr value type)]))
 
 ;allocate array on heap
 ;memory X size -> addr(allocated) X memory(new) 
@@ -61,7 +61,7 @@
 	(begin
 	(define current-o-top (heap-meta-o-top (memory-h-meta mem)))
 	(define current-a-top (heap-meta-a-top (memory-h-meta mem)))
-	(define mem-size (memory-hwrite mem current-a-top size))
+	(define mem-size (memory-hwrite mem current-a-top size int-type))
 	(cons (+ 1 current-a-top) (std:struct-copy memory mem-size [h-meta (heap-meta current-o-top (+ current-a-top size 1))]))))
 
 ;must use this to new object
@@ -80,7 +80,7 @@
 		(match (memory-v-meta mem)
 			[(vtab-meta n2t vtop)
 				(begin
-				(define n2t+ (imap-set n2t name vtop))
+				(define n2t+ (imap-set n2t name vtop #f))
 				(define vtop+ (+ vtop vt-size))
 				(std:struct-copy memory mem
 					[v-meta (vtab-meta n2t+ vtop+)]
@@ -88,22 +88,22 @@
 		mem))
 
 ;read a field value of an object
-(define (memory-fread mem fname obj-addr)
+(define (memory-fread mem fname obj-addr type)
 	(begin
 	(define vt-addr (memory-vt-base mem fname))
 	(define faddr (memory-vt-lookup mem vt-addr obj-addr))
-	(memory-hread mem faddr)))
+	(memory-hread mem faddr type)))
 
 ;write to a field of an object
-(define (memory-fwrite mem fname obj-addr value) 
+(define (memory-fwrite mem fname obj-addr value type) 
 	(begin
 	(define vt-addr (memory-vt-base mem fname))
 	(define faddr (memory-vt-lookup mem vt-addr obj-addr))
-	(memory-hwrite mem faddr value)))
+	(memory-hwrite mem faddr value type)))
 
 ;return baes address of a virtual table
 (define (memory-vt-base mem name)
-	(imap-get (vtab-meta-name2tab (memory-v-meta mem)) name))
+	(imap-get (vtab-meta-name2tab (memory-v-meta mem)) name #f))
 
 ;return entry address of a virtual table
 ;must be used after initialization
@@ -112,16 +112,17 @@
 
 (define (memory-obj-index mem obj-addr)
 	(- obj-addr (vtab-meta-top (memory-v-meta mem))))
+
 ;-----------------Array Access----------------
 ;array =  a memory range of any size on heap
 
 ;read value under an index from an array
-(define (memory-aread mem arr-addr index) 
-	(memory-hread mem (+ arr-addr index)))
+(define (memory-aread mem arr-addr index type) 
+	(memory-hread mem (+ arr-addr index) type))
 
 ;write to an index of an array
-(define (memory-awrite mem arr-addr index value)
-	(memory-hwrite mem (+ arr-addr index) value))
+(define (memory-awrite mem arr-addr index value type)
+	(memory-hwrite mem (+ arr-addr index) value type))
 
 ;==================================================
 
@@ -134,6 +135,11 @@
 		(heap-meta vt-base-addr vt-base-addr)
 		imap-empty
 		static-stack-empty))
+
+(define memory-invalid
+	(std:struct-copy memory memory-empty [heap (imap-null)]))
+
+(memory-archive invalid-id memory-invalid)
 ;========================================
 
 ;======================= Symbolic Operations ========================
@@ -141,7 +147,7 @@
 	(if summary? #f
 		(begin
 		(define new-id (memory-new-id))
-		(std:struct-copy memory memory-empty [id new-id] [stack (stack-new)] [heap (imap-sym-scoped-new new-id)]))))
+		(std:struct-copy memory memory-empty [id new-id] [stack (stack-new)] [heap (imap-new new-id)]))))
 
 ;declares that m derives all states from m-base
 (define (memory-sym-reset m m-base summary?)
@@ -153,216 +159,57 @@
 					(memory-stack m)
 					(memory-stack m-base))]
 			[heap
-				(imap-sym-scoped-reset 
+				(imap-reset 
 					(memory-heap m) 
-					(memory-heap m-base) 
-					null)])))
+					(memory-heap m-base))])))
 
 ;make writes so far visible to future reads
 ;only affect heap, stack always commit real-time
 (define (memory-sym-commit m)
-	(std:struct-copy memory m [heap (imap-sym-scoped-commit (memory-heap m))]))
+	(std:struct-copy memory m [heap (imap-commit (memory-heap m))]))
 
 ;This finishes a section. 
 ;No further operations(read/write) should be done on this state
 ;Only after this can a state be used as the base for a reset.
 ;Returns a formula that describes all updates during this section.
-(define (memory-sym-get-fml m summary?)
+(define (memory-sym-summary m summary?)
 	(if summary? #t
 		(begin
 		(memory-add-id (memory-id m))
 		(memory-archive (memory-id m) m)
 		(define fml-1 
-			(imap-sym-scoped-get-fml (memory-heap m)))
+			(imap-summary (memory-heap m)))
 		(define fml-2
-			(stack-get-fml (memory-stack m)))
+			(stack-summary (memory-stack m)))
 		(inspect fml-1)
 		(inspect fml-2)
 		(and+ fml-1 fml-2))))
 
-(define (memory-sym-sget-fml m)
-	(stack-get-fml (memory-stack m)))
+(define (memory-sym-ssummary m)
+	(stack-summary (memory-stack m)))
 
 ;candidates: list of (condition X memory)
 (define (memory-select candidates summary?)
-;	(map (lambda (p.m) (pretty-print (cons (car p.m) (fml-to-struct (cdr p.m))))) candidates)
-;	(if (equal? 1 (length candidates)) (if summary? (if (car (car candidates)) (cdr (car candidates)) #f) (cdr (car candidates)))
-	(if (and (equal? 1 (length candidates)) (imap-conc? (memory-heap (cdar candidates)))) (cdar candidates)
+	(if (and (equal? 1 (length candidates)) (imap-is-conc? (memory-heap (cdar candidates)))) (cdar candidates)
 		(begin
-
-		;remove maybe
-;		(define candidates-semi-conc (reflection-map memory? identity (map cdr candidates)))
-;		(display (~a "Candidate mems: " (length candidates-semi-conc) "\n"))
-
 		(define (extract-max f)
 			(apply max (map f candidates)))
-;			(apply max (reflection-map number? identity 
-;				(map f candidates-semi-conc))))
-
-;		(define stack-top-new (extract-max (compose stack-meta-top memory-s-meta cdr)))
 		(define obj-top-new (extract-max (compose heap-meta-o-top memory-h-meta cdr)))
 		(define heap-top-new (extract-max (compose heap-meta-a-top memory-h-meta cdr)))
 
 		(define mem-template (cdar candidates))
 
-		(define ret (std:struct-copy memory mem-template
-;			[s-meta (std:struct-copy stack-meta (memory-s-meta mem-template) [top stack-top-new])]
+		(std:struct-copy memory mem-template
 			[h-meta (heap-meta obj-top-new heap-top-new)]
 			[stack
 				(stack-select
 					(map (lambda (cnd.m) (cons (car cnd.m) (memory-stack (cdr cnd.m)))) candidates) summary?)]
 			[heap 
-				(imap-sym-scoped-select 
-					(map (lambda (cnd.m) (cons (car cnd.m) (memory-heap (cdr cnd.m)))) candidates)
-					(remove-duplicates (apply append (map (compose imap-sym-scoped-scope memory-heap cdr) candidates)))
-					summary?)]))
-		ret)))
-
-(define (memory-is-null mem)
-	(not 
-		(or (imap-conc? (memory-heap mem))
-			(imap-sym? (imap-unwrap (memory-heap mem))))))
+				(imap-select 
+					(map (lambda (cnd.m) (cons (car cnd.m) (memory-heap (cdr cnd.m)))) candidates) summary?)]))))
 
 ;generate real formulae for preserved and updated states
-(define (memory-gen-binding mem)
-
-;	(define all-keys (imap-sym-tracked-keys (imap-sym-scoped-imap (memory-heap mem))))
-	(define all-keys imap-all-get-keys)
-	(pretty-print (~a "Totally " (length all-keys) " keys"))
-
-	(define (id2keys id)
-		(map car (imap-sym-committed-updates (imap-unwrap (memory-heap (vector-ref memory-id-map id))))))
-
-	(define (contain-key? id key)
-		(ormap identity (map (lambda (key0) (equal? key key0)) (id2keys id))))
-
-	(display "\n ###############################################7.1 \n")
-
-;		(check-asserts 11)
-
-	(pretty-print (~a (length memory-id-list) " states:"))
-	(pretty-print memory-id-list)
-
-	(define fml-maybe-wrong
-		(andmap identity (map (lambda (mem-id)
-			(if (equal? mem-id invalid-id) (std:error "processing mem 0!") #f)
-			(pretty-print (~a "Generate keys for state #" mem-id))
-			(define mem (memory-heap (vector-ref memory-id-map mem-id)))
-;				(pretty-print mem)
-			(define fml-true 
-				(andmap identity (map (lambda (key) 
-						(define ret (if (is-concrete-value? key)
-							(imap-sym-key-fml (imap-unwrap mem) key)
-							((lambda () 
-								(define-symbolic* key-sym integer?)
-								(and 
-									(equal? key-sym key)
-									(imap-sym-key-fml (imap-unwrap mem) key-sym))))))
-						ret)
-					(id2keys mem-id))))
-			(define fml-deferred (imap-sym-fml-deferred (imap-unwrap mem)))
-			(add-max-sat (equal? fml-deferred fml-true))
-;			(defer-eval "maybe-wrong" (cons mem-id (equal? fml-deferred fml-true)))
-			(equal? fml-deferred fml-true))
-			memory-id-list)))
-
-	(DEBUG-DO (map (lambda (mem-id)
-		(define mem (memory-heap (vector-ref memory-id-map mem-id)))
-		(display (~a "keys num for " mem-id " : " (length (id2keys mem-id)) "\n"))
-		(map (lambda (key)
-			(defer-eval "maybe wrong:" "")
-			(imap-sym-key-fml-debug (imap-unwrap mem) key))
-		(id2keys mem-id)))
-	memory-id-list))
-
-
-	(display "\n ###############################################7.2 \n")
-
-	(define kounter 0)
-
-	(define fml-always-right
-		(andmap identity (map (lambda (mem-id)
-				(if (equal? mem-id invalid-id) (std:error "processing mem 0!") #f)
-				(define mem (memory-heap (vector-ref memory-id-map mem-id)))
-				(pretty-print (~a "Generate keys for state #" mem-id))
-;				(pretty-print (imap-sym-scoped-scope mem))
-;					(imap-sym-lookback mem)
-				(define ret (andmap identity (map (lambda (key.scope) 
-						(if (in-scope? key.scope (imap-sym-scoped-scope mem))
-							(begin
-							(set! kounter (+ 1 kounter))
-							(if (contain-key? mem-id (car key.scope)) #t
-;									(and
-									(if (is-concrete-value? (car key.scope))
-										(imap-sym-key-fml (imap-unwrap mem) (car key.scope))
-										((lambda () 
-											(define-symbolic* key-sym integer?)
-											(and 
-												(equal? key-sym (car key.scope))
-												(imap-sym-key-fml (imap-unwrap mem) key-sym)))))))
-							(imap-sym-key-not-found (imap-unwrap mem) (car key.scope))))
-					all-keys)))
-;					(display (~a "Memory id: " mem-id " formula size: " (size-of ret)))
-				(add-max-sat ret)
-;				(defer-eval "always correct" (cons mem-id ret))
-				ret)
-			memory-id-list)))
-
-
-	(DEBUG-DO (map (lambda (mem-id) 
-		(define mem (memory-heap (vector-ref memory-id-map mem-id)))
-		(map (lambda (key.scope)
-			(define key (car key.scope))
-			(defer-eval "always correct:" "")
-			(defer-eval "valid?" (not (contain-key? mem-id (car key.scope))))
-			(imap-sym-key-fml-debug (imap-unwrap mem) key))
-		all-keys))
-	memory-id-list))
-
-	(defer-eval "all keys:" all-keys)
-
-	(display (~a "Totally " kounter " keys in scope\n"))
-	(defer-eval "Totally keys in scope: " kounter)
-
-	(display "\n ###############################################7.3 \n")
-	
-	(define fml-code-bind (and fml-maybe-wrong fml-always-right))
-
-	fml-code-bind)
-
-
+(define (memory-gen-binding)
+	(imap-gen-binding))
 
 ;====================================================================
-
-
-;======================= Helper ========================
-(define (memory-print-id name m)
-	(defer-eval "" (~a "current state id: " name " : " 
-		(memory-id m) " <~ " ; (maybe-do imap-sym? #f (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-heap m))) imap-sym-func-dummy) " <~ " 
-		(maybe-do imap-sym? #f (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-heap m))) imap-sym-func-base)  "\n")))
-
-(define (in-scope? key.scope scope)
-	#t)
-;	(or
-;		(equal? (cdr key.scope) no-scope)
-;		(member (cdr key.scope) scope)))
-;=======================================================
-
-
-;====================== Tracking States ===================
-(define memory-id-list null)
-(define (memory-add-id id)
-	(set! memory-id-list (cons id memory-id-list)))
-
-(define memory-id-map (list->vector (std:build-list max-program-length (lambda (x) not-found))))
-(define (memory-archive id mem)
-	(vector-set! memory-id-map id mem))
-(memory-archive invalid-id imap-sym-null)
-
-(define memory-id-counter invalid-id)
-(define (memory-new-id)
-	(set! memory-id-counter (+ 1 memory-id-counter))
-	(display (~a "New state id: " memory-id-counter "\n"))
-	memory-id-counter)
-
-

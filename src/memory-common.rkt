@@ -1,4 +1,6 @@
 #lang rosette/safe
+(require (prefix-in std: racket/base))
+(require racket/format)
 
 (provide (all-defined-out))
 
@@ -55,4 +57,33 @@
 
 (define (is-invalid? v)
 	(equal? v invalid-state))
+
+(define bv-width 64)
+(define int-type integer?)
+(define bv-type (bitvector bv-width))
+
+(define (type->ordinal type)
+	(if (equal? (type int-type)) 0 1))
+
+(define all-types-ordered (list int-type bv-type))
+
+
+
+
+
+;====================== Tracking States ===================
+(define memory-id-list null)
+(define (memory-add-id id)
+	(set! memory-id-list (cons id memory-id-list)))
+
+(define memory-id-map (list->vector (std:build-list max-program-length (lambda (x) not-found))))
+(define (memory-archive id mem)
+	(vector-set! memory-id-map id mem))
+
+(define memory-id-counter invalid-id)
+(define (memory-new-id)
+	(set! memory-id-counter (+ 1 memory-id-counter))
+	(display (~a "New state id: " memory-id-counter "\n"))
+	memory-id-counter)
+
 

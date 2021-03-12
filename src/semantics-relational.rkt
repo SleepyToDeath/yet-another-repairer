@@ -87,13 +87,11 @@
 
 		(define mac-ass (build-virtual-table-alt mac-ass0))
 
-		(define fml-ass (and fml-ass0 (memory-sym-sget-fml (machine-mem mac-ass))))
+		(define fml-ass (and fml-ass0 (memory-sym-ssummary (machine-mem mac-ass))))
 
 		(define boot-lstate (prepend-starting-mem-in (alloc-lstate (machine-boot mac-ass)) #t (machine-mem mac-ass)))
 
 		(define fml-cfi (starting-pmark boot-lstate))
-;		(assert fml-cfi)
-;		(assert no-bug)
 		(display "\n ###############################################0 \n")
 		(set-context! mac-ass)
 		(map (lambda (cls) (pretty-print (cons (class-name cls) (class-vfields cls)))) (machine-classes mac-ass))
@@ -125,29 +123,20 @@
 						[(function-formula func lids _ _ _ _ _ class)
 							(pretty-print (list (function-name func) class))])
 					(display "^---------fml-------------^\n")
-;					(test-assert! ret1)
-;					(test-assert! ret2)
-;					(test-assert! ret)
 					ret)]))
 
-		(define fml-code-1 (memory-sym-get-fml mem-all-done #f))
+		(define fml-code-1 (memory-sym-summary mem-all-done #f))
 		(define fml-code-2 (extract-fml all-invokes))
 
 		(display "---------fml0-------------\n")
 		(define fml-code (and fml-code-1 fml-code-2))
 		(inspect fml-code-1)
-;		(test-assert! fml-code-1)
-;		(test-assert! fml-code-2)
 		(display "\n ###############################################6 \n")
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(display "\n ###############################################7 \n")
-		(define fml-code-bind (memory-gen-binding mem-all-done))
+		(define fml-code-bind (memory-gen-binding))
 		(display "\n ###############################################8 \n")
 		(and fml-cfi fml-code fml-code-bind fml-ass fml-out))
-;		(and fml-cfi fml-code))
-;		(print-fml fml-out)
-;		(print-fml fml-code)
-;		(and fml-cfi fml-code))
 
 	(list mac soft-cons hard-cons))
 
@@ -559,7 +548,7 @@
 					mem-0
 					(append (function-args func) (function-locals func)))))
 
-			(define fml-in (memory-sym-get-fml mem-decl summary?))
+			(define fml-in (memory-sym-summary mem-decl summary?))
 			(define mem-input (memory-sym-reset (memory-sym-new summary?) mem-decl (not trigger-summary?)))
 			(define func-fml-in (prepend-starting-mem-in func-fml-callee (if (or summary? trigger-summary?) #t mark) mem-input))
 			(cons func-fml-in fml-in))
@@ -567,26 +556,21 @@
 		(define (invoke-setup func-fml-callee mem args)
 ;			(memory-print mem)
 			(define mem-0 (memory-sym-reset (memory-sym-new summary?) mem summary?))
-			(if (not summary?) (memory-print-id "mem-0" mem-0) #f)
 			(define func (function-formula-func func-fml-callee))
 			(define mem-push (memory-spush mem-0))
-			(if (not summary?) (memory-print-id "mem-push" mem-push) #f)
 			(define mem-decl (memory-sym-commit
 				(foldl 
 					(lambda (var-def mem) (memory-sdecl mem (car var-def))) 
 					mem-push
 					(append (function-args func) (function-locals func) (list (cons var-ret-name 0))))))
-			(if (not summary?) (memory-print-id "mem-decl" mem-decl) #f)
 			(define mem-arg (memory-sym-commit
 				(foldl 
 					(lambda (arg-src arg-dst mem) (memory-sforce-write mem (car arg-dst) (expr-eval arg-src mac-eval-ctxt) 0))
 					mem-decl
 					args 
 					(function-args func))))
-			(if (not summary?) (memory-print-id "mem-arg" mem-arg) #f)
-			(define fml-in (memory-sym-get-fml mem-arg summary?))
+			(define fml-in (memory-sym-summary mem-arg summary?))
 			(define mem-input (memory-sym-reset (memory-sym-new summary?) mem-arg (not trigger-summary?)))
-			(if (not summary?) (memory-print-id "mem-input" mem-input) #f)
 			(define func-fml-in (prepend-starting-mem-in func-fml-callee (if (or summary? trigger-summary?) #t mark) mem-input))
 			(cons func-fml-in fml-in))
 
@@ -624,7 +608,7 @@
 
 		(define (update-mem-only mem-new)
 			(define mem-commit (memory-sym-commit mem-new))
-			(define fml-update (memory-sym-get-fml mem-commit summary?))
+			(define fml-update (memory-sym-summary mem-commit summary?))
 			(define fml-new (iassert-pc-next #t (select-fml? fml-update)))
 			(update-rbstate fml-new mem-commit #f))
 
@@ -668,7 +652,7 @@
 				(define mem-bind (memory-fwrite mem-0 fid-class-name addr maybe-class-name))
 
 				(define mem-commit (memory-sym-commit mem-bind))
-				(define fml-update (memory-sym-get-fml mem-commit summary?))
+				(define fml-update (memory-sym-summary mem-commit summary?))
 				(define fml-new (iassert-pc-next #t fml-update))
 				(assert id)
 				(update-rbstate fml-new mem-commit #f))]
@@ -696,7 +680,7 @@
 				(if summary? #f (defer-eval inst ret-value))
 				(define mem-ret.tmp (memory-sforce-write mem-0 var-ret-name ret-value 0))
 				(define mem-ret (memory-sym-commit mem-ret.tmp))
-				(define fml-update (memory-sym-get-fml mem-ret summary?))
+				(define fml-update (memory-sym-summary mem-ret summary?))
 ;				(define fml-ret (select-fml? fml-update))
 				(define fml-ret fml-update)
 				(define fml-path (iassert-pc-ret #t fml-ret))
@@ -719,13 +703,13 @@
 
 				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 				(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
-				(define fml-sum (if trigger-summary? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
+				(define fml-sum (if trigger-summary? (memory-sym-summary mem-ret.tmp2 summary?) #t))
 
 				(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
 				(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
 				(if summary? #f (defer-eval inst ret-val))
 				(define mem-ass (memory-sym-commit (memory-sforce-write mem-ret var-ret-name ret-val 0)))
-				(define fml-ret (memory-sym-get-fml mem-ass summary?))
+				(define fml-ret (memory-sym-summary mem-ass summary?))
 
 				(define fml-op (select-fml? (and fml-in fml-sum fml-ret)))
 				(define fml-new (iassert-pc-invoke #t fml-op (list func-fml-in) (list #t)))
@@ -753,14 +737,14 @@
 
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 					(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
-					(define fml-sum (if trigger-summary? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
+					(define fml-sum (if trigger-summary? (memory-sym-summary mem-ret.tmp2 summary?) #t))
 
 					(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
 					(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
 					(if summary? #f (defer-eval inst ret-val))
 					(define mem-pop (memory-spop mem-ret))
 					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0)))
-					(define fml-ret (memory-sym-get-fml mem-ass summary?))
+					(define fml-ret (memory-sym-summary mem-ass summary?))
 
 					(define fml-op (select-fml? (and fml-in fml-sum fml-ret)))
 					;(define fml-op (and fml-in fml-ret))
@@ -791,8 +775,7 @@
 
 					;push an extra scope to avoid overwriting "this" of the current scope
 					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0)))
-					(define fml-this (memory-sym-get-fml mem-this summary?))
-					(if (not summary?) (memory-print-id "mem-this" mem-this) #f)
+					(define fml-this (memory-sym-summary mem-this summary?))
 
 					(define (invoke-candidate fcan)
 						(begin
@@ -806,16 +789,14 @@
 
 						(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 						(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
-						(define fml-sum (if trigger-summary? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
-						(if (not summary?) (memory-print-id "mem-ret.tmp2" mem-ret.tmp2) #f)
+						(define fml-sum (if trigger-summary? (memory-sym-summary mem-ret.tmp2 summary?) #t))
 
 						(define mem-ret (memory-sym-reset (if summary? mem-0 (memory-sym-new summary?)) mem-ret.tmp2 summary?))
 						(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
 						(if summary? #f (defer-eval inst ret-val))
 						(define mem-pop (memory-spop (memory-spop mem-ret)))
 						(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0)))
-						(define fml-ret (memory-sym-get-fml mem-ass summary?))
-						(if (not summary?) (memory-print-id "mem-ass" mem-ass) #f)
+						(define fml-ret (memory-sym-summary mem-ass summary?))
 						(define cnd (equal? (function-formula-sid fcan) true-func-invoked-sid))
 						(list func-fml-in cnd fml-in mem-ass fml-ret funcs-ret fml-sum)))
 					
@@ -855,7 +836,7 @@
 
 					;push an extra scope to avoid overwriting "this" of the current scope
 					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0)))
-					(define fml-this (memory-sym-get-fml mem-this summary?))
+					(define fml-this (memory-sym-summary mem-this summary?))
 
 					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
 					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or trigger-summary? summary?)))
@@ -863,14 +844,14 @@
 
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 					(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
-					(define fml-sum (if trigger-summary? (memory-sym-get-fml mem-ret.tmp2 summary?) #t))
+					(define fml-sum (if trigger-summary? (memory-sym-summary mem-ret.tmp2 summary?) #t))
 
 					(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
 					(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
 					(if summary? #f (defer-eval inst ret-val))
 					(define mem-pop (memory-spop (memory-spop mem-ret)))
 					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0)))
-					(define fml-ret (memory-sym-get-fml mem-ass summary?))
+					(define fml-ret (memory-sym-summary mem-ass summary?))
 
 					(define fml-op (select-fml? (and fml-this fml-in fml-sum fml-ret)))
 					(define fml-new (iassert-pc-invoke #t fml-op (list func-fml-in) (list #t)))
@@ -897,7 +878,6 @@
 								([addr (if (equal? obj void-receiver) addr-void-receiver
 									(memory-sforce-read mem-0 (string-id (variable-name obj)) 0))])
 								(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value))]))
-				(memory-print-id "mem-new" mem-new)
 				(update-mem-only mem-new))]
 
 			;[!]there might be bug if reading from heap

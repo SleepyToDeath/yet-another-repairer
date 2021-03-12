@@ -127,7 +127,7 @@
 (define (stack-static-new)
 	static-stack-empty)
 
-(define (stack-static-get-fml st)
+(define (stack-static-summary st)
 ;	(display "Finish stack:\n")
 ;	(pretty-print st)
 	(andmap+ (lambda (sc)
@@ -270,7 +270,7 @@
 	#f)
 
 ;do nothing
-(define (stack-dynamic-get-fml st)
+(define (stack-dynamic-summary st)
 	#t)
 
 ;================================================================
@@ -313,5 +313,5 @@
 
 (define stack-select stack-static-select)
 
-(define stack-get-fml stack-static-get-fml)
+(define stack-summary stack-static-summary)
 
