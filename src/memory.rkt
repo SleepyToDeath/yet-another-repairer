@@ -17,8 +17,8 @@
 
 ;-----------------Stack Operations---------------
 ;read from stack
-(define (memory-sread mem name)
-	(stack-read mem name))
+(define (memory-sread mem name type)
+	(stack-read mem name type))
 
 ;write to stack
 (define (memory-swrite mem name value)
@@ -76,7 +76,7 @@
 ;return (new memory)
 ;does not overwrite if exists
 (define (memory-fdecl mem name) 
-	(if (equal? (memory-vt-base mem name) not-found)
+	(if (equal? (memory-vt-base mem name) (not-found addr-type))
 		(match (memory-v-meta mem)
 			[(vtab-meta n2t vtop)
 				(begin
@@ -103,7 +103,7 @@
 
 ;return baes address of a virtual table
 (define (memory-vt-base mem name)
-	(imap-get (vtab-meta-name2tab (memory-v-meta mem)) name #f))
+	(imap-get (vtab-meta-name2tab (memory-v-meta mem)) name addr-type))
 
 ;return entry address of a virtual table
 ;must be used after initialization
@@ -129,15 +129,14 @@
 ;============= Default Values ===========
 (define memory-empty 
 	(memory 
-		nullptr
-		(vtab-meta imap-empty vt-base-addr)
-;		(stack-meta null stack-bottom)
+		invalid-id
+		(vtab-meta (imap-empty addr-type) vt-base-addr)
 		(heap-meta vt-base-addr vt-base-addr)
-		imap-empty
-		static-stack-empty))
+		imap-typed-empty
+		stack-empty))
 
 (define memory-invalid
-	(std:struct-copy memory memory-empty [heap (imap-null)]))
+	(std:struct-copy memory memory-empty [heap imap-typed-null]))
 
 (memory-archive invalid-id memory-invalid)
 ;========================================

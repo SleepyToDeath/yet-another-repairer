@@ -9,7 +9,8 @@
 
 (provide imap-get imap-set imap-batch-set imap-is-conc?
 		 imap-new imap-reset imap-commit imap-summary imap-select imap-gen-binding
-		 imap-null imap-empty)
+		 imap-null imap-empty
+		 imap-typed-null imap-typed-empty)
 
 ;Usage:
 ;	1.The maps should be used in an immutable manner
@@ -51,6 +52,9 @@
 	[imap-summary imap-isym]
 	[imap-preserve imap-isym index])
   
+(define-generics imap-typed
+	[imap-get-type imap-typed type]
+	[imap-set-type imap-typed type imap])
 
 (define (imap-batch-set imap kvlist)
 	(foldl (lambda (kv m) (imap-set m (car kv) (cdr kv))) imap kvlist))
@@ -78,13 +82,14 @@
 	[
 		(define (imap-get m index type)
 			(define f (imap-conc-func m))
-			(f index))
+			(if (equal? index (nullptr addr-type)) 
+				(nullptr type)
+				(f index)))
 
 		(define (imap-set m index value type)
 			(define oldf (imap-conc-func m))
 			(define newf (lambda (args)
-				(if (equal? args nullptr) nullptr
-					(if (equal? args index) value (oldf args)))))
+				(if (equal? args index) value (oldf args))))
 			(std:struct-copy imap-conc m [func newf]))
 
 		(define (imap-get-func m)
@@ -94,13 +99,39 @@
 			#t)
 	])
 
+;----------------- Concrete Wrapper For Dispatching Types --------------------
+(struct imap-conc-wrapper (imaps) #:transparent
+	#:methods gen:imap
+	[
+		(define (imap-get m index type)
+			(imap-get+ (imap-get-type m type) index type))
+
+		(define (imap-set m index value type)
+			(imap-set-type m type (imap-set+ (imap-get-type m type) index value)))
+
+		(define (imap-get-func m)
+			(force-error #t "imap-get-func shouldn't be called on imap-conc-wrapper"))
+
+		(define (imap-is-conc? m)
+			#t)
+	]
+
+	#:methods gen:imap-typed
+	[
+		(define (imap-get-type m type)
+			(list-ref (imap-conc-wrapper-imaps m) (type->ordinal type)))
+
+		(define (imap-set-type m type ms)
+			(list-set (imap-conc-wrapper-imaps m) (type->ordinal type) ms))
+	])
+
 ;----------------- Symbolic ---------------------
 (struct imap-sym (id id-base func func-base updates updates-committed fml-deferred) #:transparent
 	#:methods gen:imap
 	[	;ignore types
 		(define (imap-get m index type)
 			(force-error (equal? (imap-sym-id m) invalid-id) "reading from mem 0!")
-			(imap-sym-real-get m index))
+			(imap-sym-real-get m index type))
 
 		(define (imap-set m index value type)
 			(force-error (equal? (imap-sym-id m) invalid-id) "writing to mem 0!")
@@ -138,10 +169,10 @@
 			ret)
 	])
 
-(define (imap-sym-real-get m index)
+(define (imap-sym-real-get m index type)
 	(define pending	(ormap identity (map
 		(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
-		(cons (cons nullptr nullptr) (imap-sym-updates-committed m)))))
+		(cons (cons nullptr0 (nullptr type)) (imap-sym-updates-committed m)))))
 	(define func-base (imap-sym-func-base m))
 	(if (number? pending) pending (func-base index)))
 
@@ -151,7 +182,7 @@
 	#:methods gen:imap
 	[
 		(define (imap-get m index type)
-			(define ms (imap-get-typed m type))
+			(define ms (imap-get-type m type))
 			(imap-add-index (cons index type))
 			(do-n-ret
 				(lambda (ret) (defer-eval "imap get" (list index ret type)))
@@ -161,9 +192,9 @@
 
 		(define (imap-set m index value type)
 			(defer-eval "imap set" (list index value type))
-			(define ms (imap-get-typed m type))
+			(define ms (imap-get-type m type))
 			(if (not (imap-sym? ms)) m
-				(imap-sym-wrapper (imap-set-typed m type (imap-set+ ms index value type)))))
+				(imap-sym-wrapper (imap-set-type m type (imap-set+ ms index value type)))))
 
 		(define (imap-get-func m)
 			(force-error #t "imap-get-func shouldn't be called on imap-sym-wrapper"))
@@ -181,8 +212,8 @@
 			(imap-sym-wrapper 
 				(map (lambda (type)
 					(if (imap-conc? m-base)
-						(imap-reset+ (imap-get-typed m type) m-base)
-						(imap-reset+ (imap-get-typed m type) (imap-get-typed m-base type)))) all-types-ordered)))
+						(imap-reset+ (imap-get-type m type) m-base)
+						(imap-reset+ (imap-get-type m type) (imap-get-type m-base type)))) all-types-ordered)))
 
 		(define (imap-commit m)
 			(imap-sym-wrapper 
@@ -194,12 +225,17 @@
 
 		(define (imap-preserve m index)
 			(force-error #t "imap-preserve shouldn't be called on imap-sym-wrapper"))
+	]
+
+	#:methods gen:imap-typed
+	[
+		(define (imap-get-type m type)
+			(list-ref (imap-sym-wrapper-imaps m) (type->ordinal type)))
+
+		(define (imap-set-type m type ms)
+			(list-set (imap-sym-wrapper-imaps m) (type->ordinal type) ms))
 	])
 
-	(define (imap-get-typed m type)
-		(list-ref (imap-sym-wrapper-imaps m) (type->ordinal type)))
-	(define (imap-set-typed m type ms)
-		(list-set (imap-sym-wrapper-imaps m) (type->ordinal type) ms))
 
 	(define (imap-select candidates summary?)
 		(define f-select (maybe-select imap-sym-null (lambda (m) (equal? (imap-sym-id m) invalid-id))))
@@ -231,7 +267,7 @@
 
 		(andmap+ (lambda (type)
 			(define (mem-get-typed id type)
-				(imap-get-typed (memory-heap (vector-ref memory-id-map id)) type))
+				(imap-get-type (memory-heap (vector-ref memory-id-map id)) type))
 			(define (id2keys id)
 				(map car (imap-sym-updates-committed (mem-get-typed id type))))
 			(define (contain-key? id key)
@@ -268,18 +304,22 @@
 		all-types-ordered))
 
 ;============= Default Values ===========
-(define (default-func x) not-found)
+(define (default-func type) (lambda (x) (not-found type)))
 
-(define imap-empty (imap-conc default-func))
+(define (imap-conc-empty type)
+	(imap-conc (default-func type)))
+(define imap-conc-wrapper-empty 
+	(imap-conc-wrapper (map (lambda (type) (imap-conc-empty type)) all-types-ordered)))
+(define imap-empty imap-conc-empty)
+(define imap-typed-empty imap-conc-wrapper-empty)
 
-(define imap-sym-null
-	(imap-sym invalid-id invalid-id default-func default-func null null #t))
-
+(define (imap-sym-null type)
+	(imap-sym (invalid-state type) (invalid-state type) (default-func type) (default-func type) null null #t))
 (define imap-sym-wrapper-null
-	(imap-sym-wrapper (map (lambda (x) imap-sym-null) all-types-ordered)))
+	(imap-sym-wrapper (map (lambda (type) (imap-sym-null type)) all-types-ordered)))
+(define imap-null imap-sym-null)
+(define imap-typed-null imap-sym-wrapper-null)
 
-(define (imap-null)
-	imap-sym-wrapper-null)
 ;========================================
 
 ;================== Generate Deferred Formulae ====================

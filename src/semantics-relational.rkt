@@ -527,11 +527,8 @@
 			(if summary? #t
 				(letrec	([fml-cnds (andmap
 								(lambda (func-fml cnd)
-;									(display "-------Problematic Fml---------\n")
-;									(print-fml fml-ops)
 									(and 
 										(equal? cnd (starting-pmark func-fml))))
-									;	(implies cnd fml-op))) 
 								func-fmls cnds)]
 						 [fml-brs (ormap starting-pmark func-fmls)])
 						(and
@@ -612,32 +609,6 @@
 			(define fml-new (iassert-pc-next #t (select-fml? fml-update)))
 			(update-rbstate fml-new mem-commit #f))
 
-		(define (add-invoke-condition itree cnd)
-			(std:struct-copy invoke-tree itree [cnd cnd]))
-
-		(define (vid2sid mac classname vid)
-			(print-fml classname)
-			(if classname
-				(begin
-				(define cls-0 (imap-get (machine-cmap mac) classname))
-				(define maybe-this-sid 
-					(ormap identity
-						(map 
-							(lambda (func-fml-cur)
-								(if (equal? vid (function-formula-vid func-fml-cur)) (function-formula-sid func-fml-cur) #f))
-							(maybe-do class? null cls-0 class-vfuncs))))
-				(if maybe-this-sid maybe-this-sid 
-					(begin
-					(define base-sid 
-						(ormap 
-							(lambda (sid) (if (is-not-found? sid) #f sid))
-							(map 
-								(lambda (cls-cur) (vid2sid mac cls-cur vid)) 
-								(maybe-do class? null cls-0 (lambda (c) (cons (class-extend c) (class-implements c)))))))
-					(if base-sid base-sid not-found))))
-				not-found))
-
-;		(if (and summary? (memory-is-null mem-in)) (std:struct-copy rbstate st [pc (+ 1 pc)])
 		(match inst 
 			[(inst-nop _) 
 				(update-rbstate (iassert-pc-next #t #t) mem-in #f null)]
