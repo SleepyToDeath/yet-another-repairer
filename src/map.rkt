@@ -10,7 +10,8 @@
 (provide imap-get imap-set imap-batch-set imap-is-conc?
 		 imap-new imap-reset imap-commit imap-summary imap-select imap-gen-binding
 		 imap-null imap-empty
-		 imap-typed-null imap-typed-empty)
+		 imap-typed-null imap-typed-empty
+		 imap-clear-indices!)
 
 ;Usage:
 ;	1.The maps should be used in an immutable manner

@@ -15,7 +15,7 @@
 (require (prefix-in r: rosette/lib/match))
 (require "jimple-grammar.rkt")
 (require "jimple-lexer.rkt")
-(require "bitwise-op.rkt")
+(require "operators.rkt")
 (require "../syntax.rkt")
 (require (prefix-in ast: "../syntax-jimple.rkt"))
 ;(require (prefix-in m: "../map.rkt"))
@@ -634,26 +634,26 @@
 
 (define (build-ast-expr-bop expr-bop-stx)
   (p:syntax-parse expr-bop-stx
-    [({p:~literal binop} "&") (ast:op b-andl)]
-    ;[({p:~literal binop} "|") or]
-    [({p:~literal binop} "^") (ast:op b-xorl)]
-    [({p:~literal binop} "%") (ast:op modulo)]
-    [({p:~literal binop} "cmp") (ast:op (lambda (x y) (if (equal? x y) 0 (if (> x y) 1 -1))))]
+    [({p:~literal binop} "&") (ast:op bvand)]
+    [({p:~literal binop} "|") (ast:op bvor)]
+    [({p:~literal binop} "^") (ast:op bvxor)]
+    [({p:~literal binop} "%") (ast:op op-mod)]
+    [({p:~literal binop} "cmp") (ast:op op-cmp)]
     ;[({p:~literal binop} "cmpg") ???]
     ;[({p:~literal binop} "cmpl") ???]
     [({p:~literal binop} "==") (ast:op equal?)]
-    [({p:~literal binop} "!=") (ast:op (lambda (x y) (not (equal? x y))))]
-    [({p:~literal binop} ">") (ast:op >)]
-    [({p:~literal binop} ">=") (ast:op >=)]
-    [({p:~literal binop} "<") (ast:op <)]
-    [({p:~literal binop} "<=") (ast:op <=)]
+    [({p:~literal binop} "!=") (ast:op op-neq)]
+    [({p:~literal binop} ">") (ast:op op-gt)]
+    [({p:~literal binop} ">=") (ast:op op-ge)]
+    [({p:~literal binop} "<") (ast:op op-lt)]
+    [({p:~literal binop} "<=") (ast:op op-le)]
     ;[({p:~literal binop} "<<") ???]
     ;[({p:~literal binop} ">>") ???]
-    [({p:~literal binop} ">>>") (ast:op b-rshift)]
-    [({p:~literal binop} "+") (ast:op +)]
-    [({p:~literal binop} "-") (ast:op -)]
-    [({p:~literal binop} "*") (ast:op *)]
-    [({p:~literal binop} "/") (ast:op /)]))
+    [({p:~literal binop} ">>>") (ast:op bvlshr)]
+    [({p:~literal binop} "+") (ast:op op-add)]
+    [({p:~literal binop} "-") (ast:op op-sub)]
+    [({p:~literal binop} "*") (ast:op op-mul)]
+    [({p:~literal binop} "/") (ast:op op-div)]))
 
 
 (define (build-ast-expr-unop expr-unop-stx)

@@ -8,13 +8,13 @@
 (provide (all-defined-out))
 
 (define string-id-table null)
-(define string-id-map imap-empty)
+(define string-id-map (imap-empty default-type))
 (define string-id-counter 0)
 (define string-id-int-offset 1000)
 
 ;provide an unique id to each string; equal? strings have same id
 (define (real-string-id s)
-	(define id (imap-get string-id-map s))
+	(define id (imap-get string-id-map s default-type))
 	(define id-true (if (not (equal? id not-found)) id
 		(begin
 			(set! string-id-table (cons (cons s string-id-counter) string-id-table))
@@ -32,16 +32,16 @@
 	(maybe-string-id s))
 
 (define (string-id-pure s)
-	(imap-get string-id-map s))
+	(imap-get string-id-map s default-type))
 
 
 ;number -> string
-(define string-value-of-table imap-empty)
+(define string-value-of-table (imap-empty default-type))
 
 (define (maybe-add-string-value-of s id)
-	(if (and (std:string? s) (std:string->number s) (is-not-found? (imap-get string-value-of-table (std:string->number s))))
+	(if (and (std:string? s) (std:string->number s) (is-not-found? (imap-get string-value-of-table (std:string->number s) default-type)))
 		(set! string-value-of-table (imap-set string-value-of-table (std:string->number s) id))
 		#f))
 
 (define (string-value-of v)
-	(imap-get string-value-of-table v))
+	(imap-get string-value-of-table v default-type))

@@ -27,6 +27,7 @@
 
 (define (function-call-simple mac func)
 ;	(pretty-print (machine-mem mac))
+	;[TODO] arg & local type
 	(define mac-decl (std:struct-copy machine mac [mem 
 		(foldl 
 			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)))) 
@@ -36,11 +37,13 @@
 
 (define (function-call mac func args)
 	(define mac-reset (std:struct-copy machine mac [pc pc-init][mem (memory-spush (machine-mem mac))]))
+	;[TODO] arg & local type
 	(define mac-decl (std:struct-copy machine mac-reset [mem 
 		(foldl 
 			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)))) 
 			(machine-mem mac-reset) 
 			(append (function-args func) (function-locals func)))]))
+	;[TODO] arg & local type
 	(define mac-input (std:struct-copy machine mac-decl [mem
 		(foldl 
 			(lambda (arg-src arg-dst mem) (memory-swrite mem (string-id (car arg-dst)) arg-src))
@@ -72,23 +75,21 @@
 (define (assign-input mac input)
 	(define mem0 (memory-spush (machine-mem mac)))
 	(reset-parameter-names)
+	;[TODO] input-type
 	(define mem-ass 
 		(foldl (lambda (v mem-cur) 
 			(memory-sforce-write mem-cur (next-parameter-name) v 0))
 			mem0 input))
 	(std:struct-copy machine mac [mem mem-ass]))
 
+;[TODO] return type
+;[!] using default type; assuming the type only affect not-found value
 ;machine X list of (key, value) -> boolean
 (define (compare-output mac output)
 	(define mem0 (machine-mem mac))
 	(foldl (lambda (kv fml-cur) (and fml-cur (equal? (cdr kv) 
-			((lambda ()
-				(begin
-					(define ret-v (memory-sread mem0 (string-id (car kv))))
-					(println ret-v)
-					ret-v
-					)))
-			))) #t output))
+		(do-n-ret pretty-print (memory-sread mem0 (string-id (car kv)) default-type)))))
+		#t output))
 
 ;machine X list of string(output var names)
 ;(define (get-output mac output-names)
@@ -109,9 +110,9 @@
 		(lambda (class-ast cl) (cons (ast->class class-ast) cl))
 		null
 		(class-list-cl (program-rhs ast))))
-	(define cmap (foldl (lambda (cls cm) (imap-set cm (class-name cls) cls)) imap-empty classes))
+	(define cmap (foldl (lambda (cls cm) (imap-set cm (class-name cls) cls default-type)) (imap-empty default-type) classes))
 	(define boot (build-boot-func))
-	(define mac-init (machine boot classes cmap imap-empty imap-empty memory-empty pc-init))
+	(define mac-init (machine boot classes cmap (imap-empty default-type) (imap-empty default-type) memory-empty pc-init))
 	mac-init)
 
 (define (ast->class ast)
@@ -145,7 +146,7 @@
 				 [func-sig 
 					(function name 
 						(if (std:equal? name func-name-init) (list (inst-init classname)) null) 
-						imap-empty args local-vars ret-ast)])
+						(imap-empty default-type) args local-vars ret-ast)])
 				(begin
 					(define func 
 						(foldl (lambda (st func)
@@ -190,7 +191,7 @@
 					(inst-switch (ast->expression condition) null #f)
 					(case-list-cl  (stat-case-list-rhs cases)))
 				lmap)]
-		[(stat-label here) (cons #f (imap-set lmap (label-v here) line-num))]
+		[(stat-label here) (cons #f (imap-set lmap (label-v here) line-num default-type))]
 		[(stat-nop any) (cons (inst-nop nullptr) lmap)]
 		[(stat-ret v) (cons (inst-ret (ast->expression v)) lmap)]
 		[(stat-new v) (cons (inst-new (string-id (variable-name v))) lmap)]
@@ -237,7 +238,7 @@
 	(define main-arg-vars (map (lambda (x) (iexpr-var (next-parameter-name))) main-arg-types))
 	(define icall-main (inst-static-call var-ret-name class-name-main func-name-main main-arg-types main-arg-vars))
 	(define iret (inst-ret (iexpr-var var-ret-name)))
-	(function func-name-boot (append icall-clinit (list icall-main iret)) imap-empty null (list (cons var-ret-name (string-id int-type-name))) (string-id int-type-name)))
+	(function func-name-boot (append icall-clinit (list icall-main iret)) (imap-empty default-type) null (list (cons var-ret-name (string-id int-type-name))) (string-id int-type-name)))
 
 (define (build-virtual-table mac) 
 	(display "Memory before buiding virtual table:\n")
@@ -256,7 +257,7 @@
 				(define sid (sfunc-id cls-name (function-name sf) (map cdr (function-args sf))))
 				(pretty-print (list "static func:" (function-name sf) sid))
 ;				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid 0))
-				(define fmap-1 (imap-set (machine-fmap mac) sid sf))
+				(define fmap-1 (imap-set (machine-fmap mac) sid sf default-type))
 				(std:struct-copy machine mac [fmap fmap-1]))
 			mac sfuncs))
 
@@ -267,8 +268,12 @@
 		(define mac-sfields (foldl 
 			(lambda (sf mac) 
 				(pretty-print (sfield-id cls-name (car sf)))
-				(define mem-decl (memory-sdecl (machine-mem mac) (sfield-id cls-name (car sf))))
-				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car sf)) (cdr sf)))
+				;[?] why did we use this?
+;				(define mem-decl (memory-sdecl (machine-mem mac) (sfield-id cls-name (car sf))))
+				;[TODO] field type
+				;static fields are treated as virtual fields of a special void receiver object
+				(define mem-decl (memory-fdecl (machine-mem mac) (vfield-id mac cls-name (car sf))))
+				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car sf)) (cdr sf) default-type))
 				(std:struct-copy machine mac 
 					[mem mem-decl][tmap tmap-1])) 
 			mac-sfuncs sfields))
@@ -281,7 +286,7 @@
 				(define sid (sfunc-id cls-name (function-name vf) (map cdr (function-args vf))))
 				(pretty-print (list "virtual func:" cls-name (function-name vf) sid vid))
 				(define mem-1 (memory-fdecl (machine-mem mac) vid)) 
-				(define fmap-1 (imap-set (machine-fmap mac) sid vf))
+				(define fmap-1 (imap-set (machine-fmap mac) sid vf default-type))
 				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
 			mac-sfields vfuncs))
 
@@ -289,7 +294,8 @@
 
 		(define mac-vfields (foldl 
 			(lambda (vf mac) 
-				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car vf)) (cdr vf)))
+				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car vf)) (cdr vf) default-type))
+				;[TODO] field type
 				(define mem-decl (memory-fdecl (machine-mem mac) (vfield-id mac cls-name (car vf))))
 				(std:struct-copy machine mac 
 					[mem mem-decl][tmap tmap-1])) 
@@ -324,15 +330,15 @@
 	[(define (inst-exec i m f) 
 		(define classname (inst-init-classname i))
 		(define mem-0 (machine-mem m))
-		(define addr (memory-sforce-read mem-0 var-this-name 1))
+		(define addr (memory-sforce-read mem-0 var-this-name 1 addr-type))
 
 		(display (~a "classname: " classname "\n"))
 		(display (~a "obj addr: " addr "\n"))
 
 		(define fid-class-name (vfield-id m classname field-name-class))
-		(define maybe-old-name (memory-fread mem-0 fid-class-name addr))
+		(define maybe-old-name (memory-fread mem-0 fid-class-name addr name-type))
 		(define maybe-class-name (if (equal? maybe-old-name not-found) classname maybe-old-name))
-		(define mem-bind (memory-fwrite mem-0 fid-class-name addr maybe-class-name))
+		(define mem-bind (memory-fwrite mem-0 fid-class-name addr maybe-class-name name-type))
 
 #|
 		(define mem-bind (foldl
@@ -363,17 +369,18 @@
 		(define rhs (lexpr-rhs (inst-ass-vl i)))
 		(define mem-new 
 			(match rhs
+				;[TODO] expr type
 				[(expr-var v) (memory-swrite mem0 (string-id (variable-name v)) v-new)]
 				[(expr-array arr idx)
 					(letrec
-						([addr (memory-sread mem0 (string-id (variable-name arr)))]
+						([addr (memory-sread mem0 (string-id (variable-name arr)) addr-type)]
 						[idx-e (ast->expression idx)]
 						[idx-v (expr-eval idx-e m)])
 						(memory-awrite mem0 addr idx-v v-new))]
 				[(expr-field obj cls fname)
 					(letrec
 						([addr (if (equal? obj void-receiver) addr-void-receiver
-							(memory-sread mem0 (string-id (variable-name obj))))])
+							(memory-sread mem0 (string-id (variable-name obj)) addr-type))])
 						(memory-fwrite mem0 (vfield-id m (string-id (type-name-name cls)) (string-id (field-name fname))) addr v-new))]
 				[_ #f]))
 
@@ -397,7 +404,7 @@
 			(define label-new (ormap (lambda (k.l)
 					(if (equal? (car k.l) cnd-v) (cdr k.l) #f))
 				cases-default))
-			(define pc-new (imap-get lmap label-new))
+			(define pc-new (imap-get lmap label-new default-type))
 			(std:struct-copy machine m [pc pc-new]))]))])
 
 ;expr X label(int)
@@ -407,7 +414,7 @@
 
 		(define lmap (function-lmap f))
 		(define iaddr (inst-jmp-label i))
-		(define pc-jmp (imap-get lmap iaddr))
+		(define pc-jmp (imap-get lmap iaddr default-type))
 		(define pc-next (+ 1 (machine-pc m)))
 
 		(define c (expr-eval (inst-jmp-condition i) m))
@@ -431,7 +438,7 @@
 			(match-define (cons addr mem-alloc) (memory-alloc mem-0 size))
 			(display (~a "new array: " addr))
 			(define pc-next (+ 1 (machine-pc m)))
-			(define mem-ass (memory-swrite mem-alloc v-name addr))
+			(define mem-ass (memory-swrite mem-alloc v-name addr addr-type))
 			(std:struct-copy machine m [pc pc-next][mem mem-ass]))]))])
 
 (struct inst-new (v-name) #:transparent
@@ -441,13 +448,14 @@
 		(define v-name (inst-new-v-name i))
 		(match-define (cons addr mem-alloc) (memory-new mem-0))
 		(define pc-next (+ 1 (machine-pc m)))
-		(define mem-ass (memory-swrite mem-alloc v-name addr))
+		(define mem-ass (memory-swrite mem-alloc v-name addr addr-type))
 ;		(pretty-print mem-ass)
 		(std:struct-copy machine m [pc pc-next][mem mem-ass]))])
 
 (struct inst-ret (v-expr) #:transparent
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
+		;[TODO] return type
 		(define ret-value (expr-eval (inst-ret-v-expr i) m))
 		(display (~a "return value:" ret-value "\n"))
 		(define mem-ret (memory-sforce-write (machine-mem m) var-ret-name ret-value 0))
@@ -457,7 +465,7 @@
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define sid (sfunc-id (inst-long-jump-cls-name i) (inst-long-jump-func-name i) null))
-		(define func (imap-get (machine-fmap m) sid))
+		(define func (imap-get (machine-fmap m) sid default-type))
 		(function-call-simple m func))])
 
 (struct inst-static-call (ret cls-name func-name arg-types args) #:transparent
@@ -478,11 +486,12 @@
 
 			(define sid (sfunc-id cls-name func-name (inst-static-call-arg-types i)))
 			;no need to read from memory
-			(define func (imap-get (machine-fmap m) sid))
+			(define func (imap-get (machine-fmap m) sid default-type))
 			(define ret (inst-static-call-ret i))
 
 			(define mac-ret (function-call m func args))
 			(define mem-ret (machine-mem mac-ret))
+			;[TODO] return type
 			(define ret-value (memory-sread mem-ret var-ret-name))
 			
 			(define mem-pop (memory-spop mem-ret))
@@ -495,7 +504,7 @@
 	[(define (inst-exec i m f)
 		;(println i)
 		(define mem-0 (machine-mem m))
-		(define obj-addr (memory-sforce-read mem-0 (inst-virtual-call-obj-name i) 0))
+		(define obj-addr (memory-sforce-read mem-0 (inst-virtual-call-obj-name i) 0 addr-type))
 		(define cls-name (inst-virtual-call-cls-name i))
 		(define func-name (inst-virtual-call-func-name i))
 		(define ret (inst-virtual-call-ret i))
@@ -515,17 +524,18 @@
 			(display (~a "obj name: " (inst-virtual-call-obj-name i) "\n"))
 			(display (~a "obj addr: " obj-addr "\n"))
 			(define fid-class-name (vfield-id m cls-name field-name-class))
-			(define classname-true (memory-fread mem-0 fid-class-name obj-addr))
+			(define classname-true (memory-fread mem-0 fid-class-name obj-addr name-type))
 			(display (~a "classname: " classname-true "\n"))
 			(define sid (sfunc-id-pure classname-true func-name (inst-virtual-call-arg-types i)))
 			(display (~a "sid: " sid "\n"))
-			(define func (imap-get (machine-fmap m) sid))
+			(define func (imap-get (machine-fmap m) sid default-type))
 			;push an extra scope to avoid overwriting "this" of the current scope
-			(define mem-this (memory-sforce-write (memory-spush mem-0) var-this-name obj-addr 0))
+			(define mem-this (memory-sforce-write (memory-spush mem-0) var-this-name obj-addr 0 addr-type))
 			(define mac-this (std:struct-copy machine m [mem mem-this]))
 
 			(define mac-ret (function-call mac-this func args))
 			(define mem-ret (machine-mem mac-ret))
+			;[TODO] return type
 			(define ret-value (memory-sread mem-ret var-ret-name))
 			;pop callee and callee's "this"
 			(define mem-pop (memory-spop (memory-spop mem-ret)))
@@ -538,7 +548,7 @@
 	#:methods gen:instruction
 	[(define (inst-exec i m f)
 		(define mem-0 (machine-mem m))
-		(define obj-addr (memory-sread mem-0 (inst-special-call-obj-name i)))
+		(define obj-addr (memory-sread mem-0 (inst-special-call-obj-name i) addr-type))
 		(define cls-name (inst-special-call-cls-name i))
 		(define func-name (inst-special-call-func-name i))
 		(define ret (inst-special-call-ret i))
@@ -553,13 +563,14 @@
 
 			(define sid (sfunc-id (inst-special-call-cls-name i) (inst-special-call-func-name i) (inst-special-call-arg-types i)))
 			;never virtual
-			(define func (imap-get (machine-fmap m) sid))
+			(define func (imap-get (machine-fmap m) sid default-type))
 			;push an extra scope to avoid overwriting "this" of the current scope
-			(define mem-this (memory-sforce-write (memory-spush mem-0) var-this-name obj-addr 0))
+			(define mem-this (memory-sforce-write (memory-spush mem-0) var-this-name obj-addr 0 addr-type))
 			(define mac-this (std:struct-copy machine m [mem mem-this]))
 
 			(define mac-ret (function-call mac-this func args))
 			(define mem-ret (machine-mem mac-ret))
+			;[TODO] return type
 			(define ret-value (memory-sread mem-ret var-ret-name))
 			;pop callee and callee's "this"
 			(define mem-pop (memory-spop (memory-spop mem-ret)))
@@ -578,8 +589,9 @@
 (struct iexpr-var (name) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
+		;[TODO] expr type
 		(define ret (if (equal? (iexpr-var-name e) var-this-name)
-			(memory-sforce-read (machine-mem m) (iexpr-var-name e) 1)
+			(memory-sforce-read (machine-mem m) (iexpr-var-name e) 1 addr-type)
 			(memory-sforce-read (machine-mem m) (iexpr-var-name e) 0)))
 		(defer-eval "var read: " (cons (iexpr-var-name e) ret))
 		ret)])
@@ -611,10 +623,11 @@
 		(define fname (iexpr-field-fname e))
 		(define cls-name (iexpr-field-cls-name e))
 		(define obj-name (iexpr-field-obj-name e))
+		;[TODO] field type
 		(define ret 
 			(let
 				([obj-addr (if (equal? obj-name var-void-receiver-name) addr-void-receiver
-					(memory-sforce-read mem0 obj-name 0))])
+					(memory-sforce-read mem0 obj-name 0 addr-type))])
 				(memory-fread mem0 (vfield-id m cls-name fname) obj-addr)))
 		(defer-eval "field read: " (list obj-name cls-name fname ret))
 		ret)])

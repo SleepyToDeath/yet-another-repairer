@@ -58,8 +58,8 @@
 
 	(define (hard-cons input output target-sids) 
 
-		(set! memory-id-list null)
-		(imap-clear-get-keys!)
+		(memory-clear-id-list!)
+		(imap-clear-indices!)
 
 		(define (assign-input mac input)
 			(define mem0 (machine-mem mac))
@@ -154,8 +154,8 @@
 	(std:struct-copy machine mac-tmp 
 		[boot (alloc-lid #f (string-id "dummy") (machine-boot mac))] 
 		[cmap (foldl 
-			(lambda (cls cm) (imap-set cm (class-name cls) cls)) 
-			imap-empty 
+			(lambda (cls cm) (imap-set cm (class-name cls) cls default-type)) 
+			(imap-empty default-type)
 			(machine-classes mac-tmp))]))
 
 (define (invoke-same-sig-alt? func-fml invoked-name invoked-arg-types)
@@ -167,7 +167,7 @@
 (define (lookup-virtual-function-alt mac cls func arg-types) 
 	(if cls
 		(begin
-			(define cls-0 (imap-get (machine-cmap mac) cls))
+			(define cls-0 (imap-get (machine-cmap mac) cls default-type))
 
 			(define base-name (ormap 
 				(lambda (cls-cur) (lookup-virtual-function-alt mac cls-cur func arg-types)) 
@@ -202,14 +202,18 @@
 				(define sid (sfunc-id cls-name (function-name (function-formula-func sf)) (map cdr (function-args (function-formula-func sf)))))
 ;				(pretty-print (machine-mem mac))
 ;				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid 0))
-				(define fmap-1 (imap-set (machine-fmap mac) sid sf))
+				(define fmap-1 (imap-set (machine-fmap mac) sid sf default-type))
 				(std:struct-copy machine mac [fmap fmap-1]))
 			mac sfuncs))
 
 		(define mac-sfields (foldl 
 			(lambda (sf mac) 
-				(define mem-decl (memory-sdecl (machine-mem mac) (sfield-id cls-name (car sf))))
-				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car sf)) (cdr sf)))
+				;[?] why did we use this?
+;				(define mem-decl (memory-sdecl (machine-mem mac) (sfield-id cls-name (car sf))))
+				;[TODO] field type
+				;static fields are treated as virtual fields of a special void receiver object
+				(define mem-decl (memory-fdecl (machine-mem mac) (vfield-id mac cls-name (car sf))))
+				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car sf)) (cdr sf) default-type))
 				(std:struct-copy machine mac 
 					[mem mem-decl][tmap tmap-1])) 
 			mac-sfuncs sfields))
@@ -219,13 +223,13 @@
 				(define vid (vfunc-id-alt mac cls-name (function-name (function-formula-func vf)) (map cdr (function-args (function-formula-func vf)))))
 				(define sid (sfunc-id cls-name (function-name (function-formula-func vf)) (map cdr (function-args (function-formula-func vf)))))
 				(define mem-1 (memory-fdecl (machine-mem mac) vid)) 
-				(define fmap-1 (imap-set (machine-fmap mac) sid vf))
+				(define fmap-1 (imap-set (machine-fmap mac) sid vf default-type))
 				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
 			mac-sfields vfuncs))
 
 		(define mac-vfields (foldl 
 			(lambda (vf mac) 
-				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car vf)) (cdr vf)))
+				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car vf)) (cdr vf) default-type))
 				(define mem-decl (memory-fdecl (machine-mem mac) (vfield-id mac cls-name (car vf))))
 				(std:struct-copy machine mac 
 					[mem mem-decl][tmap tmap-1])) 
@@ -345,7 +349,7 @@
 (define (contains-target? mac sid target-sids)
 	(if (or (member sid contains-target-list) (member sid target-sids)) #t
 		(begin
-		(define func-fml (imap-get (machine-fmap mac) sid))
+		(define func-fml (imap-get (machine-fmap mac) sid default-type))
 		(define func (function-formula-func func-fml))
 		(define prog (function-prog func))
 		(define ret (ormap (lambda (inst)
@@ -474,7 +478,7 @@
 			(get-pmark func-fml (+ 1 pc)))
 
 		(define (label-mark label) 
-			(define new-pc (imap-get (function-lmap func) label))
+			(define new-pc (imap-get (function-lmap func) label default-type))
 			(get-pmark func-fml new-pc))
 
 		(define (select-fml? fml)
@@ -668,7 +672,7 @@
 				(define sid (sfunc-id cls-name func-name null))
 				(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target? mac sid target-sids)))))
 
-				(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))
+				(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
 				(match-define (cons func-fml-in fml-in) (long-jump-setup func-invoked mem-in))
 				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? trigger-summary?)))
 
@@ -701,7 +705,7 @@
 					(define sid (sfunc-id cls-name func-name arg-types))
 					(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target? mac sid target-sids)))))
 
-					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))
+					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
 					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-in args))
 					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? trigger-summary?)))
 					(pretty-print inst)
@@ -803,7 +807,7 @@
 					(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
 					(define sid (sfunc-id cls-name func-name arg-types))
 					(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target? mac sid target-sids)))))
-					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid)))
+					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
 
 					;push an extra scope to avoid overwriting "this" of the current scope
 					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0)))
@@ -856,16 +860,16 @@
 				(begin
 				(define lmap (function-lmap func))
 				(define cnd-v (expr-eval cnd mac-eval-ctxt))
-				(define default-pc (if default-l (imap-get lmap default-l) (+ 1 pc)))
+				(define default-pc (if default-l (imap-get lmap default-l default-type) (+ 1 pc)))
 
 				(define cases-cnd (map (lambda (k.l)
-						(cons (select-fml? (equal? (car k.l) cnd-v)) (imap-get lmap (cdr k.l))))
+						(cons (select-fml? (equal? (car k.l) cnd-v)) (imap-get lmap (cdr k.l) default-type)))
 					cases))
 				(define neg-cnd (foldl (lambda (cnd.pc fml) (and (not (car cnd.pc)) fml)) #t cases-cnd))
 				(define cases-cnd+ (cons (cons neg-cnd default-pc) cases-cnd))
 
 				(define cases-mark (map (lambda (k.l)
-						(cons mark (imap-get lmap (cdr k.l))))
+						(cons mark (imap-get lmap (cdr k.l) default-type)))
 					cases))
 				(define neg-mark (foldl (lambda (cnd.pc fml) (and (not (car cnd.pc)) fml)) #t cases-mark))
 				(define cases-mark+ (cons (cons neg-mark default-pc) cases-mark))
@@ -880,7 +884,7 @@
 				(define cnd (expr-eval condition mac-eval-ctxt))
 				(define fml-update #t)
 				(define fml-new (iassert-pc-branch (select-fml? fml-update) (select-fml? cnd) (select-fml? (not cnd)) label))
-				(define pc-br (imap-get (function-lmap func) label))
+				(define pc-br (imap-get (function-lmap func) label default-type))
 				(if summary? 
 					(update-rbstate-verbose fml-new mem-in pc-br (not cnd) cnd)
 					(update-rbstate fml-new mem-in pc-br)))]))]))

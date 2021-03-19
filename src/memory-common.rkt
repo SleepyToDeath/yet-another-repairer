@@ -63,11 +63,20 @@
 
 ;====================== Memory Types =======================
 
+;[?] signed
 (define bv-type (bitvector bv-width))
 
 (define int-type integer?)
 
+(define bool-type boolean?)
+
+
 (define addr-type int-type)
+
+(define name-type int-type)
+
+(define string-type int-type)
+
 
 (define default-type int-type)
 
@@ -117,6 +126,8 @@
 
 ;====================== Tracking States =======================
 (define memory-id-list null)
+(define (memory-clear-id-list!)
+	(set! memory-id-list null))
 (define (memory-add-id id)
 	(set! memory-id-list (cons id memory-id-list)))
 
