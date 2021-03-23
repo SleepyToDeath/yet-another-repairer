@@ -11,6 +11,7 @@
 (require "formula.rkt")
 (require "model.rkt")
 (require "semantics-common.rkt")
+(require "type-checker.rkt")
 (require racket/format)
 (require (prefix-in std: racket/base))
 (require rosette/lib/match)   ; provides `match`
@@ -27,35 +28,36 @@
 
 (define (function-call-simple mac func)
 ;	(pretty-print (machine-mem mac))
-	;[TODO] arg & local type
+	;[-TODO] arg & local type
 	(define mac-decl (std:struct-copy machine mac [mem 
 		(foldl 
-			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)))) 
+			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)) (jtype->mtype (cdr var-def)))) 
 			(machine-mem mac) 
 			(append (function-args func) (function-locals func) (list (cons var-ret-name 0))))]))
-	(function-exec (std:struct-copy machine mac-decl [pc pc-init]) func))
+	(function-exec (std:struct-copy machine mac-decl [pc pc-init][fc func])))
 
 (define (function-call mac func args)
-	(define mac-reset (std:struct-copy machine mac [pc pc-init][mem (memory-spush (machine-mem mac))]))
-	;[TODO] arg & local type
+	(define mac-reset (std:struct-copy machine mac [pc pc-init][fc func][mem (memory-spush (machine-mem mac))]))
+	;[-TODO] arg & local type
 	(define mac-decl (std:struct-copy machine mac-reset [mem 
 		(foldl 
-			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)))) 
+			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)) (jtype->mtype (cdr var-def)))) 
 			(machine-mem mac-reset) 
 			(append (function-args func) (function-locals func)))]))
-	;[TODO] arg & local type
+	;[-TODO] arg & local type
 	(define mac-input (std:struct-copy machine mac-decl [mem
 		(foldl 
-			(lambda (arg-src arg-dst mem) (memory-swrite mem (string-id (car arg-dst)) arg-src))
+			(lambda (arg-src arg-dst mem) (memory-swrite mem (string-id (car arg-dst)) arg-src (jtype->mtype (cdr var-def))))
 			(machine-mem mac-decl)
 			args 
 			(function-args func))]))
 ;	(pretty-print (machine-mem mac-input))
-	(function-exec mac-input func))
+	(function-exec mac-input))
 
 (define line-counter-c 0)
 
-(define (function-exec mac func)
+(define (function-exec mac)
+	(define func (machine-fc mac))
 	(if (equal? (machine-pc mac) pc-ret) 
 		mac
 		(let ([inst-cur (list-ref (function-prog func) (machine-pc mac))])
@@ -69,26 +71,25 @@
 			(display (~a "Lines of code: " line-counter-c))
 			(display "\n\n")
 			(set-context! mac)
-			(function-exec (inst-exec inst-cur mac func) func))))
+			(function-exec (inst-exec inst-cur mac func)))))
 
 ;machine X list of int -> machine(with input inserted into memory)
 (define (assign-input mac input)
 	(define mem0 (memory-spush (machine-mem mac)))
 	(reset-parameter-names)
-	;[TODO] input-type
+	;[-TODO] input-type
 	(define mem-ass 
-		(foldl (lambda (v mem-cur) 
-			(memory-sforce-write mem-cur (next-parameter-name) v 0))
+		(foldl (lambda (v.t mem-cur) 
+			(memory-sforce-write mem-cur (next-parameter-name) (car v.t) 0 (cdr v.t)))
 			mem0 input))
 	(std:struct-copy machine mac [mem mem-ass]))
 
-;[TODO] return type
-;[!] using default type; assuming the type only affect not-found value
+;[-TODO] return type
 ;machine X list of (key, value) -> boolean
 (define (compare-output mac output)
 	(define mem0 (machine-mem mac))
-	(foldl (lambda (kv fml-cur) (and fml-cur (equal? (cdr kv) 
-		(do-n-ret pretty-print (memory-sread mem0 (string-id (car kv)) default-type)))))
+	(foldl (lambda (kvt fml-cur) (and fml-cur (equal? (second kvt) 
+		(do-n-ret pretty-print (memory-sread mem0 (string-id (first kvt)) (jtype->mtype (third kvt)))))))
 		#t output))
 
 ;machine X list of string(output var names)
@@ -112,7 +113,7 @@
 		(class-list-cl (program-rhs ast))))
 	(define cmap (foldl (lambda (cls cm) (imap-set cm (class-name cls) cls default-type)) (imap-empty default-type) classes))
 	(define boot (build-boot-func))
-	(define mac-init (machine boot classes cmap (imap-empty default-type) (imap-empty default-type) memory-empty pc-init))
+	(define mac-init (machine boot classes cmap (imap-empty default-type) (imap-empty default-type) memory-empty pc-init #f))
 	mac-init)
 
 (define (ast->class ast)
@@ -225,7 +226,9 @@
 		[(expr e) (ast->expression e)]
 		[(lexpr e) (ast->expression e)]
 		[(dexpr e) (ast->expression e)]
-		[(expr-const c) (iexpr-const (if (std:string? (const-v c)) (string-id (const-v c)) (const-v c)))]
+		[(expr-const c) (iexpr-const 
+			(if (std:string? (const-v c)) (string-id (const-v c)) (const-v c))
+			(if (std:string? (const-v c)) "string" (jtype-of (const-v c))))]
 		[(expr-var v) (iexpr-var (string-id (variable-name v)))]
 		[(expr-binary expr1 o expr2) (iexpr-binary (op-v o) (ast->expression expr1) (ast->expression expr2))]
 		[(expr-array array index) (iexpr-array (string-id (variable-name array)) (ast->expression index))]
@@ -270,7 +273,6 @@
 				(pretty-print (sfield-id cls-name (car sf)))
 				;[?] why did we use this?
 ;				(define mem-decl (memory-sdecl (machine-mem mac) (sfield-id cls-name (car sf))))
-				;[TODO] field type
 				;static fields are treated as virtual fields of a special void receiver object
 				(define mem-decl (memory-fdecl (machine-mem mac) (vfield-id mac cls-name (car sf))))
 				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car sf)) (cdr sf) default-type))
@@ -295,7 +297,6 @@
 		(define mac-vfields (foldl 
 			(lambda (vf mac) 
 				(define tmap-1 (imap-set (machine-tmap mac) (sfield-id cls-name (car vf)) (cdr vf) default-type))
-				;[TODO] field type
 				(define mem-decl (memory-fdecl (machine-mem mac) (vfield-id mac cls-name (car vf))))
 				(std:struct-copy machine mac 
 					[mem mem-decl][tmap tmap-1])) 
@@ -581,10 +582,10 @@
 
 
 ;======================== Expressions ===========================
-(struct iexpr-const (value) #:transparent
+(struct iexpr-const (value type) #:transparent
 	#:methods gen:expression
 	[(define (expr-eval e m)
-		(iexpr-const-value e))])
+		(cons (iexpr-const-value e) (iexpr-const-type e)))])
 
 (struct iexpr-var (name) #:transparent
 	#:methods gen:expression
@@ -610,8 +611,9 @@
 	#:methods gen:expression
 	[(define (expr-eval e m) 
 		(define mem0 (machine-mem m))
-		(define arr-addr (memory-sforce-read mem0 (iexpr-array-arr-name e) 0))
-		(define idx (expr-eval-dispatch (iexpr-array-index e) m))
+		(define arr-name (iexpr-array-arr-name e))
+		(define arr-addr (memory-sforce-read mem0 arr-name 0 addr-type))
+		(match-define (cons idx itype) (expr-eval-dispatch (iexpr-array-index e) m))
 		(define ret (memory-aread mem0 arr-addr idx))
 ;		(display (~a "array read index: " idx " value: " ret))
 		ret)])
@@ -623,12 +625,14 @@
 		(define fname (iexpr-field-fname e))
 		(define cls-name (iexpr-field-cls-name e))
 		(define obj-name (iexpr-field-obj-name e))
-		;[TODO] field type
+		;[-TODO] field type
+		(define jtype (imap-get (machine-tmap m) (sfield-id cls-name fname) default-type))
+		(define mtype (jtype->mtype jtype))
 		(define ret 
 			(let
 				([obj-addr (if (equal? obj-name var-void-receiver-name) addr-void-receiver
 					(memory-sforce-read mem0 obj-name 0 addr-type))])
-				(memory-fread mem0 (vfield-id m cls-name fname) obj-addr)))
+				(memory-fread mem0 (vfield-id m cls-name fname) obj-addr mtype)))
 		(defer-eval "field read: " (list obj-name cls-name fname ret))
-		ret)])
+		(cons ret jtype))])
 

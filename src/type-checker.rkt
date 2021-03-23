@@ -8,7 +8,7 @@
 (require "syntax-jimple.rkt")
 (require "jimple/operators.rkt")
 
-(provide jtype->mtype op-return-type op-type-check?)
+(provide jtype->mtype op-return-type op-type-check? jtype-of)
 
 (define supported-types (list "void" "boolean" "byte" "short" "char" "int" "long"))
 
@@ -80,3 +80,12 @@
 	(if maybe-primitive maybe-primitive addr-type))
 
 
+(define jtype-map
+	(list 
+		(cons int-type "int")
+		(cons bool-type "boolean")))
+
+;return a string of type name in java rather than a predicate
+(define (jtype-of v)
+	(define mtype (type-of v))
+	(ormap (lambda (types) (if (equal? mtype (car types)) (cdr types) #f)) jtype-map))

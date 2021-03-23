@@ -18,13 +18,14 @@
 
 ;======================== Definitions ===========================
 ;mem: memory
-;pc: int
 ;boot: boot function
 ;classes: list of classes
 ;cmap: class name to class
 ;fmap: function sid to function (function pointer in memory is sid)
 ;tmap: field's sid to its type (other type information can be found in function)
-(struct machine (boot classes cmap fmap tmap mem pc) #:transparent)
+;fc: function(current function)
+;pc: int(current line number in the function)
+(struct machine (boot classes cmap fmap tmap mem pc fc) #:transparent)
 
 ;extend: name of parent class
 ;implements: list of (name of implemented interface)
@@ -155,4 +156,11 @@
 		(list cls delimiter-static func)
 		(foldl (lambda (s l) (cons delimiter-minor (cons s l))) null arg-types)))
 
+;look up type of a local variable/parameter in a function 
+(define (lookup-type v f)
+	(do-n-ret
+		(lambda (ret) (if ret ret (force-error #t "Unknown local variable: " v)))
+		(ormap 
+			(lambda (var-def) (if (equal? v (car var-def)) (cdr var-def) #f))
+			(append (function-args f) (function-locals f)))))
 
