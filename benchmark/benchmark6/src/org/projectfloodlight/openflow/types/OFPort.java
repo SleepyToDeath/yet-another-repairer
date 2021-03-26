@@ -93,7 +93,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
      */
     public static final OFPort ZERO = OFPort.of(0);
 
-    public static final OFPort NO_MASK = OFPort.of(0xFFFFFFFF);
+    // public static final OFPort NO_MASK = OFPort.of(0xFFFFFFFF);
     public static final OFPort FULL_MASK = ZERO;
 
     /** cache of frequently used ports */
