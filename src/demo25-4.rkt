@@ -91,8 +91,8 @@ public class Test
 (define input0 null)
 (define output0 (list (cons var-ret-name 0)))
 
-(define input1 (list 4 5 6))
-(define output1 (list (cons var-ret-name 15)))
+(define input1 (list (cons 4 "int") (cons 5 "int") (cons 6 "int")))
+(define output1 (list (list var-ret-name 15 "int")))
 
 (define input2 (list (cons "r1" 1) (cons "r2" 2) (cons "r3" 3)))
 (define output2 (list (cons var-ret-name 6)))

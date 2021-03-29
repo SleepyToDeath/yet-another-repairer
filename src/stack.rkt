@@ -47,7 +47,7 @@ stack-empty)
 (define (stack-static-force-read mem name lvl)
 	(list-ref (static-scope-array (list-ref (static-stack-scopes (memory-stack mem)) lvl)) name))
 
-(define (stack-static-force-write mem name value type lvl)
+(define (stack-static-force-write mem name value lvl type)
 	(define mem-decl (if (zero? lvl) (stack-static-decl mem name type) mem))
 	(define scs (static-stack-scopes (memory-stack mem-decl)))
 	(if (is-invalid? (list-ref (static-scope-array (list-ref scs lvl)) name))

@@ -57,14 +57,14 @@
 	[imap-get-type imap-typed type]
 	[imap-set-type imap-typed type imap])
 
-(define (imap-batch-set imap kvlist)
-	(foldl (lambda (kv m) (imap-set m (car kv) (cdr kv))) imap kvlist))
+(define (imap-batch-set imap kvlist type)
+	(foldl (lambda (kv m) (imap-set m (car kv) (cdr kv) type)) imap kvlist))
 
 ;re-dispatch, what is the decent way to do this?
-(define (imap-get+ m index)
-	(imap-get m index))
-(define (imap-set+ m index value)
-	(imap-set m index value))
+(define (imap-get+ m index type)
+	(imap-get m index type))
+(define (imap-set+ m index value type)
+	(imap-set m index value type))
 (define (imap-get-func+ m)
 	(imap-get-func m))
 (define (imap-reset+ m base)
@@ -108,7 +108,7 @@
 			(imap-get+ (imap-get-type m type) index type))
 
 		(define (imap-set m index value type)
-			(imap-set-type m type (imap-set+ (imap-get-type m type) index value)))
+			(imap-conc-wrapper (imap-set-type m type (imap-set+ (imap-get-type m type) index value type))))
 
 		(define (imap-get-func m)
 			(force-error #t "imap-get-func shouldn't be called on imap-conc-wrapper"))

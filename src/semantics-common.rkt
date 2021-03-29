@@ -75,7 +75,7 @@
 	(set! parameter-counter (+ 1 parameter-counter))
 	(string-id name))
 
-(define machine-empty (machine #f null imap-empty imap-empty imap-empty memory-empty pc-init))
+(define machine-empty (machine #f null imap-empty imap-empty imap-empty memory-empty pc-init #f))
 
 ;dynamically set, used to provide machine-level context, avoid using it too much
 (define current-context machine-empty)
@@ -93,7 +93,7 @@
 	(if cls
 		(begin
 			(display (~a "class name: " cls " func name: " func "\n"))
-			(define cls-0 (imap-get (machine-cmap mac) cls))
+			(define cls-0 (imap-get (machine-cmap mac) cls default-type))
 
 			(define base-name (ormap 
 				(lambda (cls-cur) (lookup-virtual-function mac cls-cur func arg-types)) 
@@ -110,7 +110,7 @@
 	(if cls 
 		(begin
 			(display (~a "class name: " cls "\n"))
-			(define cls-0 (imap-get (machine-cmap mac) cls))
+			(define cls-0 (imap-get (machine-cmap mac) cls default-type))
 			(display (~a "class vfields: " (class-vfields cls-0) " class name: " cls " field name: " field "\n"))
 
 			(define base-name (ormap 
@@ -158,9 +158,14 @@
 
 ;look up type of a local variable/parameter in a function 
 (define (lookup-type v f)
+;	(pretty-print f)
+;	(pretty-print (append (callee-arg-names (function-args f)) (function-locals f)))
 	(do-n-ret
-		(lambda (ret) (if ret ret (force-error #t "Unknown local variable: " v)))
+		(lambda (ret) (if ret ret (force-error #t (~a "Unknown local variable: " v))))
 		(ormap 
 			(lambda (var-def) (if (equal? v (car var-def)) (cdr var-def) #f))
-			(append (function-args f) (function-locals f)))))
+			(append (callee-arg-names (function-args f)) (function-locals f)))))
 
+(define (callee-arg-names args)
+	(reset-parameter-names)
+	(map (lambda (n.t) (cons (next-parameter-name) (cdr n.t))) args))

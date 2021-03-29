@@ -15,11 +15,11 @@
 ;provide an unique id to each string; equal? strings have same id
 (define (real-string-id s)
 	(define id (imap-get string-id-map s default-type))
-	(define id-true (if (not (equal? id not-found)) id
+	(define id-true (if (not (equal? id (not-found default-type))) id
 		(begin
 			(set! string-id-table (cons (cons s string-id-counter) string-id-table))
 ;			(pretty-print string-id-table)
-			(set! string-id-map (imap-set string-id-map s string-id-counter))
+			(set! string-id-map (imap-set string-id-map s string-id-counter default-type))
 			(set! string-id-counter (+ 1 string-id-counter))
 			(- string-id-counter 1))))
 	(maybe-add-string-value-of s id-true)
@@ -40,7 +40,7 @@
 
 (define (maybe-add-string-value-of s id)
 	(if (and (std:string? s) (std:string->number s) (is-not-found? (imap-get string-value-of-table (std:string->number s) default-type)))
-		(set! string-value-of-table (imap-set string-value-of-table (std:string->number s) id))
+		(set! string-value-of-table (imap-set string-value-of-table (std:string->number s) id default-type))
 		#f))
 
 (define (string-value-of v)

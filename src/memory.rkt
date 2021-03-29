@@ -21,17 +21,17 @@
 	(stack-read mem name type))
 
 ;write to stack
-(define (memory-swrite mem name value)
-	(stack-write mem name value))
+(define (memory-swrite mem name value type)
+	(stack-write mem name value type))
 
 ;declare variable on current stack-top scope
 ;overwrites existing value
-(define (memory-sdecl mem name)
-	(stack-decl mem name))
+(define (memory-sdecl mem name type)
+	(stack-decl mem name type))
 
 ;skip decl and lookup, force write to a certain level
-(define (memory-sforce-write mem name value lvl) 
-	(stack-force-write mem name value lvl))
+(define (memory-sforce-write mem name value lvl type) 
+	(stack-force-write mem name value lvl type))
 
 ;skip lookup, force read from a certain level
 (define (memory-sforce-read mem name lvl)
