@@ -127,7 +127,7 @@
 	])
 
 ;----------------- Symbolic ---------------------
-(struct imap-sym (id id-base func func-base updates updates-committed fml-deferred) #:transparent
+(struct imap-sym (id id-base func func-base updates updates-committed fml-deferred type) #:transparent
 	#:methods gen:imap
 	[	;ignore types
 		(define (imap-get m index type)
@@ -155,7 +155,7 @@
 			(define func-base (imap-get-func m-base))
 			(define id-base (if (imap-is-conc? m-base) invalid-id (imap-get-id m-base)))
 			(imap-sym (imap-get-id m) id-base (imap-get-func m) func-base
-				null null fml-deferred))
+				null null fml-deferred (imap-sym-type m)))
 
 		;make updates so far visible to new reads
 		(define (imap-commit m)
@@ -166,7 +166,7 @@
 			(imap-sym-fml-deferred m))
 
 		(define (imap-preserve m index)
-			(equal? ((imap-sym-func m) index) (imap-sym-real-get m index)))
+			(equal? ((imap-sym-func m) index) (imap-sym-real-get m index (imap-sym-type m))))
 	])
 
 (define (imap-sym-real-get m index type)
@@ -216,10 +216,9 @@
 						(imap-reset+ (imap-get-type m type) (imap-get-type m-base type)))) all-types-ordered)))
 
 		(define (imap-commit m)
-			(display "imap-commit:\n")
-			(do-n-ret pretty-print (imap-sym-wrapper 
+			(imap-sym-wrapper 
 				(map (lambda (ms) (maybe-do imap-sym? #f ms imap-commit+)) 
-					 (imap-sym-wrapper-imaps m)))))
+					 (imap-sym-wrapper-imaps m))))
 
 		(define (imap-summary m)
 			(andmap+ (lambda (ms) (maybe-do imap-sym? #f ms imap-summary+)) (imap-sym-wrapper-imaps m)))
@@ -239,8 +238,7 @@
 
 
 	(define (imap-select candidates summary?)
-		(display "imap-select:\n")
-		(do-n-ret pretty-print (imap-sym-wrapper
+		(imap-sym-wrapper
 			(map
 				(lambda (type)
 					(define f-select (maybe-select (imap-sym-null type) (lambda (m) (equal? (imap-sym-id m) invalid-id))))
@@ -253,21 +251,23 @@
 							 (caar candidates)) ;only one input and the condition is constant #t
 						(cdr (unwrap (car candidates)))
 						(f-select candidates-unwrapped summary?)))
-				all-types-ordered))))
+				all-types-ordered)))
 
 	(define (imap-new id)
 		(define (sym-gen type)
 			(define-symbolic* func (~> addr-type type))
-			(imap-sym id invalid-id func default-func null null #f))
+			(imap-sym id invalid-id func default-func null null #f type))
 		(imap-sym-wrapper (map sym-gen all-types-ordered)))
 
 
 
 	(define (imap-gen-binding)
 		(define all-keys imap-all-indices)
-		(pretty-print (~a "Totally " (length all-keys) " keys"))
+;		(pretty-print (~a "Totally " (length all-keys) " keys"))
+		(display "imap-gen-binding:\n")
 
 		(andmap+ (lambda (type)
+			(display "++++++++++++++++++++++++\n")
 			(define (mem-get-typed id type)
 				(imap-get-type (memory-heap (vector-ref memory-id-map id)) type))
 			(define (id2keys id)
@@ -293,6 +293,8 @@
 					(equal? fml-deferred fml-true))
 				memory-id-list))
 
+			(display "-------------------------\n")
+
 			(define fml-always-right
 				(andmap+ (lambda (mem-id)
 					(define ms (mem-get-typed mem-id type))
@@ -301,6 +303,8 @@
 							((smart-preserve ms) key)))
 					all-typed-keys))
 				memory-id-list))
+
+			(pretty-print (list fml-maybe-wrong fml-always-right))
 
 			(and fml-maybe-wrong fml-always-right))
 		all-types-ordered))
@@ -316,7 +320,7 @@
 (define imap-typed-empty imap-conc-wrapper-empty)
 
 (define (imap-sym-null type)
-	(imap-sym (invalid-state type) (invalid-state type) (default-func type) (default-func type) null null #t))
+	(imap-sym (invalid-state type) (invalid-state type) (default-func type) (default-func type) null null #t type))
 (define imap-sym-wrapper-null
 	(imap-sym-wrapper (map (lambda (type) (imap-sym-null type)) all-types-ordered)))
 (define imap-null imap-sym-null)

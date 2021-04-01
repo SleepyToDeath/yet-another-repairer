@@ -139,6 +139,7 @@
 		(display "\n ###############################################7 \n")
 		(define fml-code-bind (memory-gen-binding))
 		(display "\n ###############################################8 \n")
+		(pretty-print (list fml-cfi fml-code fml-code-bind fml-ass fml-out))
 		(and fml-cfi fml-code fml-code-bind fml-ass fml-out))
 
 	(list mac soft-cons hard-cons))
