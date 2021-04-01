@@ -17,12 +17,12 @@
 
 ;-----------------Stack Operations---------------
 ;read from stack
-(define (memory-sread mem name type)
-	(stack-read mem name type))
+;(define (memory-sread mem name type)
+;	(stack-read mem name type))
 
 ;write to stack
-(define (memory-swrite mem name value type)
-	(stack-write mem name value type))
+;(define (memory-swrite mem name value type)
+;	(stack-write mem name value type))
 
 ;declare variable on current stack-top scope
 ;overwrites existing value
@@ -126,6 +126,9 @@
 
 ;==================================================
 
+
+
+
 ;============= Default Values ===========
 (define memory-empty 
 	(memory 
@@ -140,6 +143,9 @@
 
 (memory-archive invalid-id memory-invalid)
 ;========================================
+
+
+
 
 ;======================= Symbolic Operations ========================
 (define (memory-sym-new summary?)

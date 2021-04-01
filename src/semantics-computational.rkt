@@ -81,17 +81,19 @@
 	(reset-parameter-names)
 	;[-TODO] input-type
 	(define mem-ass 
-		(foldl (lambda (v.t mem-cur) 
-			(memory-sforce-write mem-cur (next-parameter-name) (car v.t) 0 (jtype->mtype (string-id (cdr v.t)))))
-			mem0 input))
+		(foldl 
+			(lambda (v.t mem-cur) 
+				(memory-sforce-write mem-cur (next-parameter-name) (car v.t) 0 (jtype->mtype (string-id (cdr v.t)))))
+			mem0 
+			input))
 	(std:struct-copy machine mac [mem mem-ass]))
 
 ;[-TODO] return type
 ;machine X list of (key, value) -> boolean
 (define (compare-output mac output)
 	(define mem0 (machine-mem mac))
-	(foldl (lambda (kvt fml-cur) (and fml-cur (equal? (second kvt) 
-		(do-n-ret pretty-print (memory-sforce-read mem0 (string-id (first kvt)) 0)))))
+	(foldl (lambda (kv fml-cur) (and fml-cur (equal? (cdr kv) 
+		(do-n-ret pretty-print (memory-sforce-read mem0 (string-id (car kv)) 0)))))
 		#t output))
 
 ;machine X list of string(output var names)
@@ -251,8 +253,6 @@
 		(string-id int-type-name)))
 
 (define (build-virtual-table mac) 
-	(display "Memory before buiding virtual table:\n")
-;	(pretty-print (machine-mem mac))
 	(define classes (machine-classes mac))
 	(define (process-class cls mac)
 		(define cls-name (class-name cls))
@@ -271,10 +271,6 @@
 				(std:struct-copy machine mac [fmap fmap-1]))
 			mac sfuncs))
 
-		(display "#1\n")
-		(pretty-print cls-name)
-		(pretty-print sfields)
-
 		(define mac-sfields (foldl 
 			(lambda (sf mac) 
 				(pretty-print (sfield-id cls-name (car sf)))
@@ -286,8 +282,6 @@
 				(std:struct-copy machine mac 
 					[mem mem-decl][tmap tmap-1])) 
 			mac-sfuncs sfields))
-
-		(display "#2\n")
 
 		(define mac-vfuncs (foldl 
 			(lambda (vf mac) 
@@ -381,7 +375,7 @@
 		(define rhs (lexpr-rhs (inst-ass-vl i)))
 		(define mem-new 
 			(match rhs
-				;[TODO] expr type
+				;[-TODO] expr type
 				[(expr-var v) (memory-sforce-write mem0 (string-id (variable-name v)) v-new 0 (jtype->mtype v-new-jt))]
 				[(expr-array arr idx)
 					(letrec

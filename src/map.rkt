@@ -153,12 +153,12 @@
 		(define (imap-reset m m-base)
 			(define-symbolic* fml-deferred boolean?)
 			(define func-base (imap-get-func m-base))
-			(define id-base (imap-get-id m-base))
+			(define id-base (if (imap-is-conc? m-base) invalid-id (imap-get-id m-base)))
 			(imap-sym (imap-get-id m) id-base (imap-get-func m) func-base
 				null null fml-deferred))
 
 		;make updates so far visible to new reads
-		(define (imap-sym-commit m)
+		(define (imap-commit m)
 			(std:struct-copy imap-sym m [updates null] [updates-committed (append (imap-sym-updates m) (imap-sym-updates-committed m))]))
 
 		(define (imap-summary m)
@@ -166,8 +166,7 @@
 			(imap-sym-fml-deferred m))
 
 		(define (imap-preserve m index)
-			(define ret (equal? ((imap-sym-func m) index) (imap-sym-real-get m index)))
-			ret)
+			(equal? ((imap-sym-func m) index) (imap-sym-real-get m index)))
 	])
 
 (define (imap-sym-real-get m index type)
@@ -189,7 +188,7 @@
 				(lambda (ret) (defer-eval "imap get" (list index ret type)))
 				(if (not (imap-sym? ms))
 					not-found
-					(imap-get+ ms index))))
+					(imap-get+ ms index type))))
 
 		(define (imap-set m index value type)
 			(defer-eval "imap set" (list index value type))
@@ -217,12 +216,13 @@
 						(imap-reset+ (imap-get-type m type) (imap-get-type m-base type)))) all-types-ordered)))
 
 		(define (imap-commit m)
-			(imap-sym-wrapper 
+			(display "imap-commit:\n")
+			(do-n-ret pretty-print (imap-sym-wrapper 
 				(map (lambda (ms) (maybe-do imap-sym? #f ms imap-commit+)) 
-					 (imap-sym-wrapper-imaps m))))
+					 (imap-sym-wrapper-imaps m)))))
 
 		(define (imap-summary m)
-			(andmap+ imap-summary+ (imap-sym-wrapper-imaps m)))
+			(andmap+ (lambda (ms) (maybe-do imap-sym? #f ms imap-summary+)) (imap-sym-wrapper-imaps m)))
 
 		(define (imap-preserve m index)
 			(force-error #t "imap-preserve shouldn't be called on imap-sym-wrapper"))
@@ -239,10 +239,11 @@
 
 
 	(define (imap-select candidates summary?)
-		(define f-select (maybe-select imap-sym-null (lambda (m) (equal? (imap-sym-id m) invalid-id))))
-		(imap-sym-wrapper
+		(display "imap-select:\n")
+		(do-n-ret pretty-print (imap-sym-wrapper
 			(map
 				(lambda (type)
+					(define f-select (maybe-select (imap-sym-null type) (lambda (m) (equal? (imap-sym-id m) invalid-id))))
 					(define (unwrap cnd.m)
 						(cons (car cnd.m) 
 							  (list-ref (imap-sym-wrapper-imaps (cdr cnd.m)) (type->ordinal type))))
@@ -250,13 +251,13 @@
 					(if (and (equal? (length candidates) 1) 
 							 (is-concrete-value? (caar candidates)) 
 							 (caar candidates)) ;only one input and the condition is constant #t
-						(cdar candidates)
+						(cdr (unwrap (car candidates)))
 						(f-select candidates-unwrapped summary?)))
-				all-types-ordered)))
+				all-types-ordered))))
 
 	(define (imap-new id)
 		(define (sym-gen type)
-			(define-symbolic* func (~> integer? type))
+			(define-symbolic* func (~> addr-type type))
 			(imap-sym id invalid-id func default-func null null #f))
 		(imap-sym-wrapper (map sym-gen all-types-ordered)))
 
@@ -282,7 +283,7 @@
 							(and (equal? key-sym key)
 								 (imap-preserve ms key-sym)))))))
 
-			(define all-typed-keys (map cdr (filter (lambda (k.t) (equal? (cdr k.t) type)) all-keys)))
+			(define all-typed-keys (map car (filter (lambda (k.t) (equal? (cdr k.t) type)) all-keys)))
 
 			(define fml-maybe-wrong
 				(andmap+ (lambda (mem-id)

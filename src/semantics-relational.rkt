@@ -11,6 +11,7 @@
 (require "memory-common.rkt")
 (require "formula.rkt")
 (require "model.rkt")
+(require "type-checker.rkt")
 (require "semantics-common.rkt")
 (require (prefix-in std: racket/base))
 (require (prefix-in std: racket/list))
@@ -67,19 +68,21 @@
 			(reset-parameter-names)
 			(match-define (cons mem-ass fml-ass)
 				(foldl 
-					(lambda (v mem+fml) 
+					(lambda (v.t mem+fml) 
 						(define-symbolic* vi integer?)
-						(define fml (equal? vi v))
+						(define fml (equal? vi (car v.t)))
 						(cons 
-							(memory-sforce-write (car mem+fml) (next-parameter-name) vi 0) 
+							(memory-sforce-write (car mem+fml) (next-parameter-name) vi 0 (jtype->mtype (string-id (cdr v.t))))
 							(and (cdr mem+fml) fml)))
-					(cons mem-push #t) input))
-			(define mem-ret (memory-sdecl mem-ass var-ret-name))
+					(cons mem-push #t) 
+					input))
+			(define mem-ret (memory-sdecl mem-ass var-ret-name default-type))
 			(cons (std:struct-copy machine mac [mem mem-ret]) fml-ass))
 
 		(define (compare-output mac output)
 			(define mem0 (machine-mem mac))
 			(andmap identity (map
+				;[!] assuming output is always int
 				(lambda (kv) (equal? (cdr kv) (memory-sforce-read mem0 (string-id (car kv)) 0)))
 				output)))
 
@@ -192,9 +195,6 @@
 		(define sfuncs (class-sfuncs cls))
 		(define vfuncs (class-vfuncs cls))
 		(define sfields (class-sfields cls))
-;		(define vfields (if (equal? cls-name class-name-root) 
-;			(cons field-name-class (class-vfields cls))
-;			(class-vfields cls)))
 		(define vfields (class-vfields cls))
 
 		(define mac-sfuncs (foldl 
@@ -250,7 +250,7 @@
 
 
 ;----------------------- Allocation -------------------------
-;funcion -> function-formula (with line id, pmark is empty)
+;function -> function-formula (with line id, pmark is empty)
 (define (alloc-lid mac clsname func)
 	(function-formula func 
 		(map (lambda (any) (define-symbolic* line-id boolean?) line-id) (function-prog func))
@@ -468,7 +468,7 @@
 ;		(print (fml-to-struct (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-0))))))
 ;		(display " \n")
 		;used only for expr-eval
-		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0]))
+		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0][fc func]))
 
 
 ;	(pretty-print mem-0)
@@ -545,7 +545,7 @@
 
 			(define mem-decl (memory-sym-commit
 				(foldl 
-					(lambda (var-def mem) (memory-sdecl mem (car var-def))) 
+					(lambda (var-def mem) (memory-sdecl mem (car var-def) (jtype->mtype (cdr var-def))))
 					mem-0
 					(append (function-args func) (function-locals func)))))
 
@@ -561,12 +561,13 @@
 			(define mem-push (memory-spush mem-0))
 			(define mem-decl (memory-sym-commit
 				(foldl 
-					(lambda (var-def mem) (memory-sdecl mem (car var-def))) 
+					(lambda (var-def mem) (memory-sdecl mem (car var-def) (jtype->mtype (cdr var-def)))) 
 					mem-push
 					(append (function-args func) (function-locals func) (list (cons var-ret-name 0))))))
 			(define mem-arg (memory-sym-commit
 				(foldl 
-					(lambda (arg-src arg-dst mem) (memory-sforce-write mem (car arg-dst) (expr-eval arg-src mac-eval-ctxt) 0))
+					(lambda (arg-src arg-dst mem) 
+						(memory-sforce-write mem (car arg-dst) (car (expr-eval arg-src mac-eval-ctxt)) 0 (jtype->mtype (cdr arg-dst))))
 					mem-decl
 					args 
 					(function-args func))))
@@ -622,9 +623,9 @@
 				(define addr (memory-sforce-read mem-0 var-this-name 1))
 				(define fid-class-name (vfield-id mac classname field-name-class))
 				(defer-eval "fid-class-name" fid-class-name)
-				(define maybe-old-name (memory-fread mem-0 fid-class-name addr))
+				(define maybe-old-name (memory-fread mem-0 fid-class-name addr addr-type))
 				(define maybe-class-name (if (equal? maybe-old-name not-found) classname maybe-old-name))
-				(define mem-bind (memory-fwrite mem-0 fid-class-name addr maybe-class-name))
+				(define mem-bind (memory-fwrite mem-0 fid-class-name addr maybe-class-name name-type))
 
 				(define mem-commit (memory-sym-commit mem-bind))
 				(define fml-update (memory-sym-summary mem-commit summary?))
@@ -638,22 +639,23 @@
 				(begin
 				(define size (expr-eval size-expr mac-eval-ctxt))
 				(match-define (cons addr mem-alloc) (memory-alloc mem-0 size))
-				(define mem-ass (memory-sforce-write mem-alloc v-name addr 0))
+				(define mem-ass (memory-sforce-write mem-alloc v-name addr 0 addr-type))
 				(assert id)
 				(update-mem-only mem-ass))]
 
 			[(inst-new v-name) 
 				(begin
 				(match-define (cons addr mem-alloc) (memory-new mem-0))
-				(define mem-ass (memory-sforce-write mem-alloc v-name addr 0))
+				(define mem-ass (memory-sforce-write mem-alloc v-name addr 0 addr-type))
 				(assert id)
 				(update-mem-only mem-ass))]
 
 			[(inst-ret v-expr) 
 				(begin
-				(define ret-value (expr-eval v-expr mac-eval-ctxt))
+				(define ret-value (car (expr-eval v-expr mac-eval-ctxt)))
+				(define ret-jtype (function-ret func))
 				(if summary? #f (defer-eval inst ret-value))
-				(define mem-ret.tmp (memory-sforce-write mem-0 var-ret-name ret-value 0))
+				(define mem-ret.tmp (memory-sforce-write mem-0 var-ret-name ret-value 0 (jtype->mtype ret-jtype)))
 				(define mem-ret (memory-sym-commit mem-ret.tmp))
 				(define fml-update (memory-sym-summary mem-ret summary?))
 ;				(define fml-ret (select-fml? fml-update))
@@ -683,7 +685,8 @@
 				(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
 				(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
 				(if summary? #f (defer-eval inst ret-val))
-				(define mem-ass (memory-sym-commit (memory-sforce-write mem-ret var-ret-name ret-val 0)))
+				(define mem-ass (memory-sym-commit (memory-sforce-write mem-ret var-ret-name ret-val 0 
+					(jtype->mtype (function-ret (function-formula-func func-invoked))))))
 				(define fml-ret (memory-sym-summary mem-ass summary?))
 
 				(define fml-op (select-fml? (and fml-in fml-sum fml-ret)))
@@ -718,7 +721,8 @@
 					(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
 					(if summary? #f (defer-eval inst ret-val))
 					(define mem-pop (memory-spop mem-ret))
-					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0)))
+					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0 
+						(jtype->mtype (function-ret (function-formula-func func-invoked))))))
 					(define fml-ret (memory-sym-summary mem-ass summary?))
 
 					(define fml-op (select-fml? (and fml-in fml-sum fml-ret)))
@@ -745,11 +749,11 @@
 						(filter (lambda (f) (and (not (is-interface-func? f)) (equal? (function-formula-vid f) vid))) 
 							(all-vfunctions mac))))
 					(define fid-class-name (vfield-id mac cls-name field-name-class))
-					(define classname-true (memory-fread mem--1 fid-class-name obj-addr))
+					(define classname-true (memory-fread mem--1 fid-class-name obj-addr addr-type))
 					(define true-func-invoked-sid (sfunc-id-pure classname-true func-name arg-types))
 
 					;push an extra scope to avoid overwriting "this" of the current scope
-					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0)))
+					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0 addr-type)))
 					(define fml-this (memory-sym-summary mem-this summary?))
 
 					(define (invoke-candidate fcan)
@@ -770,7 +774,8 @@
 						(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
 						(if summary? #f (defer-eval inst ret-val))
 						(define mem-pop (memory-spop (memory-spop mem-ret)))
-						(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0)))
+						(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0 
+							(jtype->mtype (function-ret (function-formula-func fcan))))))
 						(define fml-ret (memory-sym-summary mem-ass summary?))
 						(define cnd (equal? (function-formula-sid fcan) true-func-invoked-sid))
 						(list func-fml-in cnd fml-in mem-ass fml-ret funcs-ret fml-sum)))
@@ -810,7 +815,7 @@
 					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
 
 					;push an extra scope to avoid overwriting "this" of the current scope
-					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0)))
+					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0 addr-type)))
 					(define fml-this (memory-sym-summary mem-this summary?))
 
 					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
@@ -825,7 +830,8 @@
 					(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
 					(if summary? #f (defer-eval inst ret-val))
 					(define mem-pop (memory-spop (memory-spop mem-ret)))
-					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0)))
+					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0 
+						(jtype->mtype (function-ret (function-formula-func func-invoked))))))
 					(define fml-ret (memory-sym-summary mem-ass summary?))
 
 					(define fml-op (select-fml? (and fml-this fml-in fml-sum fml-ret)))
@@ -836,23 +842,23 @@
 			[(inst-ass vl vr) 
 				(begin
 				(if (equal? vr (iexpr-var var-this-name)) (assert id) #f)
-				(define value (expr-eval vr mac-eval-ctxt))
+				(match-define (cons value jtype) (expr-eval vr mac-eval-ctxt))
 				(if summary? #f (defer-eval inst value))
 				(define rhs (lexpr-rhs vl))
 				(define mem-new 
 					(match rhs
-						[(expr-var v) (memory-sforce-write mem-0 (string-id (variable-name v)) value 0)]
+						[(expr-var v) (memory-sforce-write mem-0 (string-id (variable-name v)) value 0 (jtype->mtype jtype))]
 						[(expr-array arr idx)
 							(letrec
 								([addr (memory-sforce-read mem-0 (string-id (variable-name arr)) 0)]
 								[idx-e (ast->expression idx)]
 								[idx-v (expr-eval idx-e mac-eval-ctxt)])
-								(memory-awrite mem-0 addr idx-v value))]
+								(memory-awrite mem-0 addr idx-v value (jtype->mtype jtype)))]
 						[(expr-field obj cls fname)
 							(letrec
 								([addr (if (equal? obj void-receiver) addr-void-receiver
 									(memory-sforce-read mem-0 (string-id (variable-name obj)) 0))])
-								(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value))]))
+								(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value (jtype->mtype jtype)))]))
 				(update-mem-only mem-new))]
 
 			;[!]there might be bug if reading from heap

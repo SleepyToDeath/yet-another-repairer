@@ -88,23 +88,8 @@ public class Test
 
 (pretty-print buggy)
 
-(define input0 null)
-(define output0 (list (cons var-ret-name 0)))
-
 (define input1 (list (cons 4 "int") (cons 5 "int") (cons 6 "int")))
-(define output1 (list (list var-ret-name 15 "int")))
-
-(define input2 (list (cons "r1" 1) (cons "r2" 2) (cons "r3" 3)))
-(define output2 (list (cons var-ret-name 6)))
-
-(define-symbolic* $r1 $r2 $r3 $ret integer?)
-
-(define input3 (list (cons "r1" $r1) (cons "r2" $r2) (cons "r3" $r3)))
-(define output3 (list (cons var-ret-name $ret)))
-
-
-
-
+(define output1 (list (cons var-ret-name 15)))
 
 (define mac (ast->machine buggy))
 (define mac-in (assign-input mac input1))
@@ -125,70 +110,3 @@ result
 (pretty-print bugl)
 
 
-#|
-(output-smt #t)
-
-(clear-pending-eval)
-
-(match-define (cons soft hard) (ast->relation buggy))
-
-(println string-id-map)
-
-;(define tf1 (hard input1 output1))
-;(define tf2 (hard input2 output2))
-(define tf3 (hard input2 output2))
-
-;(define tf3++ (forall (append (list $r1 $r2 $r3 $ret) all-symbols)
-;	(implies 
-;		(and 
-;			(> $ret 0)
-;			(> $r1 0)
-;			(> $r2 0)
-;			(> $r3 0))
-;		(implies 
-;			tf3
-;			(equal? $ret (+ $r1 $r2 $r3))))))
-
-(display "\n")
-
-(display "Top Formula:\n")
-(pretty-print tf3)
-
-(display "\nAsserts\n")
-;(pretty-print (asserts))
-(pretty-print (length (asserts)))
-
-;(define debug-tf (equal? 0 (list-ref soft 11)))
-;(define debug-tf (andmap identity cons-pending))
-;(define debug-tf (equal? 1 (first soft)))
-(define debug-tf #t)
-
-(display "\nDebug-tf\n")
-debug-tf
-
-all-symbols
-
-(define fml-no-bug (equal? (apply + soft) (length soft)))
-(define fml-one-bug (equal? (apply + soft) (- (length soft) 1)))
-
-(display "\nSolution:\n")
-;(define debug-sol (optimize #:maximize (list (apply + soft))
-;          #:guarantee (assert (and tf3 debug-tf))))
-;(define nobug-sol (solve (assert tf3)))
-
-(define debug-sol (solve (assert (and tf3 fml-one-bug))))
-
-;nobug-sol
-
-;(pretty-print (fml-to-print tf3))
-(display "\n")
-(pretty-print string-id-table)
-
-debug-sol
-(unsat? debug-sol)
-;(core debug-sol)
-
-;soft
-
-
-|#

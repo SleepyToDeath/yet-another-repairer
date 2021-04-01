@@ -64,8 +64,8 @@ stack-empty)
 	(define keys (static-scope-keys sc))
 	(define array (static-scope-array sc))
 	(define array-out (static-scope-array-out sc))
-	(define array.new (if (member name keys) array (std:list-set array name (nullptr type))))
-	(define array-out.new (if (member name keys) array-out (std:list-set array-out name 
+	(define array.new (if (member (cons name type) keys) array (std:list-set array name (nullptr type))))
+	(define array-out.new (if (member (cons name type) keys) array-out (std:list-set array-out name 
 		((lambda () (define-symbolic* vs type) vs)))))
 	(define ret (if (is-invalid? (list-ref (static-scope-array (car scs)) name))
 		mem
@@ -73,7 +73,10 @@ stack-empty)
 			[stack 
 				(static-stack 
 					(cons 
-						(std:struct-copy static-scope sc [array array.new] [array-out array-out.new] [keys (std:sort (std:remove-duplicates (cons name keys)) <)])
+						(std:struct-copy static-scope sc 
+							[array array.new] 
+							[array-out array-out.new] 
+							[keys (std:sort (std:remove-duplicates (cons (cons name type) keys)) (lambda (x y) (< (car x) (car y))))])
 						(cdr scs)))])))
 	ret)
 	
@@ -100,7 +103,7 @@ stack-empty)
 			(define array-empty (static-scope-array (static-scope-empty keys)))
 			(define array-base (static-scope-array-out sc-base))
 			(define array.new (foldl (lambda (key arr)
-					(std:list-set arr key (list-ref array-base (car key))))
+					(std:list-set arr (car key) (list-ref array-base (car key))))
 				array-empty
 				keys))
 			(define array-out.new (foldl (lambda (key arr)
@@ -137,12 +140,12 @@ stack-empty)
 	(andmap+ (lambda (sc)
 		(andmap+ (lambda (key)
 			(define ret (equal?
-				(list-ref (static-scope-array sc) key)
-				(list-ref (static-scope-array-out sc) key)))
+				(list-ref (static-scope-array sc) (car key))
+				(list-ref (static-scope-array-out sc) (car key))))
 			(defer-eval "stack-fml: " (list ret 
 				key
-				(list-ref (static-scope-array sc) key)
-				(list-ref (static-scope-array-out sc) key)))
+				(list-ref (static-scope-array sc) (car key))
+				(list-ref (static-scope-array-out sc) (car key))))
 			(inspect ret)
 ;			(pretty-print eval-pending)
 ;			(print-fml ret)
