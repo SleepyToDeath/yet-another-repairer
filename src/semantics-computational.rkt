@@ -197,7 +197,7 @@
 					(case-list-cl  (stat-case-list-rhs cases)))
 				lmap)]
 		[(stat-label here) (cons #f (imap-set lmap (label-v here) line-num default-type))]
-		[(stat-nop any) (cons (inst-nop nullptr) lmap)]
+		[(stat-nop any) (cons (inst-nop (nullptr default-type)) lmap)]
 		[(stat-ret v) (cons (inst-ret (ast->expression v)) lmap)]
 		[(stat-new v) (cons (inst-new (string-id (variable-name v))) lmap)]
 		[(stat-newarray v size) (cons (inst-newarray (string-id (variable-name v)) (ast->expression size)) lmap)]
@@ -610,6 +610,7 @@
 		(define ret (if (equal? name var-this-name)
 			(memory-sforce-read (machine-mem m) name 1)
 			(memory-sforce-read (machine-mem m) name 0)))
+		(display (~a "var read: " (cons (iexpr-var-name e) ret) "\n"))
 		(defer-eval "var read: " (cons (iexpr-var-name e) ret))
 		(cons ret jtype))])
 
@@ -654,5 +655,6 @@
 					(memory-sforce-read mem0 obj-name 0))])
 				(memory-fread mem0 (vfield-id m cls-name fname) obj-addr mtype)))
 		(defer-eval "field read: " (list obj-name cls-name fname ret))
+		(display (~a "field read: " (list obj-name cls-name fname ret) "\n"))
 		(cons ret jtype))])
 

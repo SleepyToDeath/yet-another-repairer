@@ -30,15 +30,15 @@
   (let* ([c (ast:class-def-rhs class-ast)]
          [static-virtual (trans-init-static-funcs
                            (ast:class-default-static-functions c)
-                           (ast:class-default-member-functions c))]
+                           (ast:class-default-virtual-functions c))]
          [static-funcs (car static-virtual)]
          [virtual-funcs (cdr static-virtual)])
     (ast:class-def (ast:class-default
       (ast:class-default-name c)
       (ast:class-default-extend c)
       (ast:class-default-implements c)
-      (ast:class-default-globals c)
-      (ast:class-default-fields c)
+      (ast:class-default-static-fields c)
+      (ast:class-default-virtual-fields c)
       static-funcs
       virtual-funcs))))
 

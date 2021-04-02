@@ -727,7 +727,7 @@
 
 
 (define (build-ast-const-null null-str-stx)
-  (ast:expr-const (ast:const m:nullptr)))
+  (ast:expr-const (ast:const (m:nullptr m:addr-type))))
 
 
 (define (build-ast-const-str const-str-stx)

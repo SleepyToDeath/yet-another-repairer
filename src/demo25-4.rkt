@@ -74,9 +74,19 @@ public class Test
 "
 public class Test
 {
-	public static int main()
+	public static int main(int)
 	{
-		return 0;
+//        int i0;
+        int $b1;
+
+//        i0 := @parameter0: int;
+
+        $b1 = 0;
+
+        goto label1;
+
+     label1:
+        return $b1;
 	}
 }
 ")))

@@ -95,6 +95,9 @@
 		(define boot-lstate (prepend-starting-mem-in (alloc-lstate (machine-boot mac-ass)) #t (machine-mem mac-ass)))
 
 		(define fml-cfi (starting-pmark boot-lstate))
+;		(test-assert! no-bug)
+;		(test-assert! fml-cfi)
+
 		(display "\n ###############################################0 \n")
 		(set-context! mac-ass)
 		(map (lambda (cls) (pretty-print (cons (class-name cls) (class-vfields cls)))) (machine-classes mac-ass))
@@ -117,6 +120,7 @@
 						[(function-formula func lids _ _ _ _ _ class)
 							(pretty-print (list (function-name func) class))])
 ;					(print-fml (function-formula-fmls root))
+;					(test-assert! (function-formula-fmls root))
 					(define ret1 
 						(function-formula-fmls root))
 					(define ret2
@@ -139,8 +143,11 @@
 		(display "\n ###############################################7 \n")
 		(define fml-code-bind (memory-gen-binding))
 		(display "\n ###############################################8 \n")
-		(pretty-print (list fml-cfi fml-code fml-code-bind fml-ass fml-out))
-		(and fml-cfi fml-code fml-code-bind fml-ass fml-out))
+		;(pretty-print (list fml-cfi fml-code fml-code-bind fml-ass fml-out))
+		;(print-fml fml-cfi)
+		;(print-fml fml-code)
+		(and fml-code))
+		;(and fml-cfi fml-code fml-code-bind fml-ass fml-out))
 
 	(list mac soft-cons hard-cons))
 
@@ -427,7 +434,7 @@
 	(define ret (inst->relation.real inst st))
 	(display "\n updated pc:\n")
 	(pretty-print (rbstate-pc ret))
-;	(check-asserts 0)
+	(check-asserts 0)
 	ret)
 
 (define line-counter 0)
@@ -617,7 +624,7 @@
 
 		(match inst 
 			[(inst-nop _) 
-				(update-rbstate (iassert-pc-next #t #t) mem-in #f null)]
+				(update-rbstate (iassert-pc-next #t #t) mem-in #f)]
 
 			[(inst-init classname)
 				(begin
@@ -638,7 +645,7 @@
 
 			[(inst-newarray v-name size-expr) 
 				(begin
-				(define size (expr-eval size-expr mac-eval-ctxt))
+				(define size (car (expr-eval size-expr mac-eval-ctxt)))
 				(match-define (cons addr mem-alloc) (memory-alloc mem-0 size))
 				(define mem-ass (memory-sforce-write mem-alloc v-name addr 0 addr-type))
 				(assert id)
@@ -668,6 +675,7 @@
 				(pretty-print inst)
 				(display (~a "Output state id: " (memory-id mem-ret) "\n"))
 				(inspect fml-path)
+;				(test-assert! fml-path)
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
 
 			[(inst-long-jump cls-name func-name)
@@ -697,7 +705,7 @@
 
 			[(inst-static-call ret cls-name func-name arg-types args) 
 				(begin
-				(define args-v (map (lambda (arg) (expr-eval arg mac-eval-ctxt)) args))
+				(define args-v (map (lambda (arg) (car (expr-eval arg mac-eval-ctxt))) args))
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
 					(begin
@@ -735,7 +743,7 @@
 			[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
 				(begin
 				(define obj-addr (memory-sforce-read mem-0 obj-name 0))
-				(define args-v (map (lambda (arg) (expr-eval arg mac-eval-ctxt)) args))
+				(define args-v (map (lambda (arg) (car (expr-eval arg mac-eval-ctxt))) args))
 
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
@@ -801,7 +809,7 @@
 			[(inst-special-call ret obj-name cls-name func-name arg-types args)
 				(begin
 				(define obj-addr (memory-sforce-read mem-0 obj-name 0))
-				(define args-v (map (lambda (arg) (expr-eval arg mac-eval-ctxt)) args))
+				(define args-v (map (lambda (arg) (car (expr-eval arg mac-eval-ctxt))) args))
 
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
@@ -853,7 +861,7 @@
 							(letrec
 								([addr (memory-sforce-read mem-0 (string-id (variable-name arr)) 0)]
 								[idx-e (ast->expression idx)]
-								[idx-v (expr-eval idx-e mac-eval-ctxt)])
+								[idx-v (car (expr-eval idx-e mac-eval-ctxt))])
 								(memory-awrite mem-0 addr idx-v value (jtype->mtype jtype)))]
 						[(expr-field obj cls fname)
 							(letrec
@@ -866,7 +874,7 @@
 			[(inst-switch cnd cases default-l)
 				(begin
 				(define lmap (function-lmap func))
-				(define cnd-v (expr-eval cnd mac-eval-ctxt))
+				(define cnd-v (car (expr-eval cnd mac-eval-ctxt)))
 				(define default-pc (if default-l (imap-get lmap default-l default-type) (+ 1 pc)))
 
 				(define cases-cnd (map (lambda (k.l)
@@ -886,13 +894,15 @@
 
 			;[!]there might be bug if reading from heap
 			[(inst-jmp condition label)
-				(begin
-				(define lmap (function-lmap func))
-				(define cnd (expr-eval condition mac-eval-ctxt))
-				(define fml-update #t)
-				(define fml-new (iassert-pc-branch (select-fml? fml-update) (select-fml? cnd) (select-fml? (not cnd)) label))
-				(define pc-br (imap-get (function-lmap func) label default-type))
-				(if summary? 
-					(update-rbstate-verbose fml-new mem-in pc-br (not cnd) cnd)
-					(update-rbstate fml-new mem-in pc-br)))]))]))
+				(if (equal? (imap-get (function-lmap func) label default-type) (+ pc 1))
+					(update-rbstate (iassert-pc-next #t #t) mem-in #f)
+					(begin
+					(define lmap (function-lmap func))
+					(define cnd (car (expr-eval condition mac-eval-ctxt)))
+					(define fml-update #t)
+					(define fml-new (iassert-pc-branch (select-fml? fml-update) (select-fml? cnd) (select-fml? (not cnd)) label))
+					(define pc-br (imap-get (function-lmap func) label default-type))
+					(if summary? 
+						(update-rbstate-verbose fml-new mem-in pc-br (not cnd) cnd)
+						(update-rbstate fml-new mem-in pc-br))))]))]))
 

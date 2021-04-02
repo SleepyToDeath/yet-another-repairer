@@ -43,7 +43,7 @@
 
 (pretty-print buggy)
 
-(define input1 (list (string-id "0")))
+(define input1 (list (cons (string-id "0") "string")))
 (define output1 (list (cons var-ret-name 0)))
 
 (define mac (ast->machine buggy))

@@ -83,7 +83,7 @@
 	(set! current-context mac))
 	
 (define var-void-receiver-name (string-id "__no_receiver"))
-(define addr-void-receiver nullptr)
+(define addr-void-receiver (nullptr addr-type))
 (define (set-void-receiver-addr addr)
 	(set! addr-void-receiver addr))
 	

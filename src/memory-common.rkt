@@ -68,7 +68,7 @@
 
 (define int-type integer?)
 
-(define bool-type boolean?)
+(define bool-type integer?)
 
 
 (define addr-type int-type)

@@ -5,7 +5,9 @@
 (require "match-define.rkt")
 (require "memory-common.rkt")
 (require "formula.rkt")
+(require "type-checker.rkt")
 (require "semantics-common.rkt")
+(require racket/format)
 
 (provide model-lookup)
 
@@ -82,10 +84,10 @@
 		(cons "java.util.Map" "<init>")
 		(lambda (mem obj ret args)
 			(define fid-class-name (vfield-id current-context map-class-name field-name-class))
-			(define mem-bind (memory-fwrite mem fid-class-name obj map-class-name))
+			(define mem-bind (memory-fwrite mem fid-class-name obj map-class-name name-type))
 			(match-define (cons addr-kv mem-arr) (memory-alloc mem-bind map-max-capacity))
 			(defer-eval "HashMap.<init>" (list obj addr-kv fid-class-name args))
-			(define mem-ass (memory-fwrite mem-arr (map-fid-kv) obj addr-kv))
+			(define mem-ass (memory-fwrite mem-arr (map-fid-kv) obj addr-kv addr-type))
 			mem-ass
 		))
 
@@ -98,9 +100,9 @@
 		(cons "java.util.Map" "remove")
 		(lambda (mem obj ret args) 
 			(define key (map-hash-func (first args)))
-			(define addr-kv (memory-fread mem (map-fid-kv) obj))
+			(define addr-kv (memory-fread mem (map-fid-kv) obj addr-type))
 			(defer-eval "Map.remove" (list obj addr-kv key args))
-			(define mem-rm (memory-awrite mem addr-kv key not-found))
+			(define mem-rm (memory-awrite mem addr-kv key (not-found addr-type) addr-type))
 			mem-rm
 		))
 
@@ -108,11 +110,12 @@
 		(cons "java.util.Map" "get")
 		(lambda (mem obj ret args)
 			(define key (map-hash-func (first args)))
-			(define addr-kv (memory-fread mem (map-fid-kv) obj))
-			(define value.maybe (memory-aread mem addr-kv key))
-			(define value (if (equal? value.maybe not-found) nullptr value.maybe))
+			(define addr-kv (memory-fread mem (map-fid-kv) obj addr-type))
+			(define value.maybe (memory-aread mem addr-kv key addr-type))
+			(define value (if (equal? value.maybe (not-found addr-type)) (nullptr addr-type) value.maybe))
 			(defer-eval "Map.get" (list obj addr-kv key value args))
-			(define mem-ret (memory-sforce-write mem ret value 0))
+			(display (~a "Map.get: " (list obj addr-kv key value args) "\n"))
+			(define mem-ret (memory-sforce-write mem ret value 0 addr-type))
 			mem-ret
 		))
 
@@ -121,9 +124,9 @@
 		(lambda (mem obj ret args)
 			(define key (map-hash-func (first args)))
 			(define value (second args))
-			(define addr-kv (memory-fread mem (map-fid-kv) obj))
+			(define addr-kv (memory-fread mem (map-fid-kv) obj addr-type))
 			(defer-eval "Map.put" (list obj addr-kv key value args))
-			(define mem-put (memory-awrite mem addr-kv key value))
+			(define mem-put (memory-awrite mem addr-kv key value addr-type))
 			mem-put
 		))
 
@@ -131,11 +134,11 @@
 		(cons "java.util.Map" "containsKey")
 		(lambda (mem obj ret args)
 			(define key (map-hash-func (first args)))
-			(define addr-kv (memory-fread mem (map-fid-kv) obj))
-			(define value (memory-aread mem addr-kv key))
-			(define flag (not (equal? value not-found)))
+			(define addr-kv (memory-fread mem (map-fid-kv) obj addr-type))
+			(define value (memory-aread mem addr-kv key addr-type))
+			(define flag (not (equal? value (not-found addr-type))))
 			(defer-eval "Map.containsKey" (list obj addr-kv key value flag args))
-			(define mem-ret (memory-sforce-write mem ret flag 0))
+			(define mem-ret (memory-sforce-write mem ret flag 0 addr-type))
 			mem-ret
 		))
 ))
@@ -165,10 +168,10 @@
 		(cons "java.util.HashMap" "<init>")
 		(lambda (mem obj ret args)
 			(define fid-class-name (vfield-id current-context hashmap-class-name field-name-class))
-			(define mem-bind (memory-fwrite mem fid-class-name obj hashmap-class-name))
+			(define mem-bind (memory-fwrite mem fid-class-name obj hashmap-class-name name-type))
 			(match-define (cons addr-kv mem-arr) (memory-alloc mem-bind hashmap-max-capacity))
 			(defer-eval "HashMap.<init>" (list obj addr-kv fid-class-name args))
-			(define mem-ass (memory-fwrite mem-arr (hashmap-fid-kv) obj addr-kv))
+			(define mem-ass (memory-fwrite mem-arr (hashmap-fid-kv) obj addr-kv addr-type))
 			mem-ass
 		))
 
@@ -181,9 +184,9 @@
 		(cons "java.util.HashMap" "remove")
 		(lambda (mem obj ret args) 
 			(define key (hashmap-hash-func (first args)))
-			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
+			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj addr-type))
 			(defer-eval "HashMap.remove" (list obj addr-kv key args))
-			(define mem-rm (memory-awrite mem addr-kv key not-found))
+			(define mem-rm (memory-awrite mem addr-kv key (not-found addr-type) addr-type))
 			mem-rm
 		))
 
@@ -191,11 +194,12 @@
 		(cons "java.util.HashMap" "get")
 		(lambda (mem obj ret args)
 			(define key (hashmap-hash-func (first args)))
-			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
-			(define value.maybe (memory-aread mem addr-kv key))
-			(define value (if (equal? value.maybe not-found) nullptr value.maybe))
+			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj addr-type))
+			(define value.maybe (memory-aread mem addr-kv key addr-type))
+			(define value (if (equal? value.maybe (not-found addr-type)) (nullptr addr-type) value.maybe))
+			(display (~a "HashMap.get: " (list obj addr-kv key value args) "\n"))
 			(defer-eval "HashMap.get" (list obj addr-kv key value args))
-			(define mem-ret (memory-sforce-write mem ret value 0))
+			(define mem-ret (memory-sforce-write mem ret value 0 addr-type))
 			mem-ret
 		))
 
@@ -204,9 +208,9 @@
 		(lambda (mem obj ret args)
 			(define key (hashmap-hash-func (first args)))
 			(define value (second args))
-			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
+			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj addr-type))
 			(defer-eval "HashMap.put" (list obj addr-kv key value args))
-			(define mem-put (memory-awrite mem addr-kv key value))
+			(define mem-put (memory-awrite mem addr-kv key value addr-type))
 			mem-put
 		))
 
@@ -214,11 +218,11 @@
 		(cons "java.util.HashMap" "containsKey")
 		(lambda (mem obj ret args)
 			(define key (hashmap-hash-func (first args)))
-			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj))
-			(define value (memory-aread mem addr-kv key))
-			(define flag (not (equal? value not-found)))
+			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj addr-type))
+			(define value (memory-aread mem addr-kv key addr-type))
+			(define flag (not (equal? value (not-found addr-type))))
 			(defer-eval "HashMap.containsKey" (list obj addr-kv key value flag args))
-			(define mem-ret (memory-sforce-write mem ret flag 0))
+			(define mem-ret (memory-sforce-write mem ret flag 0 addr-type))
 			mem-ret
 		))
 ))
@@ -246,9 +250,9 @@
 		(cons "java.util.HashSet" "<init>")
 		(lambda (mem obj ret args)
 			(define fid-class-name (vfield-id current-context hashset-class-name field-name-class))
-			(define mem-bind (memory-fwrite mem fid-class-name obj hashset-class-name))
+			(define mem-bind (memory-fwrite mem fid-class-name obj hashset-class-name addr-type))
 			(match-define (cons addr-kv mem-arr) (memory-alloc mem-bind hashset-max-capacity))
-			(define mem-ass (memory-fwrite mem-arr (hashset-fid-v) obj addr-kv))
+			(define mem-ass (memory-fwrite mem-arr (hashset-fid-v) obj addr-kv addr-type))
 			mem-ass
 		))
 
@@ -256,8 +260,8 @@
 		(cons "java.util.HashSet" "remove")
 		(lambda (mem obj ret args) 
 			(define key (hashset-hash-func (first args)))
-			(define addr-kv (memory-fread mem (hashset-fid-v) obj))
-			(define mem-rm (memory-awrite mem addr-kv key not-found))
+			(define addr-kv (memory-fread mem (hashset-fid-v) obj addr-type))
+			(define mem-rm (memory-awrite mem addr-kv key (not-found addr-type) addr-type))
 			mem-rm
 		))
 
@@ -266,8 +270,8 @@
 		(lambda (mem obj ret args)
 			(define key (hashset-hash-func (first args)))
 			(define value hashset-exists-flag)
-			(define addr-kv (memory-fread mem (hashset-fid-v) obj))
-			(define mem-put (memory-awrite mem addr-kv key value))
+			(define addr-kv (memory-fread mem (hashset-fid-v) obj addr-type))
+			(define mem-put (memory-awrite mem addr-kv key value addr-type))
 			mem-put
 		))
 
@@ -275,10 +279,10 @@
 		(cons "java.util.HashSet" "contains")
 		(lambda (mem obj ret args)
 			(define key (hashset-hash-func (first args)))
-			(define addr-kv (memory-fread mem (hashset-fid-v) obj))
-			(define value (memory-aread mem addr-kv key))
+			(define addr-kv (memory-fread mem (hashset-fid-v) obj addr-type))
+			(define value (memory-aread mem addr-kv key addr-type))
 			(define flag (equal? value hashset-exists-flag))
-			(define mem-ret (memory-sforce-write mem ret flag 0))
+			(define mem-ret (memory-sforce-write mem ret flag 0 addr-type))
 			mem-ret
 		))
 ))
@@ -299,7 +303,7 @@
 		(cons "java.util.ArrayList" "<init>")
 		(lambda (mem obj ret args)
 			(define fid-class-name (vfield-id current-context (string-id "java.util.ArrayList") field-name-class))
-			(define mem-bind (memory-fwrite mem fid-class-name obj (string-id "java.util.ArrayList")))
+			(define mem-bind (memory-fwrite mem fid-class-name obj (string-id "java.util.ArrayList") name-type))
 			mem-bind
 		))
 
@@ -318,7 +322,7 @@
 		))
 ))
 
-;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) ArrayList-funcs)
+(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) ArrayList-funcs)
 ;==============================================
 
 ;================= Optional ===================
@@ -333,7 +337,7 @@
 		(cons "java.lang.String" "valueOf")
 		(lambda (mem ret args)
 			(define vi (first args))
-			(define mem-ret (memory-sforce-write mem ret (string-value-of vi) 0))
+			(define mem-ret (memory-sforce-write mem ret (string-value-of vi) 0 string-type))
 			mem-ret))
 ))
 
@@ -356,7 +360,7 @@
 		;[!] not true clone, just returning the original one
 		(cons "java.lang.Object" "clone")
 		(lambda (mem obj ret args)
-			(define mem-ret (memory-sforce-write mem ret obj 0))
+			(define mem-ret (memory-sforce-write mem ret obj 0 addr-type))
 			mem-ret))
 ))
 (map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Object-funcs)
@@ -369,7 +373,7 @@
 	(cons
 		(cons "java.lang.Math" "random")
 		(lambda (mem ret args)
-			(define mem-ret (memory-sforce-write mem ret math-random-num 0))
+			(define mem-ret (memory-sforce-write mem ret math-random-num 0 int-type))
 			mem-ret))
 ))
 
@@ -396,8 +400,8 @@
 		(cons "org.projectfloodlight.openflow.types.MacAddress" "<init>")
 		(lambda (mem obj ret args)
 			(define fid-class-name (vfield-id current-context mac-class-name field-name-class))
-			(define mem-bind (memory-fwrite mem fid-class-name obj mac-class-name))
-			(define mem-ass (memory-fwrite mem-bind (mac-fid-raw) obj (first args)))
+			(define mem-bind (memory-fwrite mem fid-class-name obj mac-class-name name-type))
+			(define mem-ass (memory-fwrite mem-bind (mac-fid-raw) obj (first args) bv-type))
 			mem-ass))
 
 	(cons
@@ -406,10 +410,10 @@
 			(match-define (cons obj mem-alloc) (memory-new mem))
 
 			(define fid-class-name (vfield-id current-context mac-class-name field-name-class))
-			(define mem-bind (memory-fwrite mem-alloc fid-class-name obj mac-class-name))
-			(define mem-ass (memory-fwrite mem-bind (mac-fid-raw) obj (first args)))
+			(define mem-bind (memory-fwrite mem-alloc fid-class-name obj mac-class-name name-type))
+			(define mem-ass (memory-fwrite mem-bind (mac-fid-raw) obj (first args) bv-type))
 
-			(define mem-ret (memory-sforce-write mem ret obj 0))
+			(define mem-ret (memory-sforce-write mem ret obj 0 addr-type))
 			mem-ret))
 ))
 			

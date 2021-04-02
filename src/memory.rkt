@@ -89,17 +89,17 @@
 
 ;read a field value of an object
 (define (memory-fread mem fname obj-addr type)
-	(begin
+	(display (~a "memory-fread: " (list  fname obj-addr type) "\n"))
 	(define vt-addr (memory-vt-base mem fname))
 	(define faddr (memory-vt-lookup mem vt-addr obj-addr))
-	(memory-hread mem faddr type)))
+	(memory-hread mem faddr type))
 
 ;write to a field of an object
 (define (memory-fwrite mem fname obj-addr value type) 
-	(begin
+	(display (~a "memory-fwrite: " (list  fname obj-addr value type) "\n"))
 	(define vt-addr (memory-vt-base mem fname))
 	(define faddr (memory-vt-lookup mem vt-addr obj-addr))
-	(memory-hwrite mem faddr value type)))
+	(memory-hwrite mem faddr value type))
 
 ;return baes address of a virtual table
 (define (memory-vt-base mem name)
