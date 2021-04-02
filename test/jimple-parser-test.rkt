@@ -4,6 +4,7 @@
 (require (prefix-in std: racket/base))
 (require "../src/jimple/jimple-parser.rkt")
 (require (prefix-in ast: "../src/syntax-jimple.rkt"))
+(require (prefix-in j: "../src/jimple/operators.rkt"))
 
 
 (define (string-append-newline . strs)
@@ -793,13 +794,13 @@
                 (ast:lexpr (ast:expr-var (ast:variable "y")))
                 (ast:expr (ast:expr-binary
                   (ast:expr (ast:expr-var (ast:variable "x")))
-                  (ast:op +)
+                  (ast:op j:op-add)
                   (ast:expr (ast:expr-const (ast:const 1)))))))
               (ast:stat (ast:stat-ass
                 (ast:lexpr (ast:expr-var (ast:variable "z")))
                 (ast:expr (ast:expr-binary
                   (ast:expr (ast:expr-var (ast:variable "x")))
-                  (ast:op >)
+                  (ast:op j:op-gt)
                   (ast:expr (ast:expr-var (ast:variable "y")))))))))))))
     "expr binary operation 1")
 )

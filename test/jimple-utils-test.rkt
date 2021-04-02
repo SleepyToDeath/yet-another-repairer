@@ -37,7 +37,7 @@
   (check-equal? (length
                   (ast:function-list-fl
                     (ast:function-declares-rhs
-                      (ast:class-default-member-functions
+                      (ast:class-default-virtual-functions
                         (ast:class-def-rhs
                           (car
                             (ast:class-list-cl

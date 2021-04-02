@@ -6,6 +6,8 @@
 (require br-parser-tools/lex)
 (require (prefix-in s: racket/string))
 (require (prefix-in sre: br-parser-tools/lex-sre))
+(require (prefix-in m: "../memory-common.rkt"))
+(require (prefix-in r: rosette/base/base))
 
 
 (define (string->bool str)
@@ -16,9 +18,9 @@
           (error "Unknown boolean constant: " str))))
 
 
-(define (string->int str)
+(define (string->int-or-bv str)
   (if (s:string-suffix? str "L")
-      (string->number (substring str 0 (- (string-length str) 1)))
+      (r:bv (string->number (substring str 0 (- (string-length str) 1))) m:bv-type)
       (string->number str)))
 
 
@@ -271,7 +273,7 @@
        [bool_constant
         (token 'BOOL_CONSTANT (string->bool lexeme))]
        [integer_constant
-        (token 'INTEGER_CONSTANT (string->int lexeme))]
+        (token 'INTEGER_CONSTANT (string->int-or-bv lexeme))]
        [float_constant
         (token 'FLOAT_CONSTANT (string->number lexeme))]
        [string_constant
