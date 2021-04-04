@@ -185,9 +185,9 @@
 			(define ms (imap-get-type m type))
 			(imap-add-index (cons index type))
 			(do-n-ret
-				(lambda (ret) (defer-eval "imap get" (list index ret type)))
+				(lambda (ret) (begin (defer-eval "imap get" (list index ret type))))
 				(if (not (imap-sym? ms))
-					not-found
+					(not-found type)
 					(imap-get+ ms index type))))
 
 		(define (imap-set m index value type)
@@ -304,7 +304,7 @@
 					all-typed-keys))
 				memory-id-list))
 
-			(pretty-print (list fml-maybe-wrong fml-always-right))
+;			(pretty-print (list fml-maybe-wrong fml-always-right))
 
 			(and fml-maybe-wrong fml-always-right))
 		all-types-ordered))

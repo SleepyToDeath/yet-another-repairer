@@ -146,8 +146,7 @@
 		;(pretty-print (list fml-cfi fml-code fml-code-bind fml-ass fml-out))
 		;(print-fml fml-cfi)
 		;(print-fml fml-code)
-		(and fml-code))
-		;(and fml-cfi fml-code fml-code-bind fml-ass fml-out))
+		(and fml-cfi fml-code fml-code-bind fml-ass fml-out))
 
 	(list mac soft-cons hard-cons))
 
@@ -434,7 +433,7 @@
 	(define ret (inst->relation.real inst st))
 	(display "\n updated pc:\n")
 	(pretty-print (rbstate-pc ret))
-	(check-asserts 0)
+;	(check-asserts 0)
 	ret)
 
 (define line-counter 0)

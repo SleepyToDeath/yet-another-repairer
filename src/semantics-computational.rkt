@@ -610,7 +610,7 @@
 		(define ret (if (equal? name var-this-name)
 			(memory-sforce-read (machine-mem m) name 1)
 			(memory-sforce-read (machine-mem m) name 0)))
-		(display (~a "var read: " (cons (iexpr-var-name e) ret) "\n"))
+;		(display (~a "var read: " (cons (iexpr-var-name e) ret) "\n"))
 		(defer-eval "var read: " (cons (iexpr-var-name e) ret))
 		(cons ret jtype))])
 
@@ -621,7 +621,7 @@
 		(match-define (cons v2 t2) (expr-eval-dispatch (iexpr-binary-expr2 e) m))
 ;		(defer-eval e v1)
 ;		(defer-eval e v2)
-		(display (~a "Binary op v1: " v1 " v2: " v2 "\n"))
+;		(display (~a "Binary op v1: " v1 " v2: " v2 "\n"))
 		(define op (iexpr-binary-op e))
 		(define tr (op-return-type op t1 t2))
 		(cons (op v1 v2) tr))])
@@ -655,6 +655,6 @@
 					(memory-sforce-read mem0 obj-name 0))])
 				(memory-fread mem0 (vfield-id m cls-name fname) obj-addr mtype)))
 		(defer-eval "field read: " (list obj-name cls-name fname ret))
-		(display (~a "field read: " (list obj-name cls-name fname ret) "\n"))
+;		(display (~a "field read: " (list obj-name cls-name fname ret) "\n"))
 		(cons ret jtype))])
 

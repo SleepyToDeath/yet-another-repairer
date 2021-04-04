@@ -86,7 +86,7 @@
 			(define fid-class-name (vfield-id current-context map-class-name field-name-class))
 			(define mem-bind (memory-fwrite mem fid-class-name obj map-class-name name-type))
 			(match-define (cons addr-kv mem-arr) (memory-alloc mem-bind map-max-capacity))
-			(defer-eval "HashMap.<init>" (list obj addr-kv fid-class-name args))
+			(defer-eval "Map.<init>" (list obj addr-kv fid-class-name args))
 			(define mem-ass (memory-fwrite mem-arr (map-fid-kv) obj addr-kv addr-type))
 			mem-ass
 		))
