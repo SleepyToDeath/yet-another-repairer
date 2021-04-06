@@ -184,3 +184,6 @@ i2+
 
 (fooA ccc)
 (fooB ccc)
+
+(define e 1)
+

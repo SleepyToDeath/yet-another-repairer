@@ -35,7 +35,7 @@
 			(print op) 
 			(map print-fml-struct children)
 			(display ")"))]
-		[(const-fp id type) (begin (display " ") (display id))]
+		[(const-fp id type) (begin (display " ") (display (cons id type)))]
 		[(cons x y) (begin (print-fml-struct x) (print-fml-struct y))]
 		[x (begin (display " ") (display x))]))
 

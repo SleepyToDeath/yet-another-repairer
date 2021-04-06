@@ -174,7 +174,7 @@
 		(lambda (kv) (if (equal? (car kv) index) (cdr kv) #f))
 		(cons (cons nullptr0 (nullptr type)) (imap-sym-updates-committed m)))))
 	(define func-base (imap-sym-func-base m))
-	(if (number? pending) pending (func-base index)))
+	(if (type pending) pending (func-base index)))
 
 
 ;----------------- Symbolic Wrapper For Dispatching Types, Merging States and Tracking Keys ---------------------
@@ -279,7 +279,7 @@
 					(if (is-concrete-value? key)
 						(imap-preserve ms key)
 						((lambda () 
-							(define-symbolic* key-sym type)
+							(define-symbolic* key-sym addr-type)
 							(and (equal? key-sym key)
 								 (imap-preserve ms key-sym)))))))
 
@@ -304,7 +304,7 @@
 					all-typed-keys))
 				memory-id-list))
 
-;			(pretty-print (list fml-maybe-wrong fml-always-right))
+			(pretty-print (list fml-maybe-wrong fml-always-right))
 
 			(and fml-maybe-wrong fml-always-right))
 		all-types-ordered))

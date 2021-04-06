@@ -96,7 +96,7 @@
 (define (nullptr type)
 	(list-ref nullptr-list (type->ordinal type)))
 
-(define nullptr-list (list -1 (bv-type -1)))
+(define nullptr-list (list -1 (bv -1 bv-type)))
 
 (define nullptr0 (nullptr int-type))
 
@@ -108,7 +108,7 @@
 (define (not-found type)
 	(list-ref not-found-list (type->ordinal type)))
 
-(define not-found-list (list -6666666 (bv-type -6666666)))
+(define not-found-list (list -6666666 (bv -6666666 bv-type)))
 
 (define (is-not-found? v)
 	(equal? v (not-found (type-of v))))
@@ -118,7 +118,7 @@
 (define (invalid-state type)
 	(list-ref invalid-state-list (type->ordinal type)))
 
-(define invalid-state-list (list -314159265 (bv-type -314159265)))
+(define invalid-state-list (list -314159265 (bv -314159265 bv-type)))
 
 (define (is-invalid? v)
 	(equal? v (invalid-state (type-of v))))

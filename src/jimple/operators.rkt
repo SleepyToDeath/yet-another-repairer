@@ -25,7 +25,7 @@
 (define op-le (typed-op (list <= bvsle)))
 
 (define op-neq (lambda (x y) (not (equal? x y))))
-(define op-cmp (lambda (x y) (if (equal? x y) 0 (if (> x y) 1 -1))))
+(define op-cmp (lambda (x y) (if (equal? x y) 0 (if (op-gt x y) 1 -1))))
 
 
 

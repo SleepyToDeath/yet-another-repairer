@@ -54,8 +54,9 @@
 (define (op-return-type op t1 t2)
 	(define mt1 (jtype->mtype t1))
 	(define mt2 (jtype->mtype t2))
+	(define maybe-type (ormap (lambda (p) (if (equal? op (car p)) (cdr p) #f)) return-map))
 	(cond
-		[(ormap (lambda (p) (if (equal? op (car p)) (cdr p) #f)) return-map) => string-id]
+		[maybe-type (string-id maybe-type)]
 		[(member op generic-op-list) t1]
 		[else (force-error #t "Return type not known for \n")]))
 
@@ -83,6 +84,7 @@
 (define jtype-map
 	(list 
 		(cons int-type "int")
+		(cons bv-type "long")
 		(cons bool-type "boolean")))
 
 ;return a string of type name in java rather than a predicate

@@ -160,15 +160,15 @@ public class FirewallRule /* implements Comparable<FirewallRule> */ {
 
     public int priority = 0;
 
-    public FirewallAction action;
+    public String action;
 
-    public enum FirewallAction {
+//    public enum FirewallAction {
         /*
          * DROP: Drop rule
          * ALLOW: Allow rule
          */
-        DROP, ALLOW
-    }
+//        DROP, ALLOW
+//    }
 
     /**
      * The default rule is to match on anything.
@@ -195,7 +195,7 @@ public class FirewallRule /* implements Comparable<FirewallRule> */ {
         this.any_tp_src = true;
         this.any_tp_dst = true;
         this.priority = 0;
-        this.action = FirewallAction.ALLOW;
+        this.action = "ALLOW";//FirewallAction.ALLOW;
         this.ruleid = 0;
     }
 

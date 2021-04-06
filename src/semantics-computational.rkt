@@ -121,7 +121,7 @@
 	mac-init)
 
 (define (ast->class ast)
-	(display "--------------------ast->class\n")
+;	(display "--------------------ast->class\n")
 	(define rhs (class-def-rhs ast))
 	(match rhs
 		[(class-default name-ast extend-ast interfaces-ast sfields-ast vfields-ast sfuncs-ast vfuncs-ast)
@@ -139,7 +139,7 @@
 ;(LHS-C function-declare (rhs ::= function-content))
 ;	(RHS-C function-content (name : function-name) (args : arguments) (local-variables : variable-declares) (statements : stats))
 (define (ast->function classname ast)
-	(display "--------------------ast->function\n")
+;	(display "--------------------ast->function\n")
 	(define rhs (function-declare-rhs ast))
 	(match rhs
 		[(function-content name-ast args-ast ret-ast local-vars-ast statements-ast)
@@ -179,8 +179,8 @@
 
 ;ast X lmap X line-number -> instruction X lmap(updated)
 (define (ast->instruction ast lmap line-num)
-	(display "--------------------ast->instruction\n")
-	(pretty-print ast)
+;	(display "--------------------ast->instruction\n")
+;	(pretty-print ast)
 	(match ast
 		[(stat s) (ast->instruction s lmap line-num)]
 		[(stat-ass target rvalue) 
@@ -225,7 +225,7 @@
 				lmap)]))
 
 (define (ast->expression ast)
-	(display "--------------------ast->expression\n")
+;	(display "--------------------ast->expression\n")
 	(match ast
 		[(expr e) (ast->expression e)]
 		[(lexpr e) (ast->expression e)]
@@ -265,7 +265,7 @@
 		(define mac-sfuncs (foldl 
 			(lambda (sf mac) 
 				(define sid (sfunc-id cls-name (function-name sf) (map cdr (function-args sf))))
-				(pretty-print (list "static func:" (function-name sf) sid))
+;				(pretty-print (list "static func:" (function-name sf) sid))
 ;				(define mem-1 (memory-sforce-write (machine-mem mac) sid sid 0))
 				(define fmap-1 (imap-set (machine-fmap mac) sid sf default-type))
 				(std:struct-copy machine mac [fmap fmap-1]))
@@ -287,7 +287,7 @@
 			(lambda (vf mac) 
 				(define vid (vfunc-id mac cls-name (function-name vf) (map cdr (function-args vf))))
 				(define sid (sfunc-id cls-name (function-name vf) (map cdr (function-args vf))))
-				(pretty-print (list "virtual func:" cls-name (function-name vf) sid vid))
+;				(pretty-print (list "virtual func:" cls-name (function-name vf) sid vid))
 				(define mem-1 (memory-fdecl (machine-mem mac) vid)) 
 				(define fmap-1 (imap-set (machine-fmap mac) sid vf default-type))
 				(std:struct-copy machine mac [mem mem-1] [fmap fmap-1]))
@@ -314,7 +314,7 @@
 	(std:struct-copy machine mac-cls [mem mem-void-receiver]))
 
 (define (variable-definitions->list ast)
-	(display "--------------------var-def->list\n")
+;	(display "--------------------var-def->list\n")
 	(map variable-definition->pair (syntax-unwrap 2 ast)))
 
 (define (variable-definition->pair ast)
@@ -381,7 +381,7 @@
 					(letrec
 						([addr (memory-sforce-read mem0 (string-id (variable-name arr)) 0)]
 						[idx-e (ast->expression idx)]
-						[idx-v (expr-eval idx-e m)])
+						[idx-v (car (expr-eval idx-e m))])
 						(memory-awrite mem0 addr idx-v v-new (jtype->mtype v-new-jt)))]
 				[(expr-field obj cls fname)
 					(letrec

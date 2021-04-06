@@ -58,6 +58,7 @@ stack-empty)
 					(std:struct-copy static-scope (list-ref scs lvl) [array (std:list-set (static-scope-array (list-ref scs lvl)) name value)])))])))
 
 (define (stack-static-decl mem name type)
+;	(pretty-print (list mem name type))
 	(define st (memory-stack mem))
 	(define scs (static-stack-scopes st))
 	(define sc (car scs))

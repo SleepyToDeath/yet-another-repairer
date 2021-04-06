@@ -15,6 +15,7 @@
 (require "semantics-relational.rkt")
 (require "semantics-computational.rkt")
 (require "semantics-common.rkt")
+(require "memory-common.rkt")
 (require "formula.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 
@@ -74,31 +75,26 @@ public class Test
 "
 public class Test
 {
-	public static int main(int)
+	public static int main(long)
 	{
-//        int i0;
-        int $b1;
-
-//        i0 := @parameter0: int;
-
-        $b1 = 0;
-
-        goto label1;
-
-     label1:
-        return $b1;
+		long l0, l1;
+		l0 := @parameter0: long;
+        l1 = l0 & 281474976710655L;
+        return 15;
 	}
 }
 ")))
 
-(define buggy (program
-	(class-list (list class-A class-B))))
+;(define buggy (program
+;	(class-list (list class-A class-B))))
 
-;(define buggy (program (class-list (list class-0))))
+(define buggy (program (class-list (list class-0))))
 
 (pretty-print buggy)
 
-(define input1 (list (cons 4 "int") (cons 5 "int") (cons 6 "int")))
+;(define input1 (list (cons 4 "int") (cons 5 "int") (cons 6 "int")))
+(define input1 (list (cons (bv 123 bv-type) "long")))
+;(define input1 (list (cons 1 "int")))
 (define output1 (list (cons var-ret-name 15)))
 
 (define mac (ast->machine buggy))

@@ -418,4 +418,4 @@
 ))
 			
 
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) MacAddress-funcs)
+;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) MacAddress-funcs)

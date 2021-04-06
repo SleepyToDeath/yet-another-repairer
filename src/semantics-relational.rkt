@@ -69,7 +69,7 @@
 			(match-define (cons mem-ass fml-ass)
 				(foldl 
 					(lambda (v.t mem+fml) 
-						(define-symbolic* vi integer?)
+						(define-symbolic* vi (jtype->mtype (string-id (cdr v.t))))
 						(define fml (equal? vi (car v.t)))
 						(cons 
 							(memory-sforce-write (car mem+fml) (next-parameter-name) vi 0 (jtype->mtype (string-id (cdr v.t))))
@@ -144,8 +144,6 @@
 		(define fml-code-bind (memory-gen-binding))
 		(display "\n ###############################################8 \n")
 		;(pretty-print (list fml-cfi fml-code fml-code-bind fml-ass fml-out))
-		;(print-fml fml-cfi)
-		;(print-fml fml-code)
 		(and fml-cfi fml-code fml-code-bind fml-ass fml-out))
 
 	(list mac soft-cons hard-cons))
@@ -563,6 +561,8 @@
 
 		(define (invoke-setup func-fml-callee mem args)
 ;			(memory-print mem)
+;			(pretty-print args)
+;			(pretty-print mem)
 			(define mem-0 (memory-sym-reset (memory-sym-new summary?) mem summary?))
 			(define func (function-formula-func func-fml-callee))
 			(define mem-push (memory-spush mem-0))
@@ -592,6 +592,8 @@
 		(define (update-rbstate-verbose fml-new mem-out pc-opt-br cnd-next cnd-br)
 ;			(test-assert! fml-new)
 			(inspect fml-new)
+;			(display "++++++++++++++ Encoding: ++++++++++++\n")
+;			(print-fml fml-new)
 			(define pc-next (+ 1 pc))
 			(define func-fml-next (append-mem-in func-fml cnd-next mem-out pc-next))
 			(define func-fml-br (if pc-opt-br (append-mem-in func-fml-next cnd-br mem-out pc-opt-br) func-fml-next))
@@ -605,7 +607,7 @@
 			(display "Switch encoded.\n")
 			(pretty-print cases)
 			(inspect fml-new)
-			(print-fml fml-new)
+;			(print-fml fml-new)
 			(define func-fml-br (foldl (lambda (cnd.pc func-fml-cur)
 					(append-mem-in func-fml-cur (car cnd.pc) mem-out (cdr cnd.pc)))
 				func-fml 
@@ -665,6 +667,8 @@
 				(define mem-ret.tmp (memory-sforce-write mem-0 var-ret-name ret-value 0 (jtype->mtype ret-jtype)))
 				(define mem-ret (memory-sym-commit mem-ret.tmp))
 				(define fml-update (memory-sym-summary mem-ret summary?))
+;				(pretty-print mem-ret)
+;				(print-fml fml-update)
 ;				(define fml-ret (select-fml? fml-update))
 				(define fml-ret fml-update)
 				(define fml-path (iassert-pc-ret #t fml-ret))
@@ -672,9 +676,12 @@
 				(define func-fml-new (append-fml func-fml-ret fml-path))
 				(assert id)
 				(pretty-print inst)
-				(display (~a "Output state id: " (memory-id mem-ret) "\n"))
 				(inspect fml-path)
 ;				(test-assert! fml-path)
+;				(display "++++++++++++++ Encoding: ++++++++++++\n")
+;				(print-fml fml-path)
+
+				(display (~a "Output state id: " (memory-id mem-ret) "\n"))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
 
 			[(inst-long-jump cls-name func-name)
