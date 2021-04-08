@@ -141,9 +141,12 @@
 		(display "\n ###############################################6 \n")
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(display "\n ###############################################7 \n")
+;		(test-assert! fml-code)
 		(define fml-code-bind (memory-gen-binding))
+;		(test-assert! fml-code-bind)
 		(display "\n ###############################################8 \n")
 		;(pretty-print (list fml-cfi fml-code fml-code-bind fml-ass fml-out))
+;		(and fml-cfi fml-code fml-code-bind))
 		(and fml-cfi fml-code fml-code-bind fml-ass fml-out))
 
 	(list mac soft-cons hard-cons))
@@ -544,7 +547,8 @@
 							fml-path
 							(equal? mark (and fml-op fml-cnds fml-brs (next-mark)))))))
 
-		(define (long-jump-setup func-fml-callee mem)
+		(define (long-jump-setup func-fml-callee mem) (force-error #t "long jump is obsolete\n"))
+#|
 			(define mem-0 (memory-sym-reset (memory-sym-new summary?) mem summary?))
 			(define func (function-formula-func func-fml-callee))
 
@@ -558,19 +562,23 @@
 			(define mem-input (memory-sym-reset (memory-sym-new summary?) mem-decl (not trigger-summary?)))
 			(define func-fml-in (prepend-starting-mem-in func-fml-callee (if (or summary? trigger-summary?) #t mark) mem-input))
 			(cons func-fml-in fml-in))
+|#
 
 		(define (invoke-setup func-fml-callee mem args)
 ;			(memory-print mem)
 ;			(pretty-print args)
 ;			(pretty-print mem)
+			(display "invoke setup #1\n")
 			(define mem-0 (memory-sym-reset (memory-sym-new summary?) mem summary?))
 			(define func (function-formula-func func-fml-callee))
 			(define mem-push (memory-spush mem-0))
+			(display "invoke setup #2\n")
 			(define mem-decl (memory-sym-commit
 				(foldl 
 					(lambda (var-def mem) (memory-sdecl mem (car var-def) (jtype->mtype (cdr var-def)))) 
 					mem-push
-					(append (function-args func) (function-locals func) (list (cons var-ret-name 0))))))
+					(append (function-args func) (function-locals func) (list (cons var-ret-name (function-ret (function-formula-func func-fml-callee))))))))
+			(display "invoke setup #3\n")
 			(define mem-arg (memory-sym-commit
 				(foldl 
 					(lambda (arg-src arg-dst mem) 
@@ -579,8 +587,11 @@
 					args 
 					(function-args func))))
 			(define fml-in (memory-sym-summary mem-arg summary?))
+;			(pretty-print mem-arg)
+			(display "invoke setup #4\n")
 			(define mem-input (memory-sym-reset (memory-sym-new summary?) mem-arg (not trigger-summary?)))
 			(define func-fml-in (prepend-starting-mem-in func-fml-callee (if (or summary? trigger-summary?) #t mark) mem-input))
+			(display "invoke setup #5\n")
 			(cons func-fml-in fml-in))
 
 		; bool X memory X int(if with branch)/#f(if no branch) -> rbstate
@@ -764,7 +775,7 @@
 						(filter (lambda (f) (and (not (is-interface-func? f)) (equal? (function-formula-vid f) vid))) 
 							(all-vfunctions mac))))
 					(define fid-class-name (vfield-id mac cls-name field-name-class))
-					(define classname-true (memory-fread mem--1 fid-class-name obj-addr addr-type))
+					(define classname-true (memory-fread mem--1 fid-class-name obj-addr name-type))
 					(define true-func-invoked-sid (sfunc-id-pure classname-true func-name arg-types))
 
 					;push an extra scope to avoid overwriting "this" of the current scope
@@ -786,6 +797,7 @@
 						(define fml-sum (if trigger-summary? (memory-sym-summary mem-ret.tmp2 summary?) #t))
 
 						(define mem-ret (memory-sym-reset (if summary? mem-0 (memory-sym-new summary?)) mem-ret.tmp2 summary?))
+;						(pretty-print mem-ret)
 						(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
 						(if summary? #f (defer-eval inst ret-val))
 						(define mem-pop (memory-spop (memory-spop mem-ret)))

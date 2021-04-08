@@ -52,7 +52,8 @@ public final class OFFactories {
 		if (version == OFVersion.OF_10)
 			return org.projectfloodlight.openflow.protocol.ver10.OFFactoryVer10.INSTANCE;
 		else
-			throw new IllegalArgumentException("Unknown version");
+			return null;
+			//throw new IllegalArgumentException("Unknown version");
     }
 
     /*

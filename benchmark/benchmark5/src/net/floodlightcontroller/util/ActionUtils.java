@@ -1358,12 +1358,12 @@ public class ActionUtils {
      * @param version; The OF version to create the action for
      * @return
      */
-    public static OFAction decode_set_dst_port(String actionToDecode, OFVersion version) {
+    public static OFAction decode_set_dst_port(int actionToDecode, OFVersion version) {
         try {
             // expected:
             // OFActionSetTpDst a = OFFactories.getFactory(version).actions().buildSetTpDst()
             OFActionSetTpSrc a = OFFactories.getFactory(version).actions().buildSetTpSrc()
-                    .setTpPort(TransportPort.of(Integer.parseInt(actionToDecode)))
+                    .setTpPort(TransportPort.of(actionToDecode))
                     .build();
 //            log.debug("action {}", a);
             return a;

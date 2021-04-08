@@ -299,12 +299,13 @@
 				(andmap+ (lambda (mem-id)
 					(define ms (mem-get-typed mem-id type))
 					(andmap+ (lambda (key) 
-						(if (contain-key? mem-id key) #t
+					 	(if (contain-key? mem-id key) #t
 							((smart-preserve ms) key)))
 					all-typed-keys))
 				memory-id-list))
 
 			(pretty-print (list fml-maybe-wrong fml-always-right))
+			(display "++++++++++++++++++++++++\n")
 
 			(and fml-maybe-wrong fml-always-right))
 		all-types-ordered))

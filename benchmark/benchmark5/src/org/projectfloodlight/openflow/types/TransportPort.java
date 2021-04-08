@@ -35,7 +35,8 @@ public class TransportPort /* implements OFValueType<TransportPort> */ {
         else if (port == NO_MASK.port)
             return NO_MASK;
         else if (port < MIN_PORT || port > MAX_PORT) {
-            throw new IllegalArgumentException("Illegal transport layer port number: " + port);
+            return NONE;
+//            throw new IllegalArgumentException("Illegal transport layer port number: " + port);
         }
         return new TransportPort(port);
     }

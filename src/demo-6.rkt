@@ -41,7 +41,7 @@
 
 (pretty-print buggy)
 
-(define input1 (list 5))
+(define input1 (list (cons 5 "int")))
 (define output1 (list (cons var-ret-name 3)))
 
 (define mac (ast->machine buggy))

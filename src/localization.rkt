@@ -62,6 +62,9 @@
 ;	/* default version one bug */
 	(define debug-sol (solve (assert (and hard one-bug))))
 
+;	/* no bug */
+;	(define debug-sol (solve (assert (and hard no-bug))))
+
 ;	/* maximize satisfiable lines */
 ;	(define debug-sol (optimize #:maximize (list sum)
 ;			  #:guarantee (assert (and hard))))

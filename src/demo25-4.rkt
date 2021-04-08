@@ -19,15 +19,59 @@
 (require "formula.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 
+
+(define class-obj (p:build-ast-file (p:parse-to-stx
+"
+public class java.lang.Object
+{
+	public int __CLASS__;
+	public static void <init>() {
+        java.lang.Object r0;
+
+        r0 := @this: java.lang.Object;
+
+		return r0;
+	}
+
+    public boolean equals(java.lang.Object)
+	{
+        java.lang.Object r0, r1;
+
+        r0 := @this: java.lang.Object;
+
+        r1 := @parameter0: java.lang.Object;
+
+        if r0 != r1 goto label1;
+
+        return 1;
+
+     label1:
+        return 0;
+	}
+
+	//not real clone
+	public java.lang.Object clone()
+	{
+        java.lang.Object r0;
+
+        r0 := @this: java.lang.Object;
+		
+		return r0;
+	}
+
+}
+")))
+
 (define class-A (p:build-ast-file (p:parse-to-stx
 "
-public class A {
+public class A extends java.lang.Object {
 	public int n;
 	static void <init>(int)
 	{
 		A r0;
 		int $r1;
 		r0 := @this: A;
+        specialinvoke r0.<java.lang.Object: void <init>()>();
 		$r1 := @parameter0: int;
 		r0.<A: int n> = $r1;
 		return r0;
@@ -41,9 +85,6 @@ public class A {
 		$r1 := @parameter0: int;
 		$r2 = r0.<A: int n>;
 		$r3 = $r1 + $r2;
-		if $r3 > 0 goto label1;
-		return $r3;
-     label1:
 		return $r3;
 	}
 }
@@ -56,7 +97,7 @@ public class Test
 	public static int main(int, int, int)
 	{
 		int r1, r2, r3;
-		int r4;
+		int r4, r44;
 		int r5;
 		A r6;
 		r1 := @parameter0: int;
@@ -65,7 +106,7 @@ public class Test
 		r6 = new A;
 		specialinvoke r6.<A: void <init>(int)>(r1);
 		r4 = virtualinvoke r6.<A: int add(int)>(r2);
-		r5 = r4 - r3;
+		r5 = r4 + r3;
 		return r5;
 	}
 }
@@ -85,15 +126,15 @@ public class Test
 }
 ")))
 
-;(define buggy (program
-;	(class-list (list class-A class-B))))
+(define buggy (program
+	(class-list (list class-obj class-A class-B))))
 
-(define buggy (program (class-list (list class-0))))
+;(define buggy (program (class-list (list class-0))))
 
 (pretty-print buggy)
 
-;(define input1 (list (cons 4 "int") (cons 5 "int") (cons 6 "int")))
-(define input1 (list (cons (bv 123 bv-type) "long")))
+(define input1 (list (cons 4 "int") (cons 5 "int") (cons 6 "int")))
+;(define input1 (list (cons (bv 123 bv-type) "long")))
 ;(define input1 (list (cons 1 "int")))
 (define output1 (list (cons var-ret-name 15)))
 

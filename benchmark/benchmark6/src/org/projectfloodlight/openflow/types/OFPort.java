@@ -290,7 +290,8 @@ public class OFPort /* implements OFValueType<OFPort> */ {
                 // Any unsigned integer value > OFPP_MAX_INT will be ]-256:0[
                 // when read signed
                 if (portNumber < 0 && portNumber > OFPP_MAX_INT)
-                    throw new IllegalArgumentException("Unknown special port number:");
+					return null;
+                   // throw new IllegalArgumentException("Unknown special port number:");
                 return new OFPort(portNumber);
         }
     }

@@ -60,7 +60,7 @@
 
 (pretty-print buggy)
 
-(define input1 null)
+(define input1 (list (cons 1 "int")))
 (define output1 (list (cons var-ret-name 1)))
 
 (define mac (ast->machine buggy))

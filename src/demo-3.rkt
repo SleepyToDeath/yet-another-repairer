@@ -23,11 +23,12 @@
 
 (define src-classes (list
 "java.lang.Object.jimple"
-"java.lang.Enum.jimple"
+;"java.lang.Enum.jimple"
 ;"net.floodlightcontroller.firewall.FirewallRule$FirewallAction.jimple"
 "net.floodlightcontroller.firewall.FirewallRule.jimple"
 "net.floodlightcontroller.firewall.FirewallRuleTest.jimple"
-"org.projectfloodlight.openflow.types.MacAddress.jimple"))
+"org.projectfloodlight.openflow.types.MacAddress.jimple"
+))
 
 (define class-src-list (map (lambda (src-class) (begin 
 	(display (~a "Parsing src file: " src-class "\n"))
@@ -41,6 +42,7 @@
 (pretty-print buggy)
 
 (define input1 (list (cons (bv 100 bv-type) "long")))
+;(define input1 (list (cons 100 "int")))
 (define output1 (list (cons var-ret-name 1)))
 
 (define mac (ast->machine buggy))

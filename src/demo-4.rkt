@@ -13,6 +13,7 @@
 (require "semantics-relational.rkt")
 (require "semantics-computational.rkt")
 (require "semantics-common.rkt")
+(require "memory-common.rkt")
 (require "formula.rkt")
 (require racket/format)
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
@@ -45,7 +46,7 @@
 
 (pretty-print buggy)
 
-(define input1 (list 100))
+(define input1 (list (cons (bv 100 bv-type) "long")))
 (define output1 (list (cons var-ret-name 1)))
 
 (define mac (ast->machine buggy))

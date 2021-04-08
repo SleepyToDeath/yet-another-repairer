@@ -34,7 +34,7 @@
 		(foldl 
 			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)) (jtype->mtype (cdr var-def)))) 
 			(machine-mem mac) 
-			(append (function-args func) (function-locals func) (list (cons var-ret-name 0))))]))
+			(append (function-args func) (function-locals func) (list (cons var-ret-name (function-ret func)))))]))
 	(function-exec (std:struct-copy machine mac-decl [pc pc-init][fc func])))
 
 (define (function-call mac func args)
@@ -44,7 +44,7 @@
 		(foldl 
 			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)) (jtype->mtype (cdr var-def)))) 
 			(machine-mem mac-reset) 
-			(append (function-args func) (function-locals func)))]))
+			(append (function-args func) (function-locals func) (list (cons var-ret-name (function-ret func)))))]))
 	;[-TODO] arg & local type
 	(define mac-input (std:struct-copy machine mac-decl [mem
 		(foldl 
@@ -132,7 +132,7 @@
 				[sfuncs (map (lambda (ast) (ast->function name ast)) (syntax-unwrap 2 sfuncs-ast))]
 				[vfuncs	(map (lambda (ast) (ast->function name ast)) (syntax-unwrap 2 vfuncs-ast))]
 				[sfields (variable-definitions->list sfields-ast)]
-				[vfields (variable-definitions->list vfields-ast)])
+				[vfields (append sfields (variable-definitions->list vfields-ast))])
 				(class name extend interfaces sfuncs vfuncs sfields vfields))]))
 
 ;(struct function (name prog lmap args locals) #:transparent)
@@ -232,7 +232,7 @@
 		[(dexpr e) (ast->expression e)]
 		[(expr-const c) (iexpr-const 
 			(if (std:string? (const-v c)) (string-id (const-v c)) (const-v c))
-			(if (std:string? (const-v c)) "string" (jtype-of (const-v c))))]
+			(if (std:string? (const-v c)) string-type-name (jtype-of (const-v c))))]
 		[(expr-var v) (iexpr-var (string-id (variable-name v)))]
 		[(expr-binary expr1 o expr2) (iexpr-binary (op-v o) (ast->expression expr1) (ast->expression expr2))]
 		[(expr-array array index) (iexpr-array (string-id (variable-name array)) (ast->expression index))]
@@ -459,6 +459,7 @@
 		(define mem-0 (machine-mem m))
 		(define v-name (inst-new-v-name i))
 		(match-define (cons addr mem-alloc) (memory-new mem-0))
+		(display (~a "new object: " addr))
 		(define pc-next (+ 1 (machine-pc m)))
 		(define mem-ass (memory-sforce-write mem-alloc v-name addr 0 addr-type))
 ;		(pretty-print mem-ass)

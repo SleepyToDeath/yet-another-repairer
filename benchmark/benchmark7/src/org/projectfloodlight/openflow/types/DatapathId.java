@@ -20,13 +20,13 @@ public class DatapathId /* implements PrimitiveSinkable, Comparable<DatapathId> 
 
     public static final DatapathId NONE = new DatapathId(0);
 
-    private final long rawValue;
+    private final int rawValue;
 
-    private DatapathId(long rawValue) {
+    private DatapathId(int rawValue) {
         this.rawValue = rawValue;
     }
 
-    public static DatapathId of(long rawValue) {
+    public static DatapathId of(int rawValue) {
         return new DatapathId(rawValue);
     }
 
@@ -49,7 +49,7 @@ public class DatapathId /* implements PrimitiveSinkable, Comparable<DatapathId> 
     }
     */
 
-    public long getLong() {
+    public int getLong() {
         return rawValue;
     }
 

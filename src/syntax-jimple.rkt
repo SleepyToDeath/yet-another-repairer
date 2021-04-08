@@ -8,7 +8,7 @@
 
 (define bool-type-name "bool")
 (define int-type-name "int")
-(define string-type-name "string")
+(define string-type-name "java.lang.String")
 
 ;============= Syntax Definition & Check =============
 ;main function should be named "main"
@@ -75,7 +75,7 @@
 	(RHS-C expr-array (array : variable) (index : expr))
 	(RHS-C expr-field (obj : variable) (class : type-name) (fname : field))
 
-;"int" "string" "real" "bool" for primitive type names
+;"int" "java.lang.String" "real" "bool" for primitive type names
 (LHS-C variable-definition (rhs ::= variable-n-type))
 	(RHS-C variable-n-type (name : variable) (type : type-name))
 ;--------------------------------------------------------
