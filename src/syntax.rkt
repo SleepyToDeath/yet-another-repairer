@@ -15,8 +15,6 @@
 (define-generics expanded
 	[expanded-check expanded]
 	[expanded-get count expanded]) ;get first `count` sub-tree
-
-(struct syntax-context (vars types fields funcs consts ops labels) #:transparent)
 ;==================================================
 
 

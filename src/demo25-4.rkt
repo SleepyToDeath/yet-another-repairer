@@ -106,7 +106,7 @@ public class Test
 		r6 = new A;
 		specialinvoke r6.<A: void <init>(int)>(r1);
 		r4 = virtualinvoke r6.<A: int add(int)>(r2);
-		r5 = r4 + r3;
+		r5 = r4 - r3;
 		return r5;
 	}
 }

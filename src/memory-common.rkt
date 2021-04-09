@@ -44,7 +44,7 @@
 
 ;[+]
 ;scope-size = max number of different variable names
-(define scope-size 1000)
+(define scope-size 100)
 
 ;[-]
 (define vt-base-addr 0)
@@ -138,7 +138,7 @@
 (define memory-id-counter invalid-id)
 (define (memory-new-id)
 	(set! memory-id-counter (+ 1 memory-id-counter))
-	(display (~a "New state id: " memory-id-counter "\n"))
+;	(display (~a "New state id: " memory-id-counter "\n"))
 	memory-id-counter)
 
 

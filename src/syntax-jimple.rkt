@@ -92,6 +92,8 @@
 
 
 ;=================== Enumerators =====================
+(struct syntax-context (vars types fields funcs consts ops labels) #:transparent)
+
 ;(LHS-E stats -> (stats-enum ::= stats-multi-enum stats-single-enum))
 ;	(RHS-E stats-multi -> stats-multi-enum (stats-enum stats-enum))
 ;	(RHS-E stats-single -> stats-single-enum (stat-enum))

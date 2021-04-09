@@ -34,7 +34,7 @@
 ;cnd: the entire subtree is considered only if cnd is true
 (struct invoke-tree (root cnd subtrees) #:transparent)
 
-;(string X string X int)
+;(class X function X int)
 (struct location (class func line inst selector) #:transparent)
 ;============================= Top Level Interface ====================================
 ;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
@@ -48,7 +48,7 @@
 				(match func-fml
 					[(function-formula func lids _ _ _ _ _ class)
 						(map 
-							(lambda (line inst selector) (location class (function-name func) line inst selector))
+							(lambda (line inst selector) (location (imap-get (machine-cmap mac) class default-type) func line inst selector))
 							(std:range (length lids)) 
 							(function-prog func)
 							lids)]))
@@ -409,11 +409,11 @@
 ; if summary? then this will compute a summary (root-invoke-ret-mem will contain all updates)
 ; otherwise it is guaranteed to encode this invoked function (but may not recursively do so)
 (define (invoke->relation func-fml mac target-sids summary?)
-	(display (~a "sid for invoked function is: " (function-formula-sid func-fml) "\n"))
-	(display "\n ###############################################2 \n")
+;	(display (~a "sid for invoked function is: " (function-formula-sid func-fml) "\n"))
+;	(display "\n ###############################################2 \n")
 	(define ret (insts->relation func-fml mac target-sids summary?))
-	(display (~a "sid for invoked function is: " (function-formula-sid func-fml) "\n"))
-	(display "\n ###############################################3 \n")
+;	(display (~a "sid for invoked function is: " (function-formula-sid func-fml) "\n"))
+;	(display "\n ###############################################3 \n")
 	ret)
 
 ; "This function" is guaranteed to be at the beginning of the list.
@@ -432,8 +432,8 @@
 
 (define (inst->relation inst st)
 	(define ret (inst->relation.real inst st))
-	(display "\n updated pc:\n")
-	(pretty-print (rbstate-pc ret))
+;	(display "\n updated pc:\n")
+;	(pretty-print (rbstate-pc ret))
 ;	(check-asserts 0)
 	ret)
 
@@ -457,10 +457,9 @@
 		(set! line-counter (+ line-counter 1))
 		(display (~a "Lines of code: " line-counter))
 		(defer-eval "instruction: " inst)
-		(display "\nInstruction:\n")
 		(println inst)
-		(println mark)
-		(println id)
+		(pretty-print mark)
+		(pretty-print id)
 		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
 		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
 
@@ -568,17 +567,17 @@
 ;			(memory-print mem)
 ;			(pretty-print args)
 ;			(pretty-print mem)
-			(display "invoke setup #1\n")
+;			(display "invoke setup #1\n")
 			(define mem-0 (memory-sym-reset (memory-sym-new summary?) mem summary?))
 			(define func (function-formula-func func-fml-callee))
 			(define mem-push (memory-spush mem-0))
-			(display "invoke setup #2\n")
+;			(display "invoke setup #2\n")
 			(define mem-decl (memory-sym-commit
 				(foldl 
 					(lambda (var-def mem) (memory-sdecl mem (car var-def) (jtype->mtype (cdr var-def)))) 
 					mem-push
 					(append (function-args func) (function-locals func) (list (cons var-ret-name (function-ret (function-formula-func func-fml-callee))))))))
-			(display "invoke setup #3\n")
+;			(display "invoke setup #3\n")
 			(define mem-arg (memory-sym-commit
 				(foldl 
 					(lambda (arg-src arg-dst mem) 
@@ -588,10 +587,10 @@
 					(function-args func))))
 			(define fml-in (memory-sym-summary mem-arg summary?))
 ;			(pretty-print mem-arg)
-			(display "invoke setup #4\n")
+;			(display "invoke setup #4\n")
 			(define mem-input (memory-sym-reset (memory-sym-new summary?) mem-arg (not trigger-summary?)))
 			(define func-fml-in (prepend-starting-mem-in func-fml-callee (if (or summary? trigger-summary?) #t mark) mem-input))
-			(display "invoke setup #5\n")
+;			(display "invoke setup #5\n")
 			(cons func-fml-in fml-in))
 
 		; bool X memory X int(if with branch)/#f(if no branch) -> rbstate
@@ -609,14 +608,14 @@
 			(define func-fml-next (append-mem-in func-fml cnd-next mem-out pc-next))
 			(define func-fml-br (if pc-opt-br (append-mem-in func-fml-next cnd-br mem-out pc-opt-br) func-fml-next))
 			(define func-fml-new (append-fml func-fml-br fml-new))
-			(pretty-print inst)
-			(display (~a "Output state id: " (memory-id mem-out) "\n"))
+;			(pretty-print inst)
+;			(display (~a "Output state id: " (memory-id mem-out) "\n"))
 			(std:struct-copy rbstate st [pc pc-next] [func-fml func-fml-new]))
 
 		;cases: (list of (cnd X pc))
 		(define (update-rbstate-switch fml-new mem-out cases)
-			(display "Switch encoded.\n")
-			(pretty-print cases)
+;			(display "Switch encoded.\n")
+;			(pretty-print cases)
 			(inspect fml-new)
 ;			(print-fml fml-new)
 			(define func-fml-br (foldl (lambda (cnd.pc func-fml-cur)
@@ -624,8 +623,8 @@
 				func-fml 
 				cases))
 			(define func-fml-new (append-fml func-fml-br fml-new))
-			(pretty-print inst)
-			(display (~a "Output state id: " (memory-id mem-out) "\n"))
+;			(pretty-print inst)
+;			(display (~a "Output state id: " (memory-id mem-out) "\n"))
 			(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))
 
 		(define (update-mem-only mem-new)
@@ -686,13 +685,13 @@
 				(define func-fml-ret (prepend-ending-mem-in func-fml (if summary? #t mark) mem-ret))
 				(define func-fml-new (append-fml func-fml-ret fml-path))
 				(assert id)
-				(pretty-print inst)
+;				(pretty-print inst)
 				(inspect fml-path)
 ;				(test-assert! fml-path)
 ;				(display "++++++++++++++ Encoding: ++++++++++++\n")
 ;				(print-fml fml-path)
 
-				(display (~a "Output state id: " (memory-id mem-ret) "\n"))
+;				(display (~a "Output state id: " (memory-id mem-ret) "\n"))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
 
 			[(inst-long-jump cls-name func-name)
@@ -726,7 +725,7 @@
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
 					(begin
-					(assert id)
+;					(assert id)
 					(update-mem-only (mfunc mem-0 ret args-v)))
 
 					(begin
@@ -737,7 +736,7 @@
 					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
 					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-in args))
 					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? trigger-summary?)))
-					(pretty-print inst)
+;					(pretty-print inst)
 
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 					(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
@@ -765,7 +764,7 @@
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
 					(begin
-					(assert id)
+;					(assert id)
 					(update-mem-only (mfunc mem-0 obj-addr ret args-v)))
 
 					(begin
@@ -790,7 +789,7 @@
 						(match-define (cons func-fml-in fml-in) (invoke-setup fcan mem-this args))
 						;an invoke tree without condition
 						(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? trigger-summary?)))
-						(pretty-print inst)
+;						(pretty-print inst)
 
 						(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 						(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
@@ -832,7 +831,7 @@
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
 					(begin
-					(assert id)
+;					(assert id)
 					(update-mem-only (mfunc mem-0 obj-addr ret args-v)))
 
 					(begin
@@ -847,7 +846,7 @@
 
 					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
 					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or trigger-summary? summary?)))
-					(pretty-print inst)
+;					(pretty-print inst)
 
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 					(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))

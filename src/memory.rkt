@@ -95,7 +95,7 @@
 
 ;write to a field of an object
 (define (memory-fwrite mem fname obj-addr value type) 
-	(display (~a "memory-fwrite: " (list fname obj-addr value type)))
+;	(display (~a "memory-fwrite: " (list fname obj-addr value type)))
 	(define vt-addr (memory-vt-base mem fname))
 	(define faddr (memory-vt-lookup mem vt-addr obj-addr))
 	(memory-hwrite mem faddr value type))
