@@ -66,7 +66,7 @@ public class java.lang.Object
 "
 public class A extends java.lang.Object {
 	public int n;
-	static void <init>(int)
+	public static void <init>(int)
 	{
 		A r0;
 		int $r1;
@@ -103,9 +103,10 @@ public class Test
 		r1 := @parameter0: int;
 		r2 := @parameter1: int;
 		r3 := @parameter2: int;
-		r6 = new A;
-		specialinvoke r6.<A: void <init>(int)>(r1);
-		r4 = virtualinvoke r6.<A: int add(int)>(r2);
+//		r6 = new A;
+//		specialinvoke r6.<A: void <init>(int)>(r1);
+//		r4 = virtualinvoke r6.<A: int add(int)>(r2);
+		r4 = r1 + r2;
 		r5 = r4 - r3;
 		return r5;
 	}

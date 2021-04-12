@@ -72,7 +72,8 @@
 
 ;jimple type to memory type
 (define (jtype->mtype jtype)
-	(if (not jtype) (force-error #t "Error type\n") #f)
+;	(if (not jtype) (force-error #t "Error type\n") #f)
+	(if (not jtype) (std:error "Error type") #f)
 	(if (member jtype (map string-id unsupported-types)) (force-error #t (~a "Unsupported-type: " jtype)) #f)
 	(define maybe-primitive 
 		(ormap 

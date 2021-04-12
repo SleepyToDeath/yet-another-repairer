@@ -93,6 +93,21 @@
 	)
 )
 
+#|
+(define-syntax-rule (LHS-E name -> (name-enum ::= rhs-enum ...))
+	(define (name-enum ctxt depth-limit)
+		(if (> depth-limit 0)
+			(begin
+			(define rhs-list (list (rhs-enum ctxt (- depth-limit 1)) ...))
+
+			)
+			null)))
+
+(define-syntax-rule (RHS-E name -> name-enum (lhs-enum ...))
+	(define (name-enum ctxt depth-limit) 
+		(append (name (lhs-enum ctxt depth-limit) ... )))
+	|#
+
 (define-syntax-rule (LHS-E name -> (name-enum ::= rhs-enum ...))
 	(define (name-enum ctxt depth-limit)
 		(if (> depth-limit 0)

@@ -158,10 +158,10 @@
 
 ;look up type of a local variable/parameter in a function 
 (define (lookup-type v f)
-;	(pretty-print f)
+;	(pretty-print (list v f))
 ;	(pretty-print (append (callee-arg-names (function-args f)) (function-locals f)))
 	(do-n-ret
-		(lambda (ret) (if ret ret (force-error #t (~a "Unknown local variable: " v))))
+		(lambda (ret) (if ret ret (std:error (~a "Unknown local variable: " v))))
 		(ormap 
 			(lambda (var-def) (if (equal? v (car var-def)) (cdr var-def) #f))
 			(append (callee-arg-names (function-args f)) (function-locals f)))))

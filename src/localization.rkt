@@ -138,6 +138,9 @@
 	(display "+++++++++++++ Context Collected +++++++++++++++++\n") 
 	(define sketch (location->sketch ast ctxt bugl))
 	(display "+++++++++++++ Sketch Generated +++++++++++++++++\n") 
+
+	(define start-time (std:current-inexact-milliseconds))
+
 	(define mac-sketch (ast->machine sketch))
 	(define (spec->fml io)
 		(match-define (cons input output) io)
@@ -152,6 +155,10 @@
 		(synthesize
 			#:forall null
 			#:guarantee (assert constraint)))
+
+	(define finish-time (std:current-inexact-milliseconds))
+	(display (format "Synthesis took ~a milliseconds. Search depth: ~a\n" (- finish-time start-time) search-depth))
+
 	(if (unsat? syn-sol) 
 		(begin
 		(display "+++++++++++++ Synthesis Failed +++++++++++++++++\n") 
@@ -162,7 +169,7 @@
 		(pretty-print (evaluate sketch syn-sol))
 		bugl)))
 
-(define search-depth 5)
+(define search-depth 3)
 
 (define (location->sketch ast ctxt bugl)
 	;extract parameters
@@ -170,14 +177,15 @@
 	(define cls (location-class bugl))
 	(define cname (class-name cls))
 	(define fname (function-name func))
-	(define lnum (location-line bugl))
+	(define line (location-line bugl))
 
 	;shorthands
 	(define (is-target-cls? cls-ast)
 		(equal? cname (string-id (type-name-name (class-default-name (class-def-rhs cls-ast))))))
 
 	(define (is-target-func? func-ast)
-		(equal? fname (func-name-name (function-content-name (function-declare-rhs func-ast)))))
+;		#f)
+		(equal? fname (string-id (func-name-name (function-content-name (function-declare-rhs func-ast))))))
 
 	(define (list-replace l pred e)
 		(map (lambda (e__) (if (pred e__) e e__)) l))
@@ -196,8 +204,14 @@
 			(begin
 			(define func-ast maybe-func-ast)
 			(define insts-ast (stat-list-sl (stats-rhs (function-content-statements (function-declare-rhs func-ast)))))
-			(define insts-ast-sketch (std:list-set insts-ast lnum (stat-enum ctxt search-depth)))
+			(define inst-ast (list-ref insts-ast line))
+			(define inst-ast-sketch
+				(stat (stat-ass (stat-ass-lvalue (stat-rhs inst-ast)) (expr-enum ctxt search-depth))))
+			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line inst-ast-sketch))))
+;			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line (stat-enum ctxt search-depth)))))
+			(pretty-print insts-ast-sketch)
 			(define func-ast-sketch (function-declare (std:struct-copy function-content (function-declare-rhs func-ast) [statements insts-ast-sketch])))
+			(pretty-print func-ast-sketch)
 
 			;repack function
 			(list-replace funcs-ast is-target-func? func-ast-sketch))))
