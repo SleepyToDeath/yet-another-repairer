@@ -342,14 +342,6 @@
 (define (get-lid func-fml pc)
 	(list-ref (function-formula-lids func-fml) pc))
 
-(define (all-functions mac)
-	(apply append
-		(map (lambda (cls) (append (class-sfuncs cls) (class-vfuncs cls))) (machine-classes mac))))
-
-(define (all-vfunctions mac)
-	(apply append
-		(map (lambda (cls) (class-vfuncs cls)) (machine-classes mac))))
-
 (define contains-target-list null)
 (define (reset-contains-target-cache)
 	(set! contains-target-list null))

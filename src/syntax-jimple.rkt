@@ -1,6 +1,7 @@
 #lang rosette/safe
 
 (require "syntax.rkt")
+(require (prefix-in std: racket/base))
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
 
@@ -94,65 +95,70 @@
 ;=================== Enumerators =====================
 (struct syntax-context (vars types fields funcs consts ops labels) #:transparent)
 
-;(LHS-E stats -> (stats-enum ::= stats-multi-enum stats-single-enum))
-;	(RHS-E stats-multi -> stats-multi-enum (stats-enum stats-enum))
-;	(RHS-E stats-single -> stats-single-enum (stat-enum))
+(LHS-E stat (rhs ::= stat-ass))
+(LHS-E lexpr (rhs ::= expr-var))
+(LHS-E expr (rhs ::= expr-var expr-binary))
 
-(LHS-E stat -> (stat-enum ::= stat-ass-enum))
-	(RHS-E stat-ass -> stat-ass-enum (lexpr-enum expr-enum))
-;	(RHS-E stat-jmp -> stat-jmp-enum (expr-enum label-enum))
-;	(RHS-E stat-label -> stat-label-enum (label-enum))
+;[TODO] should be automated; can't resolve the name problem in macros
+(add-default-rhs stat-ass
+	(stat-ass (lexpr #f) (expr #f)))
+(add-default-rhs stat-jmp
+	(stat-jmp (expr #f) (label #f)))
+(add-default-rhs stat-ret
+	(stat-ret (dexpr #f)))
+
+(add-default-rhs expr-const
+	(expr-const (const #f)))
+(add-default-rhs expr-var
+	(expr-var (variable #f)))
+(add-default-rhs expr-binary
+	(expr-binary (expr #f) (op #f) (expr #f)))
+(add-default-rhs expr-array
+	(expr-array (variable #f) (expr #f)))
+(add-default-rhs expr-field
+	(expr-field (variable #f) (type-name #f) (field #f)))
 
 
-;(define (expr-enum ctxt depth-limit)
-;	(if (> depth-limit 0)
-;		(letrec
-;			([c (expr-const-enum ctxt (- depth-limit 1))]
-;			[v (expr-var-enum ctxt (- depth-limit 1))]
-;			[b (expr-binary-enum ctxt (- depth-limit 1))]
-;			[e (expr (choose* c v b))])
-;			(begin
-;			(println e)
-;			e)
-;			)
-;		(invalid 0)))
-
-(LHS-E lexpr -> (lexpr-enum ::= expr-field-enum expr-var-enum))
-(LHS-E expr -> (expr-enum ::= expr-field-enum expr-array-enum expr-const-enum expr-var-enum expr-binary-enum))
-;(LHS-E expr -> (expr-enum ::= expr-const-enum expr-var-enum))
-	(RHS-E expr-array -> expr-array-enum (variable-enum expr-enum))
-	(RHS-E expr-field -> expr-field-enum (variable-enum type-name-enum field-enum))
-	(RHS-E expr-const -> expr-const-enum (const-enum))
-	(RHS-E expr-var -> expr-var-enum (variable-enum))
-	(RHS-E expr-binary -> expr-binary-enum (expr-enum op-enum expr-enum))
-
-;[TODO] implement
 (define (variable-enum ctxt depth-limit)
-	(if (< depth-limit 0) (invalid 0)
-		(if (empty? (syntax-context-vars ctxt)) (invalid 0)
-			(variable (apply choose* (syntax-context-vars ctxt))))))
+	(display "enumerating variables\n")
+	(if (< depth-limit 0) null
+		(if (empty? (syntax-context-vars ctxt)) null
+			(map variable (syntax-context-vars ctxt)))))
 
 (define (type-name-enum ctxt depth-limit)
-	(if (< depth-limit 0) (invalid 0)
-		(if (empty? (syntax-context-types ctxt)) (invalid 0)
-			(type-name (apply choose* (syntax-context-types ctxt))))))
+	(display "enumerating types\n")
+	(if (< depth-limit 0) null
+		(if (empty? (syntax-context-types ctxt)) null
+			(map type-name (syntax-context-types ctxt)))))
+
+(define (func-name-enum ctxt depth-limit)
+	(display "enumerating functions\n")
+	(if (< depth-limit 0) null
+		(if (empty? (syntax-context-fields ctxt)) null
+			(map func-name (syntax-context-funcs ctxt)))))
 
 (define (field-enum ctxt depth-limit)
-	(if (< depth-limit 0) (invalid 0)
-		(if (empty? (syntax-context-fields ctxt)) (invalid 0)
-			(field (apply choose* (syntax-context-fields ctxt))))))
+	(display "enumerating fields\n")
+	(if (< depth-limit 0) null
+		(if (empty? (syntax-context-fields ctxt)) null
+			(map field (syntax-context-fields ctxt)))))
 
 (define (const-enum ctxt depth-limit)
-	(if (< depth-limit 0) (invalid 0)
-		(const (apply choose* (syntax-context-consts ctxt)))))
+	(display "enumerating constants\n")
+	(if (< depth-limit 0) null
+		(map const (syntax-context-consts ctxt))))
 
 (define (label-enum ctxt depth-limit)
-	(if (< depth-limit 0) (invalid 0)
-		(label (apply choose* (syntax-context-labels ctxt)))))
+	(display "enumerating labels\n")
+	(if (< depth-limit 0) null
+		(map label (syntax-context-labels ctxt))))
 
 (define (op-enum ctxt depth-limit)
-	(if (< depth-limit 0) (invalid 0)
-		(op (apply choose* (syntax-context-ops ctxt)))))
+	(display "enumerating operators\n")
+	(if (< depth-limit 0) null
+		(map op (syntax-context-ops ctxt))))
+
+(define (nop-enum ctxt depth-limit) null)
 ;=====================================================
 
 

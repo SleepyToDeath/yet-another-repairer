@@ -169,3 +169,42 @@
 (define (callee-arg-names args)
 	(reset-parameter-names)
 	(map (lambda (n.t) (cons (next-parameter-name) (cdr n.t))) args))
+
+(define (all-functions mac)
+	(apply append
+		(map (lambda (cls) (append (class-sfuncs cls) (class-vfuncs cls))) (machine-classes mac))))
+
+(define (all-vfunctions mac)
+	(apply append
+		(map (lambda (cls) (class-vfuncs cls)) (machine-classes mac))))
+
+(define (machine-type-check? mac)
+	(define (func-type-check? func)
+		(define (inst-type-check? inst)
+			(define (expr-type-check? expr) 
+				#t)
+			(match inst
+				[(inst-nop _) #t]
+				[(inst-init classname) #t]
+				[(inst-newarray v-name size-expr) #t]
+				[(inst-new v-name) #t]
+				[(inst-ret v-expr) 
+
+				]
+				[(inst-long-jump cls-name func-name) #t]
+				[(inst-static-call ret cls-name func-name arg-types args) 
+
+				]
+				[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
+
+				]
+				[(inst-special-call ret obj-name cls-name func-name arg-types args)
+
+				]
+				[(inst-ass vl vr)  
+
+				]
+				[(inst-switch cnd cases default-l) #t]
+				[(inst-jmp condition label) 
+
+				]))

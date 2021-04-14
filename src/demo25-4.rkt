@@ -117,12 +117,13 @@ public class Test
 "
 public class Test
 {
-	public static int main(long)
+	public static int main(int, int)
 	{
-		long l0, l1;
-		l0 := @parameter0: long;
-        l1 = l0 & 281474976710655L;
-        return 15;
+		int r1, r2, r3;
+		r1 := @parameter0: int;
+		r2 := @parameter1: int;
+		r3 = r1;
+        return r3;
 	}
 }
 ")))
@@ -135,6 +136,7 @@ public class Test
 (pretty-print buggy)
 
 (define input1 (list (cons 4 "int") (cons 5 "int") (cons 6 "int")))
+;(define input1 (list (cons 1 "int") (cons 2 "int")))
 ;(define input1 (list (cons (bv 123 bv-type) "long")))
 ;(define input1 (list (cons 1 "int")))
 (define output1 (list (cons var-ret-name 15)))

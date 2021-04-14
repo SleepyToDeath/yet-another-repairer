@@ -136,42 +136,52 @@
 	(define ctxt (location->ctxt ast bugl))
 	(pretty-print ctxt)
 	(display "+++++++++++++ Context Collected +++++++++++++++++\n") 
-	(define sketch (location->sketch ast ctxt bugl))
-	(display "+++++++++++++ Sketch Generated +++++++++++++++++\n") 
+	(display "+++++++++++++ Start Enumerating +++++++++++++++++\n") 
 
-	(define start-time (std:current-inexact-milliseconds))
+	(define (stat-sketch->constraint stat-sketch)
+		(define prog-sketch (location->sketch ast stat-sketch bugl))
+		(define mac-sketch (ast->machine prog-sketch))
+		(define (spec->fml io)
+			(match-define (cons input output) io)
+			(define mac-in (assign-input mac-sketch input))
+			(define mac-fin (compute mac-in))
+			(compare-output mac-fin output))
+		(define constraint (andmap+ spec->fml spec))
+		(if constraint
+			(begin
+			(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
+			(pretty-print prog-sketch)) #f)
+		constraint)
 
-	(define mac-sketch (ast->machine sketch))
-	(define (spec->fml io)
-		(match-define (cons input output) io)
-		(define mac-in (assign-input mac-sketch input))
-		(define mac-fin (compute mac-in))
-		(compare-output mac-fin output))
-	(define constraint (andmap+ spec->fml spec))
-	
-	(display "+++++++++++++ Synthesizing +++++++++++++++++\n") 
-	(clear-asserts!)
-	(define syn-sol 
-		(synthesize
-			#:forall null
-			#:guarantee (assert constraint)))
-
-	(define finish-time (std:current-inexact-milliseconds))
-	(display (format "Synthesis took ~a milliseconds. Search depth: ~a\n" (- finish-time start-time) search-depth))
-
-	(if (unsat? syn-sol) 
+	(if (ast-dfs (stat #f) ctxt stat-sketch->constraint search-depth) #t
 		(begin
 		(display "+++++++++++++ Synthesis Failed +++++++++++++++++\n") 
-		#f)
+		#f)))
+	
+;	(display "+++++++++++++ Synthesizing +++++++++++++++++\n") 
+;	(define start-time (std:current-inexact-milliseconds))
+;	(clear-asserts!)
+;	(define syn-sol 
+;		(synthesize
+;			#:forall null
+;			#:guarantee (assert constraint)))
 
-		(begin
-		(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
-		(pretty-print (evaluate sketch syn-sol))
-		bugl)))
+;	(define finish-time (std:current-inexact-milliseconds))
+;	(display (format "Synthesis took ~a milliseconds. Search depth: ~a\n" (- finish-time start-time) search-depth))
 
-(define search-depth 3)
+;	(if (unsat? syn-sol) 
+;		(begin
+;		(display "+++++++++++++ Synthesis Failed +++++++++++++++++\n") 
+;		#f)
+;
+;		(begin
+;		(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
+;		(pretty-print (evaluate sketch syn-sol))
+;		bugl)))
 
-(define (location->sketch ast ctxt bugl)
+(define search-depth 5)
+
+(define (location->sketch ast stat-sketch bugl)
 	;extract parameters
 	(define func (location-func bugl))
 	(define cls (location-class bugl))
@@ -205,13 +215,14 @@
 			(define func-ast maybe-func-ast)
 			(define insts-ast (stat-list-sl (stats-rhs (function-content-statements (function-declare-rhs func-ast)))))
 			(define inst-ast (list-ref insts-ast line))
-			(define inst-ast-sketch
-				(stat (stat-ass (stat-ass-lvalue (stat-rhs inst-ast)) (expr-enum ctxt search-depth))))
-			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line inst-ast-sketch))))
+;			(define inst-ast-sketch
+;				(stat (stat-ass (stat-ass-lvalue (stat-rhs inst-ast)) (expr-enum ctxt search-depth))))
+;			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line inst-ast-sketch))))
 ;			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line (stat-enum ctxt search-depth)))))
-			(pretty-print insts-ast-sketch)
+			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line stat-sketch))))
+;			(pretty-print insts-ast-sketch)
 			(define func-ast-sketch (function-declare (std:struct-copy function-content (function-declare-rhs func-ast) [statements insts-ast-sketch])))
-			(pretty-print func-ast-sketch)
+;			(pretty-print func-ast-sketch)
 
 			;repack function
 			(list-replace funcs-ast is-target-func? func-ast-sketch))))
@@ -235,7 +246,7 @@
 	(define cls (location-class bugl))
 	(define cname (class-name cls))
 
-	(define vars (map car (append (function-args func) (function-locals func))))
+	(define vars (map car (function-locals func)))
 	(define types null)
 	(define fields (map (lambda (fname) (cons cname fname)) 
 		(map car (append (class-vfields cls) (class-sfields cls)))))
