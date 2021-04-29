@@ -2,22 +2,26 @@
 (require (prefix-in std: racket/base))
 (require racket/format)
 
+(require "map.rkt")
 (require "formula.rkt")
 (require "string-id.rkt")
 (require "memory-common.rkt")
+(require "semantics-common.rkt")
 (require "syntax-jimple.rkt")
 (require "jimple/operators.rkt")
 
-(provide jtype->mtype op-return-type op-type-check? jtype-of)
+(provide jtype->mtype op-return-type op-type-check? jtype-of is-a?)
 
-(define supported-types (list "void" "boolean" "byte" "short" "char" "int" "long"))
+(define supported-types (list "void" "mboolean" "boolean" "byte" "short" "char" "int" "long"))
 
 (define unsupported-types (list "float" "double"))
 
 (define memory-map
 	(list
 	(cons "void" int-type)
+	(cons "null" int-type)
 	(cons "boolean" bool-type)
+	(cons "mboolean" mbool-type)
 	(cons "byte" int-type)
 	(cons "short" int-type)
 	(cons "char" int-type)
@@ -36,12 +40,12 @@
 		(cons bvor "long")
 		(cons bvxor "long")
 		(cons bvlshr "long")
-		(cons equal? "boolean")
-		(cons op-gt "boolean") 
-		(cons op-ge "boolean") 
-		(cons op-lt "boolean")
-		(cons op-le "boolean")
-		(cons op-neq "boolean") 
+		(cons equal? "mboolean")
+		(cons op-gt "mboolean") 
+		(cons op-ge "mboolean") 
+		(cons op-lt "mboolean")
+		(cons op-le "mboolean")
+		(cons op-neq "mboolean") 
 		(cons op-cmp "int")))
 
 (define operand-map
@@ -86,9 +90,35 @@
 	(list 
 		(cons int-type "int")
 		(cons bv-type "long")
-		(cons bool-type "boolean")))
+		(cons mbool-type "mboolean")))
 
 ;return a string of type name in java rather than a predicate
 (define (jtype-of v)
-	(define mtype (type-of v))
-	(ormap (lambda (types) (if (equal? mtype (car types)) (cdr types) #f)) jtype-map))
+	(if (equal? (nullptr int-type) v) (string-id null-type-name)
+		(begin
+		(define mtype (type-of v))
+		(define maybe-jtype (ormap (lambda (types) (if (equal? mtype (car types)) (string-id (cdr types)) #f)) jtype-map))
+		(if maybe-jtype maybe-jtype "unknown"))))
+
+(define (primitive-type? jtype)
+	(ormap 
+		(lambda (j.m) (if (equal? jtype (string-id (car j.m))) (cdr j.m) #f)) 
+		memory-map))
+
+(define (is-subclass? returned receiver mac)
+;	(display (~a "Checking subclass: " returned " <|? " receiver "\n"))
+	(if (equal? returned (string-id null-type-name)) #t
+		(if (primitive-type? returned) #f
+			(if (equal? returned receiver) #t
+				(begin
+				(define cls (imap-get (machine-cmap mac) returned default-type))
+				(ormap 
+					(lambda (base) (if base (is-subclass? base receiver mac) #f))
+					(cons (class-extend cls) (class-implements cls))))))))
+
+(define (is-a? returned receiver mac)
+	(if (equal? returned (string-id "mboolean")) #f
+		(if (primitive-type? receiver)
+			(equal? (jtype->mtype returned) (jtype->mtype receiver))
+			(is-subclass? returned receiver mac))))
+

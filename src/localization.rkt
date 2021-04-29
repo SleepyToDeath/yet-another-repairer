@@ -64,7 +64,7 @@
 	(define debug-max-sat (> max-sat-sum (- (length max-sat-list) 7)))
 
 	(display "asserts: \n") 
-	(pretty-print (asserts))
+;	(pretty-print (asserts))
 
 	(display "\n Solving: \n")
 	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
@@ -103,6 +103,7 @@
 		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 		(print-location bugl)
 		(add-visited-location bugl)
+;		(map print-location locations)
 		
 		(DEBUG-DO (pretty-print string-id-table))
 		(DEBUG-DO (std:error "Halt!"))
@@ -137,21 +138,35 @@
 	(pretty-print ctxt)
 	(display "+++++++++++++ Context Collected +++++++++++++++++\n") 
 	(display "+++++++++++++ Start Enumerating +++++++++++++++++\n") 
+	
+	(define enum-counter 0)
+	(define type-check-counter 0)
 
 	(define (stat-sketch->constraint stat-sketch)
+		(display (~a enum-counter " programs explored\n"))
+		(display  "enumerated statement: " )
+		(pretty-print stat-sketch)
+		(set! enum-counter (+ 1 enum-counter))
 		(define prog-sketch (location->sketch ast stat-sketch bugl))
 		(define mac-sketch (ast->machine prog-sketch))
-		(define (spec->fml io)
-			(match-define (cons input output) io)
-			(define mac-in (assign-input mac-sketch input))
-			(define mac-fin (compute mac-in))
-			(compare-output mac-fin output))
-		(define constraint (andmap+ spec->fml spec))
-		(if constraint
+		(if (not (machine-type-check? (build-virtual-table mac-sketch))) #f
 			(begin
-			(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
-			(pretty-print prog-sketch)) #f)
-		constraint)
+			(set! type-check-counter (+ 1 type-check-counter))
+			(display (~a type-check-counter " programs type-checks\n"))
+			(define (spec->fml io)
+				(match-define (cons input output) io)
+				(display "+++++ Filling Input +++++\n") 
+				(define mac-in (assign-input mac-sketch input))
+				(display "+++++ Computing +++++\n") 
+				(define mac-fin (compute mac-in))
+				(display "+++++ Comparing Output +++++\n") 
+				(compare-output mac-fin output))
+			(define constraint (andmap+ spec->fml spec))
+			(if constraint
+				(begin
+				(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
+				(pretty-print prog-sketch)) #f)
+			constraint)))
 
 	(if (ast-dfs (stat #f) ctxt stat-sketch->constraint search-depth) #t
 		(begin
@@ -179,7 +194,7 @@
 ;		(pretty-print (evaluate sketch syn-sol))
 ;		bugl)))
 
-(define search-depth 5)
+(define search-depth 3)
 
 (define (location->sketch ast stat-sketch bugl)
 	;extract parameters
@@ -187,7 +202,7 @@
 	(define cls (location-class bugl))
 	(define cname (class-name cls))
 	(define fname (function-name func))
-	(define line (location-line bugl))
+	(define line (if (equal? fname func-name-init) (- (location-line bugl) 1) (location-line bugl)))
 
 	;shorthands
 	(define (is-target-cls? cls-ast)
@@ -220,6 +235,7 @@
 ;			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line inst-ast-sketch))))
 ;			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line (stat-enum ctxt search-depth)))))
 			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line stat-sketch))))
+;			(display (~a "replacing line " line ":\n"))
 ;			(pretty-print insts-ast-sketch)
 			(define func-ast-sketch (function-declare (std:struct-copy function-content (function-declare-rhs func-ast) [statements insts-ast-sketch])))
 ;			(pretty-print func-ast-sketch)

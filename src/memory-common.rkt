@@ -68,8 +68,9 @@
 
 (define int-type integer?)
 
-(define bool-type integer?)
+(define bool-type int-type)
 
+(define mbool-type boolean?)
 
 (define addr-type int-type)
 
@@ -77,12 +78,13 @@
 
 (define string-type int-type)
 
+(define null-type int-type)
 
 (define default-type int-type)
 
 
 
-(define all-types-ordered (list int-type bv-type))
+(define all-types-ordered (list int-type bv-type mbool-type))
 
 (define (type->ordinal type)
 	(if (equal? type int-type) 0 1))

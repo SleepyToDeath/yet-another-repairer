@@ -35,7 +35,7 @@
 						((id2pred rhs) __et) ...
 					)
 					(expanded-check __et)))
-				(if flag flag (begin (print name) (display "\n")))
+;				(if flag flag (begin (print name) (display "\n")))
 				flag)
 
 			(define (ast-get __ast)
@@ -115,7 +115,6 @@
 				((id2acc name val) __ast))
 
 			(define (ast-expand-next __ctxt __ast __depth)
-				(pretty-print __ast)
 				(if (< __depth 0) null
 					(if ((id2acc name val) __ast) (list __ast)
 						((id2enum name) __ctxt __depth))))
@@ -173,7 +172,6 @@
 (define (add-default-rhs rhs ast-def)
 	(set! default-rhs-list (cons (cons rhs ast-def) default-rhs-list)))
 (define (lookup-default-rhs rhs)
-	(pretty-print rhs)
 	(cdr (findf (lambda (entry) (equal? (car entry) rhs)) default-rhs-list)))
 
 (define (ast-dfs ast ctxt verifier depth)

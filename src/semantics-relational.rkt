@@ -446,6 +446,7 @@
 		(define trigger-summary? in-target?) ;updated later
 ;		(imap-set-selector id)
 
+#|
 		(set! line-counter (+ line-counter 1))
 		(display (~a "Lines of code: " line-counter))
 		(defer-eval "instruction: " inst)
@@ -454,6 +455,7 @@
 		(pretty-print id)
 		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
 		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
+		|#
 
 		(if (not in-target?) (assert id) #f)
 

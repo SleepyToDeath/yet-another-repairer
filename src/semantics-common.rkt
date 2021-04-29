@@ -125,7 +125,7 @@
 		#f))
 
 ;virtual functions sharing same signature will have same vid
-(define (vfunc-id mac cls func arg-types) (string-id (do-n-ret pretty-print (lookup-virtual-function mac cls func arg-types))))
+(define (vfunc-id mac cls func arg-types) (string-id (lookup-virtual-function mac cls func arg-types)))
 
 (define (vfield-id mac cls field) (string-id (lookup-virtual-field mac cls field)))
 
@@ -178,33 +178,3 @@
 	(apply append
 		(map (lambda (cls) (class-vfuncs cls)) (machine-classes mac))))
 
-(define (machine-type-check? mac)
-	(define (func-type-check? func)
-		(define (inst-type-check? inst)
-			(define (expr-type-check? expr) 
-				#t)
-			(match inst
-				[(inst-nop _) #t]
-				[(inst-init classname) #t]
-				[(inst-newarray v-name size-expr) #t]
-				[(inst-new v-name) #t]
-				[(inst-ret v-expr) 
-
-				]
-				[(inst-long-jump cls-name func-name) #t]
-				[(inst-static-call ret cls-name func-name arg-types args) 
-
-				]
-				[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
-
-				]
-				[(inst-special-call ret obj-name cls-name func-name arg-types args)
-
-				]
-				[(inst-ass vl vr)  
-
-				]
-				[(inst-switch cnd cases default-l) #t]
-				[(inst-jmp condition label) 
-
-				]))

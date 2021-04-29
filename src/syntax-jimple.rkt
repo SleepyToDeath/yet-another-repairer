@@ -10,6 +10,7 @@
 (define bool-type-name "bool")
 (define int-type-name "int")
 (define string-type-name "java.lang.String")
+(define null-type-name "null")
 
 ;============= Syntax Definition & Check =============
 ;main function should be named "main"
@@ -120,41 +121,41 @@
 
 
 (define (variable-enum ctxt depth-limit)
-	(display "enumerating variables\n")
+;	(display "enumerating variables\n")
 	(if (< depth-limit 0) null
 		(if (empty? (syntax-context-vars ctxt)) null
 			(map variable (syntax-context-vars ctxt)))))
 
 (define (type-name-enum ctxt depth-limit)
-	(display "enumerating types\n")
+;	(display "enumerating types\n")
 	(if (< depth-limit 0) null
 		(if (empty? (syntax-context-types ctxt)) null
 			(map type-name (syntax-context-types ctxt)))))
 
 (define (func-name-enum ctxt depth-limit)
-	(display "enumerating functions\n")
+;	(display "enumerating functions\n")
 	(if (< depth-limit 0) null
 		(if (empty? (syntax-context-fields ctxt)) null
 			(map func-name (syntax-context-funcs ctxt)))))
 
 (define (field-enum ctxt depth-limit)
-	(display "enumerating fields\n")
+;	(display "enumerating fields\n")
 	(if (< depth-limit 0) null
 		(if (empty? (syntax-context-fields ctxt)) null
 			(map field (syntax-context-fields ctxt)))))
 
 (define (const-enum ctxt depth-limit)
-	(display "enumerating constants\n")
+;	(display "enumerating constants\n")
 	(if (< depth-limit 0) null
 		(map const (syntax-context-consts ctxt))))
 
 (define (label-enum ctxt depth-limit)
-	(display "enumerating labels\n")
+;	(display "enumerating labels\n")
 	(if (< depth-limit 0) null
 		(map label (syntax-context-labels ctxt))))
 
 (define (op-enum ctxt depth-limit)
-	(display "enumerating operators\n")
+;	(display "enumerating operators\n")
 	(if (< depth-limit 0) null
 		(map op (syntax-context-ops ctxt))))
 

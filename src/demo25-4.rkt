@@ -99,7 +99,7 @@ public class Test
 		int r1, r2, r3;
 		int r4, r44;
 		int r5;
-		A r6;
+//		A r6;
 		r1 := @parameter0: int;
 		r2 := @parameter1: int;
 		r3 := @parameter2: int;
@@ -128,18 +128,21 @@ public class Test
 }
 ")))
 
+;(define buggy (program
+;	(class-list (list class-obj class-A class-B))))
+
 (define buggy (program
-	(class-list (list class-obj class-A class-B))))
+	(class-list (list class-B))))
 
 ;(define buggy (program (class-list (list class-0))))
 
 (pretty-print buggy)
 
 (define input1 (list (cons 4 "int") (cons 5 "int") (cons 6 "int")))
-;(define input1 (list (cons 1 "int") (cons 2 "int")))
-;(define input1 (list (cons (bv 123 bv-type) "long")))
-;(define input1 (list (cons 1 "int")))
 (define output1 (list (cons var-ret-name 15)))
+
+;(define input1 (list (cons 1 "int") (cons 2 "int")))
+;(define output1 (list (cons var-ret-name 2)))
 
 (define mac (ast->machine buggy))
 (define mac-in (assign-input mac input1))

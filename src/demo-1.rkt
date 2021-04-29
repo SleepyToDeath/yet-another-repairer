@@ -37,7 +37,7 @@
 (pretty-print buggy)
 
 (define input1 (list (cons 0 "int")))
-(define output1 (list (cons var-ret-name 1)))
+(define output1 (list (cons var-ret-name 0)))
 
 (define mac (ast->machine buggy))
 (pretty-print string-id-map)
