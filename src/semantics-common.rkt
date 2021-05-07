@@ -181,3 +181,9 @@
 	(apply append
 		(map (lambda (cls) (class-vfuncs cls)) (machine-classes mac))))
 
+(define (print-location l)
+	(pretty-print
+		(match l
+			[(location cls func line inst selector)
+				(location (class-name cls) (function-name func) line inst selector)])))
+

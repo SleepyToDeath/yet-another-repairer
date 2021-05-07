@@ -17,7 +17,7 @@
 (require "formula.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 (require "jimple/operators.rkt")
-(require "enum-helper.rkt")
+(require "enumerator.rkt")
 
 (provide (all-defined-out))
 
@@ -136,14 +136,22 @@
 			(lambda (stat-sketch)
 				(define prog-sketch (replace-stat ast stat-sketch bugl))
 				(search-second prog-sketch)))
-		(ast-dfs (stat #f) ctxt verifier ??? ??? search-depth))
+		(define updater
+			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
+		(define pruner
+			(lambda (ast) (real-pruner ast mac)))
+		(ast-dfs (stat #f) ctxt verifier pruner updater search-depth))
 
 	(define (search-second ast)
 		(define verifier
 			(lambda (invoke-sketch)
 				(define prog-sketch (insert-stat ast invoke-sketch bugl))
 				(program-sketch->constraint prog-sketch spec)))
-		(ast-dfs (stat-calls #f) ctxt verifier ??? ??? search-depth))
+		(define updater
+			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
+		(define pruner
+			(lambda (ast) (real-pruner ast mac)))
+		(ast-dfs (stat-calls #f) ctxt verifier pruner updater search-depth))
 
 	(search-first))
 
@@ -164,10 +172,4 @@
 			(pretty-print prog-sketch)) #f)
 		constraint)))
 
-
-(define (print-location l)
-	(pretty-print
-		(match l
-			[(location cls func line inst selector)
-				(location (class-name cls) (function-name func) line inst selector)])))
 

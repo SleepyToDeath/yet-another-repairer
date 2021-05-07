@@ -10,16 +10,22 @@
 (require "match-define.rkt")
 (require "string-id.rkt")
 (require "formula.rkt")
+(require "map.rkt")
 
 (require "syntax.rkt")
 (require "syntax-jimple.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 (require "jimple/operators.rkt")
+(require "jimple/jimple-parser.rkt")
+(require "type-checker.rkt")
 
+(require "memory-common.rkt")
 (require "semantics-common.rkt")
+(require "semantics-computational.rkt")
 
 (provide (all-defined-out))
 
+;======================== Helper & Config ======================
 (define (list-replace l pred e)
 	(map (lambda (e__) (if (pred e__) e e__)) l))
 
@@ -28,6 +34,27 @@
 
 (define search-depth 3)
 
+(define bridge-var-name (string-id "__bridge__"))
+
+
+;======================== Enumerator ======================
+;verifier: check if a completed program satisfies spec
+;pruner: check if a partial program can be eliminated early
+;updater: update context by current ast
+(define (ast-dfs ast ctxt verifier pruner updater depth)
+	(if (not (pruner ast)) #f
+		(if (ast-check ast)
+			;finished
+			(verifier ast)
+			(begin
+			(define maybe-asts (ast-expand-next ctxt ast depth))
+			;unfinished but can't expand within depth limit
+			(if (null? maybe-asts) #f 
+				;unfinished and can be expanded
+				(ormap (lambda (ast+) (ast-dfs ast+ (updater ctxt ast+) verifier pruner updater depth)) maybe-asts))))))
+
+
+;======================== Early Checker  ======================
 ;(struct syntax-context (vars types fields funcs consts ops labels def-list-gen) #:transparent)
 ;(struct location (class func line inst selector) #:transparent)
 (define (location->ctxt ast bugl mac)
@@ -38,7 +65,7 @@
 	(define line-mac (location-line bugl))
 	(define line-ast (if (equal? fname func-name-init) (- line-mac 1) line-mac))
 
-	(define vars (map car (function-locals func)))
+	(define vars (cons bridge-var-name (map car (function-locals func))))
 	(define types null)
 	(define fields (map (lambda (fname) (cons cname fname)) 
 		(map car (append (class-vfields cls) (class-sfields cls)))))
@@ -47,25 +74,28 @@
 	(define ops (list bvand bvor bvxor op-mod op-cmp equal? op-neq op-gt op-ge op-lt op-le bvlshr op-add op-sub op-mul op-div))
 	; don't change jump target
 	(define labels 
-		(match (list-ref (function-program func) line-mac)
+		(match (list-ref (function-prog func) line-mac)
 			[(inst-jmp condition label) (list label)]
 			[_ null]))
-	(syntax-context vars types fields funcs consts ops labels context-updater))
+	(syntax-context vars types fields funcs consts ops labels identity))
 
 ;ast: enumerated statement
 ;set default argument list by function name
-(define (context-updater ast mac)
+(define (real-context-updater ctxt ast mac)
 	(define func (ast->func ast mac))
-	(define empty-arg-list (map (lambda (x) #f) (function-args func)))
-	(define dummy-arg-list (map (lambda (x) (type-name "int")) (function-args func)))
-	(define (def-list-gen node)
-		(match ast
-			[type-list dummy-arg-list]
-			[argument-caller-list empty-arg-list])))
+	(if (not func) ctxt
+		(begin
+		(define empty-arg-list (map (lambda (x) #f) (function-args func)))
+		(define dummy-arg-list (map (lambda (x) (type-name "int")) (function-args func)))
+		(define (def-list-gen node)
+			(match ast
+				[type-list dummy-arg-list]
+				[argument-caller-list empty-arg-list]))
+		(std:struct-copy syntax-context ctxt [def-list-gen def-list-gen]))))
 
 
-(define (pruner ast mac extra)
-	(define func (ast-> func ast mac))
+(define (real-pruner ast mac)
+	(define func (ast->func ast mac))
 	(define (arg-type-checker)
 		#t)
 	(define (ret-type-checker)
@@ -79,23 +109,23 @@
 
 	(define (find-vfunc mac cname fname)
 		(ormap (lambda (cls) 
-			(if (not (equal? cname (class-name name))) #f 
+			(if (not (equal? cname (class-name cls))) #f 
 				(findf (lambda (f) 
-					(if (not (equal? fname (function-name f)) #f f)) 
-					(class-vfuncs cls))) 
-			(machine-classes mac))))
+					(equal? fname (function-name f)))
+					(class-vfuncs cls))))
+			(machine-classes mac)))
 
 	(define (find-sfunc mac cname fname)
 		(ormap (lambda (cls) 
-			(if (not (equal? cname (class-name name))) #f 
+			(if (not (equal? cname (class-name cls))) #f 
 				(findf (lambda (f) 
-					(if (not (equal? fname (function-name f)) #f f)) 
-					(class-sfuncs cls))) 
-			(machine-classes mac))))
+					(equal? fname (function-name f)))
+					(class-sfuncs cls))))
+			(machine-classes mac)))
 
 	(match ast
-		[(stat s) (ast->func s)]
-		[(stat-call s) (ast->func s)]
+		[(stat s) (ast->func s mac)]
+		[(stat-calls s) (ast->func s mac)]
 
 		[(stat-static-call ret cls-name func arg-types args) 
 			(if (not (and cls-name (type-name-name cls-name) func (func-name-name func))) #f
@@ -120,15 +150,14 @@
 
 		[_ #f]))
 
-	
 
-
+;======================== Spec Checker ======================
 ;insert before current `newl`
 (define (insert-stat ast stat-sketch newl)
 	(define func (location-func newl))
 	(define fname (function-name func))
 	(define line (if (equal? fname func-name-init) (- (location-line newl) 1) (location-line newl)))
-	(update-prog ast
+	(update-prog ast newl
 		(lambda (ast) 
 			(update-func ast newl 
 				(lambda (ast) (stats (stat-list (list-insert ast line stat-sketch))))))))
@@ -137,7 +166,7 @@
 	(define func (location-func bugl))
 	(define fname (function-name func))
 	(define line (if (equal? fname func-name-init) (- (location-line bugl) 1) (location-line bugl)))
-	(update-prog ast
+	(update-prog ast bugl
 		(lambda (ast) 
 			(update-func ast bugl 
 				(lambda (ast) (stats (stat-list (std:list-set ast line stat-sketch))))))))
@@ -181,18 +210,68 @@
 	(program (class-list clss-ast-sketch)))
 
 
-;verifier: check if a completed program satisfies spec
-;pruner: check if a partial program can be eliminated early
-;updater: update context by current ast
-(define (ast-dfs ast ctxt verifier pruner updater depth)
-	(if (not (pruner ast)) #f
-		(if (ast-check ast)
-			;finished
-			(verifier ast)
-			(begin
-			(define maybe-asts (ast-expand-next ctxt ast depth))
-			;unfinished but can't expand within depth limit
-			(if (null? maybe-asts) #f 
-				;unfinished and can be expanded
-				(ormap (lambda (ast+) (ast-dfs ast+ (updater ctxt ast+) verifier pruner updater depth)) maybe-asts))))))
+(define (machine-type-check? mac)
+	(define (func-type-check? func)
+		(define (inst-type-check? inst)
+;			(display "type checking instruction: ")
+;			(pretty-print inst)
+			;return expression's type if type checks, #f otherwise
+			(define (expr-type-check? expr) 
+				(match expr
+					[(iexpr-const value type) type]
+					[(iexpr-var name)
+						(if (equal? name var-this-name) (string-id "void") (lookup-type name func))]
+					[(iexpr-binary op expr1 expr2)
+						(begin
+						(define t1 (expr-type-check? expr1))
+						(define t2 (expr-type-check? expr2))
+;						(pretty-print (list t1 t2))
+						(define op-check? (and t1 t2 (op-type-check? op t1 t2)))
+						(if op-check? (op-return-type op t1 t2) #f))]
+					[(iexpr-array arr-name index)
+						(lookup-type arr-name func)]
+					[(iexpr-field obj-name cls-name fname)
+;						(pretty-print (sfield-id cls-name fname))
+						(if (and (not (equal? obj-name (string-id (variable-name void-receiver)))) (not (is-a? (lookup-type obj-name func) cls-name mac))) #f
+							(imap-get (machine-tmap mac) (sfield-id cls-name fname) default-type))]))
 
+			(match inst
+				[(inst-nop _) #t]
+				[(inst-init classname) #t]
+				[(inst-newarray v-name size-expr) #t]
+				[(inst-new v-name) #t]
+				[(inst-ret v-expr) 
+					(begin
+					(define rt (expr-type-check? v-expr))
+					(if (not rt) #f
+						(is-a? rt (function-ret func) mac)))]
+				[(inst-long-jump cls-name func-name) #t]
+				[(inst-static-call ret cls-name func-name arg-types args) 
+					(andmap (lambda (at aexpr)
+						(define at+ (expr-type-check? aexpr))
+						(and at+ (is-a? at+ at mac)))
+						arg-types
+						args)]
+				[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
+					(andmap (lambda (at aexpr)
+						(define at+ (expr-type-check? aexpr))
+						(and at+ (is-a? at+ at mac)))
+						arg-types
+						args)]
+				[(inst-special-call ret obj-name cls-name func-name arg-types args)
+					(andmap (lambda (at aexpr)
+						(define at+ (expr-type-check? aexpr))
+						(and at+ (is-a? at+ at mac)))
+						arg-types
+						args)]
+				[(inst-ass vl vr)  
+					(begin
+					(define lt (expr-type-check? (ast->expression vl)))
+					(define rt (expr-type-check? vr))
+;					(pretty-print (list lt rt))
+					(and lt rt (is-a? lt rt mac)))]
+				[(inst-switch cnd cases default-l) #t]
+				[(inst-jmp condition label) 
+					(expr-type-check? condition)]))
+		(andmap (lambda (i) (if (inst-type-check? i) #t (begin (display "Type error: ") (pretty-print i) #f))) (function-prog func)))
+	(andmap func-type-check? (all-functions mac)))
