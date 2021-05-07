@@ -48,6 +48,7 @@
 (LHS-C stats (rhs ::= stat-list))
 	(RHS-C-List stat-list (sl : stat))
 
+(LHS-C stat-calls (rhs ::= stat-static-call stat-virtual-call))
 (LHS-C stat (rhs ::= stat-ass stat-jmp stat-label stat-static-call stat-virtual-call stat-special-call stat-nop stat-ret stat-new stat-newarray))
 	(RHS-C stat-new (v : variable))
 	(RHS-C stat-newarray (v : variable) (size : dexpr))
@@ -94,9 +95,8 @@
 
 
 ;=================== Enumerators =====================
-(struct syntax-context (vars types fields funcs consts ops labels) #:transparent)
-
-(LHS-E stat (rhs ::= stat-ass))
+(LHS-E stat-calls (rhs ::= stat-static-call stat-virtual-call))
+(LHS-E stat (rhs ::= stat-ass stat-ret stat-jmp))
 (LHS-E lexpr (rhs ::= expr-var))
 (LHS-E expr (rhs ::= expr-var expr-binary))
 

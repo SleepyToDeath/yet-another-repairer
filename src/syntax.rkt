@@ -2,6 +2,7 @@
 
 (require (for-syntax racket/match racket/syntax))
 (require (prefix-in std: racket/base))
+(require (prefix-in std: racket/list))
 
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
@@ -18,6 +19,8 @@
 	[expanded-expand-next ctxt expanded depth]
 	[expanded-check expanded]
 	[expanded-get count expanded]) ;get first `count` sub-tree
+
+(struct syntax-context (vars types fields funcs consts ops labels def-list-gen) #:transparent)
 ;==================================================
 
 
@@ -61,6 +64,29 @@
 
 			(define (expanded-get __lvl __et)
 				(list ((id2acc name lname) __et)))
+
+			(define (expanded-expand-next __ctxt __ast __depth)
+				(define __ast+ 
+					(if ((id2acc name lname) __ast)
+						__ast
+						(name ((syntax-context-def-list-gen __ctxt) name))))
+				(foldl 
+					(lambda (__index __lst)
+						(define (__expander __ast0)
+							(define __lhsl ((id2acc name lname) __ast0))
+							(define __lhs0 (list-ref __lhsl __index))
+							(if __lhs0
+								(map 
+									(lambda (__lhs+) (std:struct-copy name __ast0 [lname (std:list-set __lhsl __index __lhs+)])) 
+									(ast-expand-next __ctxt __lhs0 (- __depth 1)))
+								(map 
+									(lambda (__lhs+) (std:struct-copy name __ast0 [lname (std:list-set __lhsl __index __lhs+)])) 
+									(ast-expand-next __ctxt (lhs #f) (- __depth 1)))))
+						(if (equal? (length __lst) 1) 
+							(__expander (car __lst))
+							__lst))
+					(list __ast+)
+					(std:range (length ((id2acc name lname) __ast+)))))
 		]
 	)
 )
@@ -96,8 +122,12 @@
 						(lambda (__ast0) 
 							(define __lhs0 ((id2acc name lname) __ast0))
 							(if __lhs0
-								(map (lambda (__lhs+) (std:struct-copy name __ast0 [lname __lhs+])) (ast-expand-next __ctxt __lhs0 (- __depth 1)))
-								(map (lambda (__lhs+) (std:struct-copy name __ast0 [lname __lhs+])) (ast-expand-next __ctxt (lhs #f) (- __depth 1)))))
+								(map 
+									(lambda (__lhs+) (std:struct-copy name __ast0 [lname __lhs+])) 
+									(ast-expand-next __ctxt __lhs0 (- __depth 1)))
+								(map 
+									(lambda (__lhs+) (std:struct-copy name __ast0 [lname __lhs+])) 
+									(ast-expand-next  __ctxt (lhs #f) (- __depth 1)))))
 						...)))
 		])
 )
@@ -174,16 +204,7 @@
 (define (lookup-default-rhs rhs)
 	(cdr (findf (lambda (entry) (equal? (car entry) rhs)) default-rhs-list)))
 
-(define (ast-dfs ast ctxt verifier depth)
-	(if (ast-check ast)
-		;finished
-		(verifier ast)
-		(begin
-		(define maybe-asts (ast-expand-next ctxt ast depth))
-		;unfinished but can't expand within depth limit
-		(if (null? maybe-asts) #f 
-			;unfinished and can be expanded
-			(ormap (lambda (ast+) (ast-dfs ast+ ctxt verifier depth)) maybe-asts)))))
+
 ;==================== Syntax Helpers ====================
 (define-syntax (id2enum stx)
 	(define id (cadr (syntax-e stx)))

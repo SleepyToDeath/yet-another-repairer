@@ -40,6 +40,9 @@
 ;ret: string(type of return value)
 (struct function (name prog lmap args locals ret) #:transparent)
 
+;(class X function X int)
+(struct location (class func line inst selector) #:transparent)
+
 ;inst-exec: machine(before exec) -> machine(after exec)
 (define-generics instruction
 	[inst-exec instruction machine function])

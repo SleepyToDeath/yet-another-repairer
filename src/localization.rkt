@@ -17,6 +17,7 @@
 (require "formula.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 (require "jimple/operators.rkt")
+(require "enum-helper.rkt")
 
 (provide (all-defined-out))
 
@@ -63,14 +64,8 @@
 	(define max-sat-sum (apply + (map (lambda (l) (if l 1 0)) max-sat-list)))
 	(define debug-max-sat (> max-sat-sum (- (length max-sat-list) 7)))
 
-	(display "asserts: \n") 
-;	(pretty-print (asserts))
-
 	(display "\n Solving: \n")
 	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
-;	(pretty-print (asserts))
-;	(pretty-print hard)
-;	(check-asserts 0)
 	(output-smt #t)
 
 ;	/* default version one bug */
@@ -133,145 +128,42 @@
 
 
 (define (try-fixing ast mac spec bugl)
-	(display "+++++++++++++ Trying to Fix +++++++++++++++++\n") 
-	(define ctxt (location->ctxt ast bugl))
-	(pretty-print ctxt)
-	(display "+++++++++++++ Context Collected +++++++++++++++++\n") 
-	(display "+++++++++++++ Start Enumerating +++++++++++++++++\n") 
-	
-	(define enum-counter 0)
-	(define type-check-counter 0)
 
-	(define (stat-sketch->constraint stat-sketch)
-		(display (~a enum-counter " programs explored\n"))
-		(display  "enumerated statement: " )
-		(pretty-print stat-sketch)
-		(set! enum-counter (+ 1 enum-counter))
-		(define prog-sketch (location->sketch ast stat-sketch bugl))
-		(define mac-sketch (ast->machine prog-sketch))
-		(if (not (machine-type-check? (build-virtual-table mac-sketch))) #f
-			(begin
-			(set! type-check-counter (+ 1 type-check-counter))
-			(display (~a type-check-counter " programs type-checks\n"))
-			(define (spec->fml io)
-				(match-define (cons input output) io)
-				(display "+++++ Filling Input +++++\n") 
-				(define mac-in (assign-input mac-sketch input))
-				(display "+++++ Computing +++++\n") 
-				(define mac-fin (compute mac-in))
-				(display "+++++ Comparing Output +++++\n") 
-				(compare-output mac-fin output))
-			(define constraint (andmap+ spec->fml spec))
-			(if constraint
-				(begin
-				(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
-				(pretty-print prog-sketch)) #f)
-			constraint)))
+	(define ctxt (location->ctxt ast bugl mac))
 
-	(if (ast-dfs (stat #f) ctxt stat-sketch->constraint search-depth) #t
+	(define (search-first)
+		(define verifier
+			(lambda (stat-sketch)
+				(define prog-sketch (replace-stat ast stat-sketch bugl))
+				(search-second prog-sketch)))
+		(ast-dfs (stat #f) ctxt verifier ??? ??? search-depth))
+
+	(define (search-second ast)
+		(define verifier
+			(lambda (invoke-sketch)
+				(define prog-sketch (insert-stat ast invoke-sketch bugl))
+				(program-sketch->constraint prog-sketch spec)))
+		(ast-dfs (stat-calls #f) ctxt verifier ??? ??? search-depth))
+
+	(search-first))
+
+
+(define (program-sketch->constraint prog-sketch spec)
+	(define mac-sketch (ast->machine prog-sketch))
+	(if (not (machine-type-check? (build-virtual-table mac-sketch))) #f
 		(begin
-		(display "+++++++++++++ Synthesis Failed +++++++++++++++++\n") 
-		#f)))
-	
-;	(display "+++++++++++++ Synthesizing +++++++++++++++++\n") 
-;	(define start-time (std:current-inexact-milliseconds))
-;	(clear-asserts!)
-;	(define syn-sol 
-;		(synthesize
-;			#:forall null
-;			#:guarantee (assert constraint)))
-
-;	(define finish-time (std:current-inexact-milliseconds))
-;	(display (format "Synthesis took ~a milliseconds. Search depth: ~a\n" (- finish-time start-time) search-depth))
-
-;	(if (unsat? syn-sol) 
-;		(begin
-;		(display "+++++++++++++ Synthesis Failed +++++++++++++++++\n") 
-;		#f)
-;
-;		(begin
-;		(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
-;		(pretty-print (evaluate sketch syn-sol))
-;		bugl)))
-
-(define search-depth 3)
-
-(define (location->sketch ast stat-sketch bugl)
-	;extract parameters
-	(define func (location-func bugl))
-	(define cls (location-class bugl))
-	(define cname (class-name cls))
-	(define fname (function-name func))
-	(define line (if (equal? fname func-name-init) (- (location-line bugl) 1) (location-line bugl)))
-
-	;shorthands
-	(define (is-target-cls? cls-ast)
-		(equal? cname (string-id (type-name-name (class-default-name (class-def-rhs cls-ast))))))
-
-	(define (is-target-func? func-ast)
-;		#f)
-		(equal? fname (string-id (func-name-name (function-content-name (function-declare-rhs func-ast))))))
-
-	(define (list-replace l pred e)
-		(map (lambda (e__) (if (pred e__) e e__)) l))
-
-	;find class in AST
-	(define clss-ast (class-list-cl (program-rhs ast)))
-	(define cls-ast (findf is-target-cls? clss-ast))
-	(define vfuncs-ast (function-list-fl (function-declares-rhs (class-default-virtual-functions (class-def-rhs cls-ast)))))
-	(define sfuncs-ast (function-list-fl (function-declares-rhs (class-default-static-functions (class-def-rhs cls-ast)))))
-
-	;find function in AST
-	(define (maybe-replace-func funcs-ast)
-		(define maybe-func-ast (findf is-target-func? funcs-ast))
-		(if (not maybe-func-ast) funcs-ast
-			;find and replace instruction in AST
+		(define (spec->fml io)
+			(match-define (cons input output) io)
+			(define mac-in (assign-input mac-sketch input))
+			(define mac-fin (compute mac-in))
+			(compare-output mac-fin output))
+		(define constraint (andmap+ spec->fml spec))
+		(if constraint
 			(begin
-			(define func-ast maybe-func-ast)
-			(define insts-ast (stat-list-sl (stats-rhs (function-content-statements (function-declare-rhs func-ast)))))
-			(define inst-ast (list-ref insts-ast line))
-;			(define inst-ast-sketch
-;				(stat (stat-ass (stat-ass-lvalue (stat-rhs inst-ast)) (expr-enum ctxt search-depth))))
-;			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line inst-ast-sketch))))
-;			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line (stat-enum ctxt search-depth)))))
-			(define insts-ast-sketch (stats (stat-list (std:list-set insts-ast line stat-sketch))))
-;			(display (~a "replacing line " line ":\n"))
-;			(pretty-print insts-ast-sketch)
-			(define func-ast-sketch (function-declare (std:struct-copy function-content (function-declare-rhs func-ast) [statements insts-ast-sketch])))
-;			(pretty-print func-ast-sketch)
+			(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
+			(pretty-print prog-sketch)) #f)
+		constraint)))
 
-			;repack function
-			(list-replace funcs-ast is-target-func? func-ast-sketch))))
-
-	;repack class
-	(define cls-ast-sketch (class-def (std:struct-copy class-default (class-def-rhs cls-ast) 
-		[virtual-functions (function-declares (function-list (maybe-replace-func vfuncs-ast)))]
-		[static-functions (function-declares (function-list (maybe-replace-func sfuncs-ast)))])))
-	(define clss-ast-sketch (list-replace clss-ast is-target-cls? cls-ast-sketch))
-
-	;repack program
-	(program (class-list clss-ast-sketch)))
-
-			
-		
-
-;(struct syntax-context (vars types fields funcs consts ops labels) #:transparent)
-;(struct location (class func line inst selector) #:transparent)
-(define (location->ctxt ast bugl)
-	(define func (location-func bugl))
-	(define cls (location-class bugl))
-	(define cname (class-name cls))
-
-	(define vars (map car (function-locals func)))
-	(define types null)
-	(define fields (map (lambda (fname) (cons cname fname)) 
-		(map car (append (class-vfields cls) (class-sfields cls)))))
-	(define funcs null)
-	(define consts (list 0 1 2 3))
-	(define ops (list bvand bvor bvxor op-mod op-cmp equal? op-neq op-gt op-ge op-lt op-le bvlshr op-add op-sub op-mul op-div))
-	(define labels null)
-	(syntax-context vars types fields funcs consts ops labels))
-		
 
 (define (print-location l)
 	(pretty-print

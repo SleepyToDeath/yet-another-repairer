@@ -33,9 +33,6 @@
 
 ;cnd: the entire subtree is considered only if cnd is true
 (struct invoke-tree (root cnd subtrees) #:transparent)
-
-;(class X function X int)
-(struct location (class func line inst selector) #:transparent)
 ;============================= Top Level Interface ====================================
 ;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
 (define (ast->relation ast)
