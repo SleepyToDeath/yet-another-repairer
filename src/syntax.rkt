@@ -155,39 +155,8 @@
 (define-syntax-rule (LHS-E name ( rname ::= rhs ... ))
 	(add-lhs-options name (list rhs ...)))
 
-
-
-
-;(define (depth-lhs ast)
-;	(depth-rhs (lhs-rhs ast)))
-
-;(rhs -> name1:lhs1 name2:lhs2 ...)
-
-;(define (depth-rhs ast)
-;	(+ 1
-;		(max (depth-lhs (rhs-name1 ast)) ...)))
-
-;(term -> value)
-;(define (depth-term ast)
-;	0)
-
-
-#|
-(define-syntax-rule (LHS-E name -> (name-enum ::= rhs-enum ...))
-	(define (name-enum ctxt depth-limit)
-		(if (> depth-limit 0)
-			(letrec ([rhs-list (list (rhs-enum ctxt (- depth-limit 1)) ... )]
-				 	 [rhs-list-valid 
-					 	(foldl (lambda (rhs l) (if (expanded-check rhs) (cons rhs l) l))
-							null
-							rhs-list)])
-					(name (if (empty? rhs-list-valid) (invalid 0) (apply choose* rhs-list-valid))))
-			(invalid 0))))
-
-(define-syntax-rule (RHS-E name -> name-enum (lhs-enum ...))
-	(define (name-enum ctxt depth-limit) 
-		(name (lhs-enum ctxt depth-limit) ... )))
-|#
+(define-syntax-rule (RHS-E name (lname : lhs) ...)
+	(add-default-rhs name (name (lhs #f) ...)))
 ;=================================================
 
 

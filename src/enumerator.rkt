@@ -33,6 +33,7 @@
 	(append (take l pos) (list v) (drop l pos)))
 
 (define search-depth 3)
+(define inf-depth 100)
 
 (define bridge-var-name (string-id "__bridge__"))
 
@@ -42,14 +43,17 @@
 ;pruner: check if a partial program can be eliminated early
 ;updater: update context by current ast
 (define (ast-dfs ast ctxt verifier pruner updater depth)
-	(if (not (pruner ast)) #f
+	(pretty-print ast)
+	(if (not (pruner ast)) 
+		(begin (display "pruned\n") #f)
 		(if (ast-check ast)
 			;finished
 			(verifier ast)
 			(begin
 			(define maybe-asts (ast-expand-next ctxt ast depth))
 			;unfinished but can't expand within depth limit
-			(if (null? maybe-asts) #f 
+			(if (null? maybe-asts) 
+				(begin (display "out of depth bound\n") #f)
 				;unfinished and can be expanded
 				(ormap (lambda (ast+) (ast-dfs ast+ (updater ctxt ast+) verifier pruner updater depth)) maybe-asts))))))
 
@@ -152,6 +156,8 @@
 
 
 ;======================== Spec Checker ======================
+;[TODO] check no recursion
+
 ;insert before current `newl`
 (define (insert-stat ast stat-sketch newl)
 	(define func (location-func newl))

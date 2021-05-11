@@ -132,6 +132,7 @@
 	(define ctxt (location->ctxt ast bugl mac))
 
 	(define (search-first)
+		(display "------- enum first --------\n")
 		(define verifier
 			(lambda (stat-sketch)
 				(define prog-sketch (replace-stat ast stat-sketch bugl))
@@ -143,6 +144,7 @@
 		(ast-dfs (stat #f) ctxt verifier pruner updater search-depth))
 
 	(define (search-second ast)
+		(display "------- enum second --------\n")
 		(define verifier
 			(lambda (invoke-sketch)
 				(define prog-sketch (insert-stat ast invoke-sketch bugl))
@@ -151,7 +153,7 @@
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 		(define pruner
 			(lambda (ast) (real-pruner ast mac)))
-		(ast-dfs (stat-calls #f) ctxt verifier pruner updater search-depth))
+		(ast-dfs (stat-calls #f) ctxt verifier pruner updater inf-depth))
 
 	(search-first))
 

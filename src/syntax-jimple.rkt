@@ -98,26 +98,46 @@
 (LHS-E stat-calls (rhs ::= stat-static-call stat-virtual-call))
 (LHS-E stat (rhs ::= stat-ass stat-ret stat-jmp))
 (LHS-E lexpr (rhs ::= expr-var))
+(LHS-E dexpr (rhs ::= expr-var expr-const))
 (LHS-E expr (rhs ::= expr-var expr-binary))
 
 ;[TODO] should be automated; can't resolve the name problem in macros
-(add-default-rhs stat-ass
-	(stat-ass (lexpr #f) (expr #f)))
-(add-default-rhs stat-jmp
-	(stat-jmp (expr #f) (label #f)))
-(add-default-rhs stat-ret
-	(stat-ret (dexpr #f)))
+(RHS-E stat-static-call (ret : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
+(RHS-E stat-virtual-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
+(RHS-E stat-special-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
+(RHS-E stat-ass (lvalue : lexpr) (rvalue : expr))
+(RHS-E stat-jmp (condition : expr) (target : label))
+(RHS-E stat-ret (v : dexpr))
 
-(add-default-rhs expr-const
-	(expr-const (const #f)))
-(add-default-rhs expr-var
-	(expr-var (variable #f)))
-(add-default-rhs expr-binary
-	(expr-binary (expr #f) (op #f) (expr #f)))
-(add-default-rhs expr-array
-	(expr-array (variable #f) (expr #f)))
-(add-default-rhs expr-field
-	(expr-field (variable #f) (type-name #f) (field #f)))
+(RHS-E expr-const (value : const))
+(RHS-E expr-var (name : variable))
+(RHS-E expr-binary (operand1 : expr) (operator : op) (operand2 : expr))
+(RHS-E expr-array (array : variable) (index : expr))
+(RHS-E expr-field (obj : variable) (class : type-name) (fname : field))
+
+;(add-default-rhs stat-static-call
+;	(stat-static-call (variable #f) (type-name #f) (func-name #f) (types #f) (arguments-caller #f)))
+;(add-default-rhs stat-special-call
+;	(stat-special-call (variable #f) (variable #f) (type-name #f) (func-name #f) (types #f) (arguments-caller #f)))
+;(add-default-rhs stat-virtual-call
+;	(stat-virtual-call (variable #f) (variable #f) (type-name #f) (func-name #f) (types #f) (arguments-caller #f)))
+;(add-default-rhs stat-ass
+;	(stat-ass (lexpr #f) (expr #f)))
+;(add-default-rhs stat-jmp
+;	(stat-jmp (expr #f) (label #f)))
+;(add-default-rhs stat-ret
+;	(stat-ret (dexpr #f)))
+
+;(add-default-rhs expr-const
+;	(expr-const (const #f)))
+;(add-default-rhs expr-var
+;	(expr-var (variable #f)))
+;(add-default-rhs expr-binary
+;	(expr-binary (expr #f) (op #f) (expr #f)))
+;(add-default-rhs expr-array
+;	(expr-array (variable #f) (expr #f)))
+;(add-default-rhs expr-field
+;	(expr-field (variable #f) (type-name #f) (field #f)))
 
 
 (define (variable-enum ctxt depth-limit)
