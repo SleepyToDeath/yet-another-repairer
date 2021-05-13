@@ -175,6 +175,11 @@
 
 
 ;==================== Syntax Helpers ====================
+(define-syntax (id2helper stx)
+	(define id (cadr (syntax-e stx)))
+	(define enum (format-symbol "~a-helper" (syntax->datum id)))
+	(datum->syntax id enum))
+
 (define-syntax (id2enum stx)
 	(define id (cadr (syntax-e stx)))
 	(define enum (format-symbol "~a-enum" (syntax->datum id)))
@@ -225,4 +230,7 @@
 ;used if RHS has four elements
 (define (syntax-unwrap4 lvl ast)
 	(expanded-get 4 (syntax-unwrap (- lvl 1) ast)))
+
+(define-syntax-rule (struct-update struct-name obj [field-name updater] ...)
+	(std:struct-copy struct-name obj [field-name (updater ((id2acc struct-name field-name) obj))] ...))
 ;==================================================

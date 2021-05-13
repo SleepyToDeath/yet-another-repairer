@@ -290,7 +290,7 @@
 
 		(define mac-vfuncs (foldl 
 			(lambda (vf mac) 
-				(define vid (vfunc-id mac cls-name (function-name vf) (map cdr (function-args vf))))
+				(define vid (vfunc-id-ori mac cls-name (function-name vf) (map cdr (function-args vf))))
 				(define sid (sfunc-id cls-name (function-name vf) (map cdr (function-args vf))))
 ;				(pretty-print (list "virtual func:" cls-name (function-name vf) sid vid))
 				(define mem-1 (memory-fdecl (machine-mem mac) vid)) 
@@ -354,7 +354,7 @@
 #|
 		(define mem-bind (foldl
 			(lambda (func mem) 
-				(define vid (vfunc-id m classname (function-name func) (map cdr (function-args func))))
+				(define vid (vfunc-id-ori m classname (function-name func) (map cdr (function-args func))))
 				(display (~a "vid: " vid "\n"))
 				(define sid (sfunc-id classname (function-name func) (map cdr (function-args func))))
 				(display (~a "sid: " sid "\n"))
@@ -537,7 +537,7 @@
 			(begin
 
 
-			(define vid (vfunc-id m cls-name func-name (inst-virtual-call-arg-types i)))
+			(define vid (vfunc-id-ori m cls-name func-name (inst-virtual-call-arg-types i)))
 ;			(pretty-print mem-0)
 ;			(display (~a "vid: " vid "\n"))
 ;			(display (~a "obj name: " (inst-virtual-call-obj-name i) "\n"))

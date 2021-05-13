@@ -13,6 +13,7 @@
 (require "model.rkt")
 (require "type-checker.rkt")
 (require "semantics-common.rkt")
+(require "enumerator.rkt")
 (require (prefix-in std: racket/base))
 (require (prefix-in std: racket/list))
 (require racket/format)
@@ -166,31 +167,7 @@
 			(imap-empty default-type)
 			(machine-classes mac-tmp))]))
 
-(define (invoke-same-sig-alt? func-fml invoked-name invoked-arg-types)
-	(define func (function-formula-func func-fml))
-	(and
-		(equal? (function-name func) invoked-name)
-		(andmap (lambda (arg-1 arg-2) (equal? (cdr arg-1) arg-2)) (function-args func) invoked-arg-types)))
-
-(define (lookup-virtual-function-alt mac cls func arg-types) 
-	(if cls
-		(begin
-			(define cls-0 (imap-get (machine-cmap mac) cls default-type))
-
-			(define base-name (ormap 
-				(lambda (cls-cur) (lookup-virtual-function-alt mac cls-cur func arg-types)) 
-				(cons (class-extend cls-0) (class-implements cls-0))))
-
-			(if base-name base-name
-				(if 
-					(ormap (lambda (func-cur) (invoke-same-sig-alt? func-cur func arg-types)) (class-vfuncs cls-0)) 
-					(vfunc-sig->string cls func arg-types)
-					#f)))
-		#f))
-
-
-(define (vfunc-id-alt mac cls func arg-types) (string-id (lookup-virtual-function-alt mac cls func arg-types)))
-
+(define vfunc-id-alt (curry vfunc-id function-formula-func))
 
 (define (build-virtual-table-alt mac) 
 	(define classes (machine-classes mac))
@@ -249,10 +226,6 @@
 	(set-void-receiver-addr addr)
 	(std:struct-copy machine mac-cls [mem mem-void-receiver]))
 
-(define (is-interface-func? func-fml)
-	(null? (function-prog (function-formula-func func-fml))))
-
-
 
 ;----------------------- Allocation -------------------------
 ;function -> function-formula (with line id, pmark is empty)
@@ -262,7 +235,7 @@
 		null
 		#f
 		#t
-		(if mac (vfunc-id mac clsname (function-name func) (map cdr (function-args func))) #f)
+		(if mac (vfunc-id-ori mac clsname (function-name func) (map cdr (function-args func))) #f)
 		(sfunc-id clsname (function-name func) (map cdr (function-args func)))
 		clsname))
 
@@ -334,51 +307,11 @@
 	(lstate-pmark (get-lstate func-fml pc)))
 
 
-
-
 (define (get-lid func-fml pc)
 	(list-ref (function-formula-lids func-fml) pc))
 
-(define contains-target-list null)
-(define (reset-contains-target-cache)
-	(set! contains-target-list null))
-;if a function will (transitively) call any target function
-(define (contains-target? mac sid target-sids)
-	(if (or (member sid contains-target-list) (member sid target-sids)) #t
-		(begin
-		(define func-fml (imap-get (machine-fmap mac) sid default-type))
-		(define func (function-formula-func func-fml))
-		(define prog (function-prog func))
-		(define ret (ormap (lambda (inst)
-			(match inst
-				[(inst-nop _) #f]
-				[(inst-init classname) #f]
-				[(inst-newarray v-name size-expr) #f]
-				[(inst-new v-name) #f]
-				[(inst-ret v-expr) #f]
-				[(inst-long-jump cls-name func-name) 
-					(if (model-lookup cls-name func-name) #f
-						(contains-target? mac (sfunc-id cls-name func-name null) target-sids))]
-				[(inst-static-call ret cls-name func-name arg-types args) 
-					(if (model-lookup cls-name func-name) #f
-						(contains-target? mac (sfunc-id cls-name func-name arg-types) target-sids))]
-				[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
-					(if (model-lookup cls-name func-name) #f
-						(begin
-						(define vid (vfunc-id-alt mac cls-name func-name arg-types))
-						(define sids-invoked (map function-formula-sid
-							(filter (lambda (f) (and (not (is-interface-func? f)) (equal? (function-formula-vid f) vid))) 
-								(all-vfunctions mac))))
-						(ormap (lambda (sid) (contains-target? mac sid target-sids)) sids-invoked)))]
-				[(inst-special-call ret obj-name cls-name func-name arg-types args)
-					(if (model-lookup cls-name func-name) #f
-						(contains-target? mac (sfunc-id cls-name func-name arg-types) target-sids))]
-				[(inst-ass vl vr)  #f]
-				[(inst-switch cnd cases default-l) #f]
-				[(inst-jmp condition label) #f]))
-			prog))
-		(if ret (set! contains-target-list (cons sid contains-target-list)) #f)
-		ret)))
+
+(define contains-target-alt? (curry contains-target? function-formula-func))
 
 
 ;return a new func-fml
@@ -688,7 +621,7 @@
 			[(inst-long-jump cls-name func-name)
 				(begin
 				(define sid (sfunc-id cls-name func-name null))
-				(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target? mac sid target-sids)))))
+				(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target-alt? mac sid target-sids)))))
 
 				(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
 				(match-define (cons func-fml-in fml-in) (long-jump-setup func-invoked mem-in))
@@ -722,7 +655,7 @@
 					(begin
 
 					(define sid (sfunc-id cls-name func-name arg-types))
-					(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target? mac sid target-sids)))))
+					(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target-alt? mac sid target-sids)))))
 
 					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
 					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-in args))
@@ -762,7 +695,7 @@
 					(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
 					(define vid (vfunc-id-alt mac cls-name func-name arg-types))
 					(define funcs-invoked (map alloc-lstate 
-						(filter (lambda (f) (and (not (is-interface-func? f)) (equal? (function-formula-vid f) vid))) 
+						(filter (lambda (f) (and (not (is-interface-func? (function-formula-func f))) (equal? (function-formula-vid f) vid))) 
 							(all-vfunctions mac))))
 					(define fid-class-name (vfield-id mac cls-name field-name-class))
 					(define classname-true (memory-fread mem--1 fid-class-name obj-addr name-type))
@@ -775,7 +708,7 @@
 					(define (invoke-candidate fcan)
 						(begin
 						;[?] can different styles of callee be mixed in one calling instruction? I think yes, but note for potential bugs
-						(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target? mac (function-formula-sid fcan) target-sids)))))
+						(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target-alt? mac (function-formula-sid fcan) target-sids)))))
 
 						(match-define (cons func-fml-in fml-in) (invoke-setup fcan mem-this args))
 						;an invoke tree without condition
@@ -828,7 +761,7 @@
 					(begin
 					(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
 					(define sid (sfunc-id cls-name func-name arg-types))
-					(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target? mac sid target-sids)))))
+					(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target-alt? mac sid target-sids)))))
 					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
 
 					;push an extra scope to avoid overwriting "this" of the current scope

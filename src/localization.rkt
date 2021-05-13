@@ -136,7 +136,9 @@
 		(define verifier
 			(lambda (stat-sketch)
 				(define prog-sketch (replace-stat ast stat-sketch bugl))
-				(search-second prog-sketch)))
+				(if (using-bridge-var? stat-sketch)
+					(search-second prog-sketch)
+					(program-sketch->constraint prog-sketch spec))))
 		(define updater
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 		(define pruner
@@ -147,7 +149,7 @@
 		(display "------- enum second --------\n")
 		(define verifier
 			(lambda (invoke-sketch)
-				(define prog-sketch (insert-stat ast invoke-sketch bugl))
+				(define prog-sketch (define-bridge-var (insert-stat ast invoke-sketch bugl) invoke-sketch (get-invoke-ret-type invoke-sketch mac) bugl))
 				(program-sketch->constraint prog-sketch spec)))
 		(define updater
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
@@ -160,7 +162,7 @@
 
 (define (program-sketch->constraint prog-sketch spec)
 	(define mac-sketch (ast->machine prog-sketch))
-	(if (not (machine-type-check? (build-virtual-table mac-sketch))) #f
+	(if (not (machine-all-check? (build-virtual-table mac-sketch))) #f
 		(begin
 		(define (spec->fml io)
 			(match-define (cons input output) io)

@@ -92,19 +92,19 @@
 	
 
 ;============================= Utils ===================================
-(define (lookup-virtual-function mac cls func arg-types) 
+(define (lookup-virtual-function func-getter mac cls func arg-types) 
 	(if cls
 		(begin
 ;			(display (~a "class name: " cls " func name: " func "\n"))
 			(define cls-0 (imap-get (machine-cmap mac) cls default-type))
 
 			(define base-name (ormap 
-				(lambda (cls-cur) (lookup-virtual-function mac cls-cur func arg-types)) 
+				(lambda (cls-cur) (lookup-virtual-function func-getter mac cls-cur func arg-types)) 
 				(cons (class-extend cls-0) (class-implements cls-0))))
 
 			(if base-name base-name
 				(if 
-					(ormap (lambda (func-cur) (invoke-same-sig? func-cur func arg-types)) (class-vfuncs cls-0)) 
+					(ormap (lambda (func-cur) (invoke-same-sig? (func-getter func-cur) func arg-types)) (class-vfuncs cls-0)) 
 					(vfunc-sig->string cls func arg-types)
 					#f)))
 		#f))
@@ -128,7 +128,8 @@
 		#f))
 
 ;virtual functions sharing same signature will have same vid
-(define (vfunc-id mac cls func arg-types) (string-id (lookup-virtual-function mac cls func arg-types)))
+(define (vfunc-id func-getter mac cls func arg-types) (string-id (lookup-virtual-function func-getter mac cls func arg-types)))
+(define vfunc-id-ori (curry vfunc-id identity))
 
 (define (vfield-id mac cls field) (string-id (lookup-virtual-field mac cls field)))
 
@@ -181,9 +182,32 @@
 	(apply append
 		(map (lambda (cls) (class-vfuncs cls)) (machine-classes mac))))
 
+(define (all-sids mac)
+	(apply append
+		(map (lambda (cls)
+			(map (lambda (func)
+				(sfunc-id (class-name cls) (function-name func) (map cdr (function-args func))))
+			(append (class-sfuncs cls) (class-vfuncs cls))))
+		(machine-classes mac))))
+
+(define (all-vf-sid-vids mac)
+	(apply append
+		(map (lambda (cls)
+			(map (lambda (func)
+				(list 
+					func
+					(sfunc-id (class-name cls) (function-name func) (map cdr (function-args func)))
+					(vfunc-id-ori mac (class-name cls) (function-name func) (map cdr (function-args func)))))
+			(class-vfuncs cls)))
+		(machine-classes mac))))
+
+(define (is-interface-func? func)
+	(null? (function-prog func)))
+
 (define (print-location l)
 	(pretty-print
 		(match l
 			[(location cls func line inst selector)
 				(location (class-name cls) (function-name func) line inst selector)])))
+
 

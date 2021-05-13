@@ -115,29 +115,6 @@
 (RHS-E expr-array (array : variable) (index : expr))
 (RHS-E expr-field (obj : variable) (class : type-name) (fname : field))
 
-;(add-default-rhs stat-static-call
-;	(stat-static-call (variable #f) (type-name #f) (func-name #f) (types #f) (arguments-caller #f)))
-;(add-default-rhs stat-special-call
-;	(stat-special-call (variable #f) (variable #f) (type-name #f) (func-name #f) (types #f) (arguments-caller #f)))
-;(add-default-rhs stat-virtual-call
-;	(stat-virtual-call (variable #f) (variable #f) (type-name #f) (func-name #f) (types #f) (arguments-caller #f)))
-;(add-default-rhs stat-ass
-;	(stat-ass (lexpr #f) (expr #f)))
-;(add-default-rhs stat-jmp
-;	(stat-jmp (expr #f) (label #f)))
-;(add-default-rhs stat-ret
-;	(stat-ret (dexpr #f)))
-
-;(add-default-rhs expr-const
-;	(expr-const (const #f)))
-;(add-default-rhs expr-var
-;	(expr-var (variable #f)))
-;(add-default-rhs expr-binary
-;	(expr-binary (expr #f) (op #f) (expr #f)))
-;(add-default-rhs expr-array
-;	(expr-array (variable #f) (expr #f)))
-;(add-default-rhs expr-field
-;	(expr-field (variable #f) (type-name #f) (field #f)))
 
 
 (define (variable-enum ctxt depth-limit)
