@@ -128,33 +128,42 @@
 
 
 (define (try-fixing ast mac spec bugl)
+	
+	(define first-counter 0)
+	(define second-counter 0)
 
 	(define ctxt (location->ctxt ast bugl mac))
+	(display "============ context collected =============:\n")
+	(pretty-print ctxt)
 
 	(define (search-first)
 		(display "------- enum first --------\n")
+		(++ first-counter)
+		(pretty-print first-counter)
 		(define verifier
 			(lambda (stat-sketch)
 				(define prog-sketch (replace-stat ast stat-sketch bugl))
 				(if (using-bridge-var? stat-sketch)
 					(search-second prog-sketch)
-					(program-sketch->constraint prog-sketch spec))))
+					(monitor-reason "spec" (program-sketch->constraint prog-sketch spec)))))
 		(define updater
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 		(define pruner
-			(lambda (ast) (real-pruner ast mac)))
+			(monitor-reason "pruner" (lambda (ast) (real-pruner ast mac))))
 		(ast-dfs (stat #f) ctxt verifier pruner updater search-depth))
 
 	(define (search-second ast)
 		(display "------- enum second --------\n")
+		(++ second-counter)
+		(pretty-print second-counter)
 		(define verifier
 			(lambda (invoke-sketch)
 				(define prog-sketch (define-bridge-var (insert-stat ast invoke-sketch bugl) invoke-sketch (get-invoke-ret-type invoke-sketch mac) bugl))
-				(program-sketch->constraint prog-sketch spec)))
+				(monitor-reason "spec" (program-sketch->constraint prog-sketch spec))))
 		(define updater
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 		(define pruner
-			(lambda (ast) (real-pruner ast mac)))
+			(monitor-reason "pruner" (lambda (ast) (real-pruner ast mac))))
 		(ast-dfs (stat-calls #f) ctxt verifier pruner updater inf-depth))
 
 	(search-first))

@@ -101,15 +101,21 @@
 
 (define (real-pruner ast mac)
 	(define func (ast->func ast mac))
+	;[TODO] not necessary, but improves performance
 	(define (arg-type-checker)
 		#t)
+	;[?] what is this?
 	(define (ret-type-checker)
 		#t)
 	(define (bridge-var-checker)
-		#t)
+		(and 
+			(unwanted-bridge-var? ast)
+			(missing-bridge-var? ast)))
 	(and 
 		(arg-type-checker)
-		(ret-type-checker)))
+		(ret-type-checker)
+		(bridge-var-checker)
+	))
 
 
 (define (ast->func ast mac)
@@ -160,12 +166,37 @@
 (define (using-bridge-var? ast)
 	(match ast
 		[(stat rhs) (using-bridge-var? rhs)]
+		[(stat-ass lvalue rvalue) (using-bridge-var? rvalue)]
+		[(stat-ret v) (using-bridge-var? v)]
+		[(stat-jmp condition target) (using-bridge-var? condition)]
+		[(dexpr rhs) (using-bridge-var? rhs)]
+		[(lexpr rhs) (using-bridge-var? rhs)]
+		[(expr rhs) (using-bridge-var? rhs)]
+		[(expr-const value) #f]
+		[(expr-binary operand1 operator operand2) (or (using-bridge-var? operand1) (using-bridge-var? operand2))]
+		[(expr-array array index) (or (using-bridge-var? array) (using-bridge-var? index))]
+		[(expr-field obj class fname) (using-bridge-var? obj)]
+		[(expr-var name) (using-bridge-var? name)]
+		[(variable name) (equal? (string-id name) bridge-var-name)]
+		[_ #f]))
+
+(define (unwanted-bridge-var? ast)
+	(match ast
+		[(stat rhs) (using-bridge-var? rhs)]
 		[(stat-ass lvalue rvalue) (using-bridge-var? lvalue)]
 		[(lexpr rhs) (using-bridge-var? rhs)]
 		[(expr-var name) (using-bridge-var? name)]
 		[(variable name) (equal? (string-id name) bridge-var-name)]
 		[_ #f]))
 
+(define (missing-bridge-var? ast)
+	(match ast
+		[(stat rhs) (using-bridge-var? rhs)]
+		[(stat-calls rhs) (using-bridge-var? rhs)]
+		[(stat-static-call ret cls-name func arg-types args) (not (equal? (string-id ret) bridge-var-name))]
+		[(stat-virtual-call ret obj cls-name func arg-types args) (not (equal? (string-id ret) bridge-var-name))]
+		[(stat-special-call ret obj cls-name func arg-types args) (not (equal? (string-id ret) bridge-var-name))]
+		[_ #f]))
 
 
 ;======================== Spec Checker ======================
@@ -395,3 +426,10 @@
 			[(inst-jmp condition label) #f]))
 		prog))
 	ret)
+
+
+
+;======================== Debug ========================
+(define (monitor-reason msg result)
+	(if (not result) (display (~a "Fail check " msg "\n")) #f)
+	result)

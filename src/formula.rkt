@@ -215,3 +215,6 @@
 (define (do-n-ret f v)
 	(f v)
 	v)
+
+(define-syntax-rule (++ name)
+	(set! name (+ name 1)))
