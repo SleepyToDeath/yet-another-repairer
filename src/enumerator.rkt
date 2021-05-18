@@ -44,14 +44,15 @@
 ;pruner: check if a partial program can be eliminated early
 ;updater: update context by current ast
 (define (ast-dfs ast ctxt verifier pruner updater depth)
-;	(pretty-print ast)
+	(pretty-print ast)
 	(if (not (pruner ast)) 
-		#f;(begin (display "pruned\n") #f)
+		(begin (display "pruned\n") #f)
 		(if (ast-check ast)
 			;finished
 			(verifier ast)
 			(begin
 			(define maybe-asts (ast-expand-next ctxt ast depth))
+;			(pretty-print maybe-asts)
 			;unfinished but can't expand within depth limit
 			(if (null? maybe-asts) 
 				#f;(begin (display "out of depth bound\n") #f)
@@ -71,10 +72,10 @@
 	(define line-ast (if (equal? fname func-name-init) (- line-mac 1) line-mac))
 
 	(define vars (cons bridge-var-name (map car (function-locals func))))
-	(define types null)
+	(define types (map class-name (machine-classes mac)))
 	(define fields (map (lambda (fname) (cons cname fname)) 
 		(map car (append (class-vfields cls) (class-sfields cls)))))
-	(define funcs null)
+	(define funcs (map function-name (all-functions mac)))
 	(define consts (list 0 1 2 3))
 	(define ops (list bvand bvor bvxor op-mod op-cmp equal? op-neq op-gt op-ge op-lt op-le bvlshr op-add op-sub op-mul op-div))
 	; don't change jump target
@@ -91,50 +92,53 @@
 	(if (not func) ctxt
 		(begin
 		(define empty-arg-list (map (lambda (x) #f) (function-args func)))
-		(define dummy-arg-list (map (lambda (x) (type-name "int")) (function-args func)))
+		(define dummy-type-list (map (lambda (x) (type-name "int")) (function-args func)))
 		(define (def-list-gen node)
 			(match ast
-				[type-list dummy-arg-list]
+				[type-list dummy-type-list]
 				[argument-caller-list empty-arg-list]))
 		(std:struct-copy syntax-context ctxt [def-list-gen def-list-gen]))))
 
 
 (define (real-pruner ast mac)
-	(define func (ast->func ast mac))
 	;[TODO] not necessary, but improves performance
 	(define (arg-type-checker)
 		#t)
-	;[?] what is this?
-	(define (ret-type-checker)
-		#t)
+	(define (invalid-func-checker)
+		(monitor-reason "invalid function" (not (invalid-function-error? (ast->func ast mac)))))
 	(define (bridge-var-checker)
 		(and 
-			(unwanted-bridge-var? ast)
-			(missing-bridge-var? ast)))
+			(monitor-reason "unwanted var" (not (unwanted-bridge-var? ast)))
+			(monitor-reason "missing var" (not (missing-bridge-var? ast)))))
 	(and 
-		(arg-type-checker)
-		(ret-type-checker)
 		(bridge-var-checker)
+		(invalid-func-checker)
+		(arg-type-checker)
 	))
 
+(struct invalid-function-error (msg) #:transparent)
 
 (define (ast->func ast mac)
 
 	(define (find-vfunc mac cname fname)
-		(ormap (lambda (cls) 
-			(if (not (equal? cname (class-name cls))) #f 
-				(findf (lambda (f) 
-					(equal? fname (function-name f)))
-					(class-vfuncs cls))))
-			(machine-classes mac)))
+		(define ret
+			(ormap (lambda (cls) 
+				(if (not (equal? cname (class-name cls))) #f 
+					(findf (lambda (f) 
+						(equal? fname (function-name f)))
+						(class-vfuncs cls))))
+				(machine-classes mac)))
+		(if ret ret (invalid-function-error -1)))
 
 	(define (find-sfunc mac cname fname)
-		(ormap (lambda (cls) 
-			(if (not (equal? cname (class-name cls))) #f 
-				(findf (lambda (f) 
-					(equal? fname (function-name f)))
-					(class-sfuncs cls))))
-			(machine-classes mac)))
+		(define ret
+			(ormap (lambda (cls) 
+				(if (not (equal? cname (class-name cls))) #f 
+					(findf (lambda (f) 
+						(equal? fname (function-name f)))
+						(class-sfuncs cls))))
+				(machine-classes mac)))
+		(if ret ret (invalid-function-error -1)))
 
 	(match ast
 		[(stat s) (ast->func s mac)]
@@ -181,21 +185,22 @@
 		[_ #f]))
 
 (define (unwanted-bridge-var? ast)
+;	(pretty-print ast)
 	(match ast
-		[(stat rhs) (using-bridge-var? rhs)]
-		[(stat-ass lvalue rvalue) (using-bridge-var? lvalue)]
-		[(lexpr rhs) (using-bridge-var? rhs)]
-		[(expr-var name) (using-bridge-var? name)]
+		[(stat rhs) (unwanted-bridge-var? rhs)]
+		[(stat-ass lvalue rvalue) (unwanted-bridge-var? lvalue)]
+		[(lexpr rhs) (unwanted-bridge-var? rhs)]
+		[(expr-var name) (unwanted-bridge-var? name)]
 		[(variable name) (equal? (string-id name) bridge-var-name)]
 		[_ #f]))
 
 (define (missing-bridge-var? ast)
 	(match ast
-		[(stat rhs) (using-bridge-var? rhs)]
-		[(stat-calls rhs) (using-bridge-var? rhs)]
-		[(stat-static-call ret cls-name func arg-types args) (not (equal? (string-id ret) bridge-var-name))]
-		[(stat-virtual-call ret obj cls-name func arg-types args) (not (equal? (string-id ret) bridge-var-name))]
-		[(stat-special-call ret obj cls-name func arg-types args) (not (equal? (string-id ret) bridge-var-name))]
+		[(stat rhs) (missing-bridge-var? rhs)]
+		[(stat-calls rhs) (missing-bridge-var? rhs)]
+		[(stat-static-call ret cls-name func arg-types args) (and (variable-name ret) (not (equal? (string-id (variable-name ret)) bridge-var-name)))]
+		[(stat-virtual-call ret obj cls-name func arg-types args) (and (variable-name ret) (not (equal? (string-id (variable-name ret)) bridge-var-name)))]
+		[(stat-special-call ret obj cls-name func arg-types args) (and (variable-name ret) (not (equal? (string-id (variable-name ret)) bridge-var-name)))]
 		[_ #f]))
 
 
@@ -205,12 +210,14 @@
 	(function-ret (ast->func ast-invoke mac)))
 
 (define (define-bridge-var ast-prog ast-invoke ret-type loc)
-	(update-prog ast-prog loc (lambda (ast-func)
-		(struct-update function-declare ast-func [rhs (lambda (rhs) 
-			(struct-update function-content rhs [local-variables (lambda (lhs)
-				(struct-update variable-definitions lhs [rhs (lambda (rhs)
-					(struct-update variable-definition-list rhs [vl (lambda (lst)
-						(cons (variable-definition (variable-n-type (variable bridge-var-name) (type-name ret-type))) lst))]))]))]))]))))
+	(update-prog ast-prog loc (lambda (ast-funcs)
+		(map (lambda (ast-func) (if (not (is-target-func? loc ast-func)) ast-func
+			(struct-update function-declare ast-func [rhs (lambda (rhs) 
+				(struct-update function-content rhs [local-variables (lambda (lhs)
+					(struct-update variable-definitions lhs [rhs (lambda (rhs)
+						(struct-update variable-definition-list rhs [vl (lambda (lst)
+							(cons (variable-definition (variable-n-type (variable bridge-var-name) (type-name ret-type))) lst))]))]))]))])))
+		ast-funcs))))
 
 ;insert before current `newl`
 (define (insert-stat ast stat-sketch newl)
@@ -231,22 +238,20 @@
 			(update-func ast bugl 
 				(lambda (ast) (stats (stat-list (std:list-set ast line stat-sketch))))))))
 
-(define (update-func funcs-ast loc lupdater)
+(define (is-target-func? loc func-ast)
 	(define func (location-func loc))
 	(define fname (function-name func))
+	(equal? fname (string-id (func-name-name (function-content-name (function-declare-rhs func-ast))))))
 
-	(define (is-target-func? func-ast)
-		(equal? fname (string-id (func-name-name (function-content-name (function-declare-rhs func-ast))))))
-
-	(define maybe-func-ast (findf is-target-func? funcs-ast))
+(define (update-func funcs-ast loc lupdater)
+	(define maybe-func-ast (findf (curry is-target-func? loc) funcs-ast))
 	(if (not maybe-func-ast) funcs-ast
 		(begin
 		(define func-ast maybe-func-ast)
 		(define insts-ast (stat-list-sl (stats-rhs (function-content-statements (function-declare-rhs func-ast)))))
 		(define insts-ast-sketch (lupdater insts-ast)) 
 		(define func-ast-sketch (function-declare (std:struct-copy function-content (function-declare-rhs func-ast) [statements insts-ast-sketch])))
-		(list-replace funcs-ast is-target-func? func-ast-sketch))))
-
+		(list-replace funcs-ast (curry is-target-func? loc) func-ast-sketch))))
 
 (define (update-prog ast loc fupdater)
 	(define cls (location-class loc))

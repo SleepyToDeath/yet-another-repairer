@@ -101,6 +101,9 @@
 (LHS-E dexpr (rhs ::= expr-var expr-const))
 (LHS-E expr (rhs ::= expr-var expr-binary))
 
+(LHS-E types (rhs ::= type-list))
+(LHS-E arguments-caller (rhs ::= argument-caller-list))
+
 ;[TODO] should be automated; can't resolve the name problem in macros
 (RHS-E stat-static-call (ret : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 (RHS-E stat-virtual-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
@@ -115,6 +118,8 @@
 (RHS-E expr-array (array : variable) (index : expr))
 (RHS-E expr-field (obj : variable) (class : type-name) (fname : field))
 
+(RHS-E-List type-list (tl : type-name))
+(RHS-E-List argument-caller-list (al : dexpr))
 
 
 (define (variable-enum ctxt depth-limit)

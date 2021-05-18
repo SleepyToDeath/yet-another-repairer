@@ -186,6 +186,7 @@
 ;	(pretty-print ast)
 	(match ast
 		[(stat s) (ast->instruction s lmap line-num)]
+		[(stat-calls s) (ast->instruction s lmap line-num)]
 		[(stat-ass target rvalue) 
 			(begin
 			(cons (inst-ass target (ast->expression rvalue)) lmap))]
@@ -326,7 +327,7 @@
 	(define n.t (syntax-unwrap2 2 ast))
 	(define name (syntax-unwrap 1 (car n.t)))
 	(define type0 (syntax-unwrap 1 (cdr n.t)))
-	(define type (if (string-suffix? type0 "[]") (std:substring type0 0 (- (std:string-length type0) 2)) type0))
+	(define type (if (and (std:string? type0) (string-suffix? type0 "[]")) (std:substring type0 0 (- (std:string-length type0) 2)) type0))
 	(cons (string-id name) (string-id type)))
 
 

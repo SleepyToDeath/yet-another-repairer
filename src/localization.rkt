@@ -60,7 +60,8 @@
 	(define sum (apply + (map (lambda (l) (if (location-selector l) 1 0)) locations)))
 	(define one-bug (equal? sum (- (length locations) 1)))
 	(define no-bug (equal? sum (length locations)))
-	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) spec)))
+;	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) spec)))
+	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) (list (car spec)))))
 	(define max-sat-sum (apply + (map (lambda (l) (if l 1 0)) max-sat-list)))
 	(define debug-max-sat (> max-sat-sum (- (length max-sat-list) 7)))
 
@@ -122,15 +123,17 @@
 					(localize-bug-in-funcs ast mac locations encoder spec 
 						(map function-formula-sid vfuncs)))]
 
-			[_ (try-fixing ast mac spec bugl)]))
+			[_ (try-fixing ast spec bugl)]))
 
 		(if maybe-l maybe-l (localize-bug-in-funcs ast mac locations encoder spec funcs)))))
 
 
-(define (try-fixing ast mac spec bugl)
+(define (try-fixing ast spec bugl)
 	
 	(define first-counter 0)
 	(define second-counter 0)
+
+	(define mac (ast->machine ast))
 
 	(define ctxt (location->ctxt ast bugl mac))
 	(display "============ context collected =============:\n")
@@ -149,7 +152,7 @@
 		(define updater
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 		(define pruner
-			(monitor-reason "pruner" (lambda (ast) (real-pruner ast mac))))
+			(lambda (ast) (monitor-reason "pruner" (real-pruner ast mac))))
 		(ast-dfs (stat #f) ctxt verifier pruner updater search-depth))
 
 	(define (search-second ast)

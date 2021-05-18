@@ -38,6 +38,8 @@
 
 (define input1 (list (cons 0 "int")))
 (define output1 (list (cons var-ret-name 0)))
+(define input2 (list (cons 1 "int")))
+(define output2 (list (cons var-ret-name 1)))
 
 (define mac (ast->machine buggy))
 (pretty-print string-id-map)
@@ -56,7 +58,7 @@ result
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1))))
+(define bugl (localize-bug buggy (list (cons input1 output1) (cons input2 output2))))
 (pretty-print bugl)
 
 
