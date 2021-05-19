@@ -44,7 +44,6 @@
 ;pruner: check if a partial program can be eliminated early
 ;updater: update context by current ast
 (define (ast-dfs ast ctxt verifier pruner updater depth)
-	(pretty-print ast)
 	(if (not (pruner ast)) 
 		(begin (display "pruned\n") #f)
 		(if (ast-check ast)
@@ -52,7 +51,6 @@
 			(verifier ast)
 			(begin
 			(define maybe-asts (ast-expand-next ctxt ast depth))
-;			(pretty-print maybe-asts)
 			;unfinished but can't expand within depth limit
 			(if (null? maybe-asts) 
 				#f;(begin (display "out of depth bound\n") #f)
@@ -83,13 +81,13 @@
 		(match (list-ref (function-prog func) line-mac)
 			[(inst-jmp condition label) (list label)]
 			[_ null]))
-	(syntax-context vars types fields funcs consts ops labels identity))
+	(syntax-context vars types fields funcs consts ops labels (lambda (x) #f)))
 
 ;ast: enumerated statement
 ;set default argument list by function name
 (define (real-context-updater ctxt ast mac)
 	(define func (ast->func ast mac))
-	(if (not func) ctxt
+	(if (or (not-a-function-error? func) (invalid-function-error? func)) ctxt
 		(begin
 		(define empty-arg-list (map (lambda (x) #f) (function-args func)))
 		(define dummy-type-list (map (lambda (x) (type-name "int")) (function-args func)))
@@ -105,7 +103,10 @@
 	(define (arg-type-checker)
 		#t)
 	(define (invalid-func-checker)
-		(monitor-reason "invalid function" (not (invalid-function-error? (ast->func ast mac)))))
+		(define maybe-func (ast->func ast mac))
+		(and 
+			(monitor-reason "invalid function" (not (invalid-function-error? maybe-func)))))
+;			(monitor-reason "not a function" (not (not-a-function-error? maybe-func)))))
 	(define (bridge-var-checker)
 		(and 
 			(monitor-reason "unwanted var" (not (unwanted-bridge-var? ast)))
@@ -117,13 +118,15 @@
 	))
 
 (struct invalid-function-error (msg) #:transparent)
+(struct not-a-function-error (msg) #:transparent)
+(define default-msg -1)
 
 (define (ast->func ast mac)
 
 	(define (find-vfunc mac cname fname)
 		(define ret
 			(ormap (lambda (cls) 
-				(if (not (equal? cname (class-name cls))) #f 
+				(if (not (equal? cname (class-name cls))) #f
 					(findf (lambda (f) 
 						(equal? fname (function-name f)))
 						(class-vfuncs cls))))
@@ -133,7 +136,7 @@
 	(define (find-sfunc mac cname fname)
 		(define ret
 			(ormap (lambda (cls) 
-				(if (not (equal? cname (class-name cls))) #f 
+				(if (not (equal? cname (class-name cls))) #f
 					(findf (lambda (f) 
 						(equal? fname (function-name f)))
 						(class-sfuncs cls))))
@@ -145,27 +148,27 @@
 		[(stat-calls s) (ast->func s mac)]
 
 		[(stat-static-call ret cls-name func arg-types args) 
-			(if (not (and cls-name (type-name-name cls-name) func (func-name-name func))) #f
+			(if (not (and cls-name (type-name-name cls-name) func (func-name-name func))) (not-a-function-error default-msg)
 				(begin
 				(define cname (string-id (type-name-name cls-name)))
 				(define fname (string-id (func-name-name func)))
 				(find-sfunc mac cname fname)))]
 
 		[(stat-virtual-call ret obj cls-name func arg-types args)
-			(if (not (and cls-name (type-name-name cls-name) func (func-name-name func))) #f
+			(if (not (and cls-name (type-name-name cls-name) func (func-name-name func))) (not-a-function-error default-msg)
 				(begin
 				(define cname (string-id (type-name-name cls-name)))
 				(define fname (string-id (func-name-name func)))
 				(find-vfunc mac cname fname)))]
 
 		[(stat-special-call ret obj cls-name func arg-types args)
-			(if (not (and cls-name (type-name-name cls-name) func (func-name-name func))) #f
+			(if (not (and cls-name (type-name-name cls-name) func (func-name-name func))) (not-a-function-error default-msg)
 				(begin
 				(define cname (string-id (type-name-name cls-name)))
 				(define fname (string-id (func-name-name func)))
 				(find-sfunc mac cname fname)))]
 
-		[_ #f]))
+		[_ (not-a-function-error default-msg)]))
 
 (define (using-bridge-var? ast)
 	(match ast
@@ -185,7 +188,6 @@
 		[_ #f]))
 
 (define (unwanted-bridge-var? ast)
-;	(pretty-print ast)
 	(match ast
 		[(stat rhs) (unwanted-bridge-var? rhs)]
 		[(stat-ass lvalue rvalue) (unwanted-bridge-var? lvalue)]

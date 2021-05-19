@@ -169,14 +169,12 @@
 (define (add-lhs-options lhs rhs-list)
 	(set! lhs-options-list (cons (cons lhs rhs-list) lhs-options-list)))
 (define (lookup-default-lhs lhs)
-	(pretty-print lhs)
 	(cdr (findf (lambda (entry) (equal? (car entry) lhs)) lhs-options-list)))
 
 (define default-rhs-list null)
 (define (add-default-rhs rhs ast-def)
 	(set! default-rhs-list (cons (cons rhs ast-def) default-rhs-list)))
 (define (lookup-default-rhs rhs)
-	(pretty-print rhs)
 	(cdr (findf (lambda (entry) (equal? (car entry) rhs)) default-rhs-list)))
 
 
