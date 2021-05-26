@@ -38,7 +38,7 @@
 						((id2pred rhs) __et) ...
 					)
 					(expanded-check __et)))
-;				(if flag flag (begin (print name) (display "\n")))
+				(if flag flag (begin (print name) (display "\n")))
 				flag)
 
 			(define (ast-get __ast)
@@ -67,10 +67,12 @@
 				(list ((id2acc name lname) __et)))
 
 			(define (expanded-expand-next __ctxt __ast __depth)
+				(pretty-print __ast)
 				(define __ast+ 
 					(if ((id2acc name lname) __ast)
 						__ast
-						(name ((syntax-context-def-list-gen __ctxt) name))))
+						(name ((syntax-context-def-list-gen __ctxt) (name 0)))))
+				(pretty-print __ast+)
 				(foldl 
 					(lambda (__index __lst)
 						(define (__expander __ast0)

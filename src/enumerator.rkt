@@ -73,7 +73,7 @@
 	(define types (map class-name (machine-classes mac)))
 	(define fields (map (lambda (fname) (cons cname fname)) 
 		(map car (append (class-vfields cls) (class-sfields cls)))))
-	(define funcs (map function-name (all-functions mac)))
+	(define funcs (remove func-name-init (remove-duplicates (map function-name (all-functions mac)))))
 	(define consts (list 0 1 2 3))
 	(define ops (list bvand bvor bvxor op-mod op-cmp equal? op-neq op-gt op-ge op-lt op-le bvlshr op-add op-sub op-mul op-div))
 	; don't change jump target
@@ -92,9 +92,9 @@
 		(define empty-arg-list (map (lambda (x) #f) (function-args func)))
 		(define dummy-type-list (map (lambda (x) (type-name "int")) (function-args func)))
 		(define (def-list-gen node)
-			(match ast
-				[type-list dummy-type-list]
-				[argument-caller-list empty-arg-list]))
+			(match node
+				[(type-list _) dummy-type-list]
+				[(argument-caller-list _) empty-arg-list]))
 		(std:struct-copy syntax-context ctxt [def-list-gen def-list-gen]))))
 
 
@@ -194,6 +194,14 @@
 		[(lexpr rhs) (unwanted-bridge-var? rhs)]
 		[(expr-var name) (unwanted-bridge-var? name)]
 		[(variable name) (equal? (string-id name) bridge-var-name)]
+
+		[(stat-calls rhs) (unwanted-bridge-var? rhs)]
+		[(stat-static-call ret cls-name func arg-types args) (unwanted-bridge-var? args)]
+		[(stat-virtual-call ret obj cls-name func arg-types args) (unwanted-bridge-var? args)]
+		[(stat-special-call ret obj cls-name func arg-types args) (unwanted-bridge-var? args)]
+		[(arguments-caller rhs) (unwanted-bridge-var? rhs)]
+		[(argument-caller-list al) (if al (ormap (lambda (arg) (unwanted-bridge-var? arg)) al) #f)]
+		[(dexpr rhs) (unwanted-bridge-var? rhs)]
 		[_ #f]))
 
 (define (missing-bridge-var? ast)
@@ -220,6 +228,32 @@
 						(struct-update variable-definition-list rhs [vl (lambda (lst)
 							(cons (variable-definition (variable-n-type (variable bridge-var-name) (type-name ret-type))) lst))]))]))]))])))
 		ast-funcs))))
+
+(define (fix-arg-type invoke-stat loc)
+
+	(define (args->types args)
+		(types (type-list
+			(map (lambda (arg)
+				(define func (location-func loc))
+				(type-name 
+					(match (dexpr-rhs arg) 
+						[(expr-var v) (lookup-type (variable-name v) func)]
+						[(expr-const v) (jtype-of (const-v v))])))
+				(argument-caller-list-al (arguments-caller-rhs args))))))
+
+	(match invoke-stat
+		[(stat-calls rhs) (stat (fix-arg-type rhs loc))]
+		[(stat rhs) (stat (fix-arg-type rhs loc))]
+		[(stat-static-call ret cls-name func arg-types args) 
+			(stat-static-call ret cls-name func (args->types args) args)]
+		[(stat-virtual-call ret obj cls-name func arg-types args)
+			(stat-virtual-call ret obj cls-name func (args->types args) args)]
+		[(stat-special-call ret obj cls-name func arg-types args)
+			(stat-special-call ret obj cls-name func (args->types args) args)]))
+
+;	(RHS-C stat-static-call (ret : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
+;	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
+;	(RHS-C stat-special-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 
 ;insert before current `newl`
 (define (insert-stat ast stat-sketch newl)
@@ -299,8 +333,12 @@
 						(lookup-type arr-name func)]
 					[(iexpr-field obj-name cls-name fname)
 ;						(pretty-print (sfield-id cls-name fname))
-						(if (and (not (equal? obj-name (string-id (variable-name void-receiver)))) (not (is-a? (lookup-type obj-name func) cls-name mac))) #f
-							(imap-get (machine-tmap mac) (sfield-id cls-name fname) default-type))]))
+						(if (not (lookup-type obj-name func)) #f
+							(if (and 
+									(not (equal? obj-name (string-id (variable-name void-receiver)))) 
+									(not (is-a? (lookup-type obj-name func) cls-name mac))) 
+								#f
+								(imap-get (machine-tmap mac) (sfield-id cls-name fname) default-type)))]))
 
 			(match inst
 				[(inst-nop _) #t]
@@ -314,23 +352,29 @@
 						(is-a? rt (function-ret func) mac)))]
 				[(inst-long-jump cls-name func-name) #t]
 				[(inst-static-call ret cls-name func-name arg-types args) 
-					(andmap (lambda (at aexpr)
-						(define at+ (expr-type-check? aexpr))
-						(and at+ (is-a? at+ at mac)))
-						arg-types
-						args)]
+					(and 
+						(not (is-not-found? (imap-get (machine-fmap mac) (sfunc-id cls-name func-name arg-types) default-type)))
+						(andmap (lambda (at aexpr)
+							(define at+ (expr-type-check? aexpr))
+							(and at+ (is-a? at+ at mac)))
+							arg-types
+							args))]
 				[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
-					(andmap (lambda (at aexpr)
-						(define at+ (expr-type-check? aexpr))
-						(and at+ (is-a? at+ at mac)))
-						arg-types
-						args)]
+					(and 
+						(not (is-not-found? (imap-get (machine-fmap mac) (sfunc-id cls-name func-name arg-types) default-type)))
+						(andmap (lambda (at aexpr)
+							(define at+ (expr-type-check? aexpr))
+							(and at+ (is-a? at+ at mac)))
+							arg-types
+							args))]
 				[(inst-special-call ret obj-name cls-name func-name arg-types args)
-					(andmap (lambda (at aexpr)
-						(define at+ (expr-type-check? aexpr))
-						(and at+ (is-a? at+ at mac)))
-						arg-types
-						args)]
+					(and 
+						(not (is-not-found? (imap-get (machine-fmap mac) (sfunc-id cls-name func-name arg-types) default-type)))
+						(andmap (lambda (at aexpr)
+							(define at+ (expr-type-check? aexpr))
+							(and at+ (is-a? at+ at mac)))
+							arg-types
+							args))]
 				[(inst-ass vl vr)  
 					(begin
 					(define lt (expr-type-check? (ast->expression vl)))
@@ -344,7 +388,7 @@
 	(andmap func-type-check? (all-functions mac)))
 
 (define (machine-has-recursion? mac) 
-	(define contains-target-ori? (curry contains-target-pure? identity))
+	(define contains-target-ori? (curry contains-target-or-rec? identity))
 	(define sids (all-sids mac))
 	(ormap (lambda (func)
 		(contains-target-ori? mac func (list func)))
@@ -395,48 +439,57 @@
 		(if ret (set! contains-target-list (cons sid contains-target-list)) #f)
 		ret)))
 
+(define visited-sids null)
+
+(define (contains-target-or-rec? func-getter mac sid target-sids)
+	(set! visited-sids null)
+	(contains-target-pure? func-getter mac sid target-sids))
+
 (define (contains-target-pure? func-getter mac sid target-sids)
-	(define func (func-getter (imap-get (machine-fmap mac) sid default-type)))
-	(define prog (function-prog func))
-	(define ret (ormap (lambda (inst)
-		(match inst
-			[(inst-nop _) #f]
-			[(inst-init classname) #f]
-			[(inst-newarray v-name size-expr) #f]
-			[(inst-new v-name) #f]
-			[(inst-ret v-expr) #f]
-			[(inst-long-jump cls-name func-name) 
-				(if (model-lookup cls-name func-name) #f
-					(if (member (sfunc-id cls-name func-name null) target-sids) #t
-						(contains-target-pure? func-getter mac (sfunc-id cls-name func-name null) target-sids)))]
-			[(inst-static-call ret cls-name func-name arg-types args) 
-				(if (model-lookup cls-name func-name) #f
-					(if (member (sfunc-id cls-name func-name arg-types) target-sids) #t
-					(contains-target-pure? func-getter mac (sfunc-id cls-name func-name arg-types) target-sids)))]
-			[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
-				(if (model-lookup cls-name func-name) #f
-					(begin
-					(define vid (vfunc-id func-getter mac cls-name func-name arg-types))
-					(define sids-invoked 
-						(map second
-							(filter (lambda (fsv) (and (not (is-interface-func? (first fsv))) (equal? (third fsv) vid)))
-								(all-vf-sid-vids mac))))
-					(ormap (lambda (sid) 
-						(if (member sid target-sids) #t
-							(contains-target-pure? func-getter mac sid target-sids))) sids-invoked)))]
-			[(inst-special-call ret obj-name cls-name func-name arg-types args)
-				(if (model-lookup cls-name func-name) #f
-					(if (member (sfunc-id cls-name func-name arg-types) target-sids) #t
+	(if (member sid visited-sids) #t
+		(begin
+		(set! visited-sids (cons sid visited-sids))
+		(define func (func-getter (imap-get (machine-fmap mac) sid default-type)))
+		(define prog (function-prog func))
+		(define ret (ormap (lambda (inst)
+			(match inst
+				[(inst-nop _) #f]
+				[(inst-init classname) #f]
+				[(inst-newarray v-name size-expr) #f]
+				[(inst-new v-name) #f]
+				[(inst-ret v-expr) #f]
+				[(inst-long-jump cls-name func-name) 
+					(if (model-lookup cls-name func-name) #f
+						(if (member (sfunc-id cls-name func-name null) target-sids) #t
+							(contains-target-pure? func-getter mac (sfunc-id cls-name func-name null) target-sids)))]
+				[(inst-static-call ret cls-name func-name arg-types args) 
+					(if (model-lookup cls-name func-name) #f
+						(if (member (sfunc-id cls-name func-name arg-types) target-sids) #t
 						(contains-target-pure? func-getter mac (sfunc-id cls-name func-name arg-types) target-sids)))]
-			[(inst-ass vl vr)  #f]
-			[(inst-switch cnd cases default-l) #f]
-			[(inst-jmp condition label) #f]))
-		prog))
-	ret)
+				[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
+					(if (model-lookup cls-name func-name) #f
+						(begin
+						(define vid (vfunc-id func-getter mac cls-name func-name arg-types))
+						(define sids-invoked 
+							(map second
+								(filter (lambda (fsv) (and (not (is-interface-func? (first fsv))) (equal? (third fsv) vid)))
+									(all-vf-sid-vids mac))))
+						(ormap (lambda (sid) 
+							(if (member sid target-sids) #t
+								(contains-target-pure? func-getter mac sid target-sids))) sids-invoked)))]
+				[(inst-special-call ret obj-name cls-name func-name arg-types args)
+					(if (model-lookup cls-name func-name) #f
+						(if (member (sfunc-id cls-name func-name arg-types) target-sids) #t
+							(contains-target-pure? func-getter mac (sfunc-id cls-name func-name arg-types) target-sids)))]
+				[(inst-ass vl vr)  #f]
+				[(inst-switch cnd cases default-l) #f]
+				[(inst-jmp condition label) #f]))
+			prog))
+		ret)))
 
 
 
-;======================== Debug ========================
-(define (monitor-reason msg result)
-	(if (not result) (display (~a "Fail check " msg "\n")) #f)
-	result)
+	;======================== Debug ========================
+	(define (monitor-reason msg result)
+		(if (not result) (display (~a "Fail check " msg "\n")) #f)
+		result)

@@ -127,11 +127,14 @@
 
 		(if maybe-l maybe-l (localize-bug-in-funcs ast mac locations encoder spec funcs)))))
 
+(define meta-counter 0)
+(define first-counter 0)
+(define second-counter 0)
 
 (define (try-fixing ast spec bugl)
-	
-	(define first-counter 0)
-	(define second-counter 0)
+
+	(++ meta-counter)
+	(display (~a "============ Tried " meta-counter " iterations =============\n"))
 
 	(define mac (ast->machine ast))
 
@@ -140,11 +143,14 @@
 	(pretty-print ctxt)
 
 	(define (search-first)
-		(display "------- enum first --------\n")
-		(++ first-counter)
-		(pretty-print first-counter)
 		(define verifier
 			(lambda (stat-sketch)
+
+				(display "------- enum first --------\n")
+				(++ first-counter)
+				(pretty-print first-counter)
+				(pretty-print second-counter)
+
 				(define prog-sketch (replace-stat ast stat-sketch bugl))
 				(if (using-bridge-var? stat-sketch)
 					(search-second prog-sketch)
@@ -153,21 +159,26 @@
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 		(define pruner
 			(lambda (ast) (monitor-reason "pruner" (real-pruner ast mac))))
-		(ast-dfs (stat #f) ctxt verifier pruner updater search-depth))
+		(ast-dfs patch-line-1 ctxt verifier pruner updater search-depth))
 
 	(define (search-second ast)
-		(display "------- enum second --------\n")
-		(++ second-counter)
-		(pretty-print second-counter)
 		(define verifier
 			(lambda (invoke-sketch)
-				(define prog-sketch (define-bridge-var (insert-stat ast invoke-sketch bugl) invoke-sketch (get-invoke-ret-type invoke-sketch mac) bugl))
+
+				(display "------- enum second --------\n")
+				(++ second-counter)
+				(pretty-print first-counter)
+				(pretty-print second-counter)
+
+				(define invoke-sketch+ (fix-arg-type invoke-sketch bugl))
+				(pretty-print invoke-sketch+)
+				(define prog-sketch (define-bridge-var (insert-stat ast invoke-sketch+ bugl) invoke-sketch+ (get-invoke-ret-type invoke-sketch+ mac) bugl))
 				(monitor-reason "spec" (program-sketch->constraint prog-sketch spec))))
 		(define updater
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 		(define pruner
 			(monitor-reason "pruner" (lambda (ast) (real-pruner ast mac))))
-		(ast-dfs (stat-calls #f) ctxt verifier pruner updater inf-depth))
+		(ast-dfs patch-line-2 ctxt verifier pruner updater inf-depth))
 
 	(search-first))
 
@@ -189,3 +200,17 @@
 		constraint)))
 
 
+(define patch-line-1 (stat (stat-jmp 
+	(expr (expr-binary 
+		(expr (expr-var (variable bridge-var-name))) 
+		(op op-neq) 
+		(expr (expr-const (const 1)))))
+	(label "label1"))))
+
+(define patch-line-2 (stat (stat-virtual-call 
+	(variable bridge-var-name) 
+	(variable (string-id "r0")) 
+	(type-name (string-id "org.projectfloodlight.openflow.types.IPv4Address"))
+	(func-name (string-id "equals"))
+	(types (type-list (list (type-name (string-id "org.projectfloodlight.openflow.types.IPv4Address")))))
+	(arguments-caller (argument-caller-list (list (dexpr (expr-var (variable (string-id "$r1" ))))))))))
