@@ -5,7 +5,8 @@
 (require racket/format)
 (require racket/pretty)
 (require rosette/lib/angelic  ; provides `choose*`
-         rosette/lib/match)   ; provides `match`
+         rosette/lib/match   ; provides `match`
+		 rosette/query/core)
 
 (require "match-define.rkt")
 (require "string-id.rkt")
@@ -67,10 +68,11 @@
 
 	(display "\n Solving: \n")
 	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
+	(pretty-print (asserts))
 	(output-smt #t)
 
 ;	/* default version one bug */
-	(define debug-sol (solve (assert (and hard one-bug))))
+	(define debug-sol (solve (assert (and (andmap+ identity hard) one-bug) "TTTTTTTEST!!!!!!!!!!!!!!")))
 
 ;	/* no bug */
 ;	(define debug-sol (solve (assert (and hard no-bug))))
@@ -87,10 +89,13 @@
 ;			  #:guarantee (assert (and no-bug hard))))
 	
 	(display "\n Model: \n")
-;	(pretty-print debug-sol)
+	(pretty-print debug-sol)
 
 	(if (unsat? debug-sol)
-		#f
+		(begin
+		(match (core (∃-debug (append hard (list one-bug) (asserts)) #:muc #t)) [l (map print-fml l)])
+		#f)
+
 		(begin
 		(DEBUG-DO (display (~a (evaluate max-sat-sum debug-sol) "/" (length max-sat-list) "\n")))
 		(DEBUG-DO ((lambda () (print-pending-eval debug-sol) (display "\n"))))
@@ -214,3 +219,4 @@
 	(func-name (string-id "equals"))
 	(types (type-list (list (type-name (string-id "org.projectfloodlight.openflow.types.IPv4Address")))))
 	(arguments-caller (argument-caller-list (list (dexpr (expr-var (variable (string-id "$r1" ))))))))))
+

@@ -266,7 +266,7 @@
 ;		(pretty-print (~a "Totally " (length all-keys) " keys"))
 		(display "imap-gen-binding:\n")
 
-		(andmap+ (lambda (type)
+		(apply append (map (lambda (type)
 			(display "++++++++++++++++++++++++\n")
 			(define (mem-get-typed id type)
 				(imap-get-type (memory-heap (vector-ref memory-id-map id)) type))
@@ -286,7 +286,7 @@
 			(define all-typed-keys (map car (filter (lambda (k.t) (equal? (cdr k.t) type)) all-keys)))
 
 			(define fml-maybe-wrong
-				(andmap+ (lambda (mem-id)
+				(map (lambda (mem-id)
 					(define ms (mem-get-typed mem-id type))
 					(define fml-true (andmap+ (smart-preserve ms) (id2keys mem-id)))
 					(define fml-deferred (imap-sym-fml-deferred ms))
@@ -296,7 +296,7 @@
 			(display "-------------------------\n")
 
 			(define fml-always-right
-				(andmap+ (lambda (mem-id)
+				(map (lambda (mem-id)
 					(define ms (mem-get-typed mem-id type))
 					(andmap+ (lambda (key) 
 					 	(if (contain-key? mem-id key) #t
@@ -304,11 +304,11 @@
 					all-typed-keys))
 				memory-id-list))
 
-			(pretty-print (list fml-maybe-wrong fml-always-right))
+			(pretty-print (append fml-maybe-wrong fml-always-right))
 			(display "++++++++++++++++++++++++\n")
 
-			(and fml-maybe-wrong fml-always-right))
-		all-types-ordered))
+			(append fml-maybe-wrong fml-always-right))
+		all-types-ordered)))
 
 ;============= Default Values ===========
 (define (default-func type) (lambda (x) (not-found type)))

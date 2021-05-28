@@ -4,6 +4,7 @@
 (require racket/pretty)
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
+(require rosette/solver/smt/z3)
 
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 (require "match-define.rkt")
@@ -79,13 +80,9 @@ public class A extends java.lang.Object {
 
 	public int add(int)
 	{
-		A r0;
-		int $r1, $r2, $r3;
-		r0 := @this: A;
+		int $r1;
 		$r1 := @parameter0: int;
-		$r2 = r0.<A: int n>;
-		$r3 = $r1 + $r2;
-		return $r3;
+		return $r1;
 	}
 }
 ")))
@@ -99,15 +96,15 @@ public class Test
 		int r1, r2, r3;
 		int r4, r44;
 		int r5;
-//		A r6;
+		A r6;
 		r1 := @parameter0: int;
 		r2 := @parameter1: int;
 		r3 := @parameter2: int;
-//		r6 = new A;
-//		specialinvoke r6.<A: void <init>(int)>(r1);
-//		r4 = virtualinvoke r6.<A: int add(int)>(r2);
-		r4 = r1 + r2;
-		r5 = r4 - r3;
+		r6 = new A;
+		specialinvoke r6.<A: void <init>(int)>(r1);
+		r44 = virtualinvoke r6.<A: int add(int)>(r2);
+		r4 = r1 - r2;
+		r5 = r4 + r3;
 		return r5;
 	}
 }
@@ -128,17 +125,17 @@ public class Test
 }
 ")))
 
-;(define buggy (program
-;	(class-list (list class-obj class-A class-B))))
-
 (define buggy (program
-	(class-list (list class-B))))
+	(class-list (list class-obj class-A class-B))))
+
+;(define buggy (program
+;	(class-list (list class-B))))
 
 ;(define buggy (program (class-list (list class-0))))
 
 (pretty-print buggy)
 
-(define input1 (list (cons 4 "int") (cons 5 "int") (cons 6 "int")))
+(define input1 (list (cons 6 "int") (cons 5 "int") (cons 4 "int")))
 (define output1 (list (cons var-ret-name 15)))
 
 ;(define input1 (list (cons 1 "int") (cons 2 "int")))
@@ -157,8 +154,15 @@ result
 (display "================================================ Encoding ... =================================================\n")
 (display "===============================================================================================================\n")
 
+(current-solver (z3 #:options
+   (std:hash ':produce-unsat-cores 'true
+         ':auto-config 'true
+         ':smt.relevancy 2
+         ':smt.mbqi.max_iterations 10000000)))
 
 (output-smt #t)
+(pretty-print (solver-features (current-solver)))
+(pretty-print (solver-options (current-solver)))
 (define bugl (localize-bug buggy (list (cons input1 output1))))
 (pretty-print bugl)
 

@@ -122,8 +122,8 @@
 					(define ret1 
 						(function-formula-fmls root))
 					(define ret2
-						(andmap+ extract-fml subs))
-					(define ret (and ret2 ret1))
+						(apply append (map extract-fml subs)))
+					(define ret (append ret2 (list ret1)))
 					(match root
 						[(function-formula func lids _ _ _ _ _ class)
 							(pretty-print (list (function-name func) class))])
@@ -134,7 +134,7 @@
 		(define fml-code-2 (extract-fml all-invokes))
 
 		(display "---------fml0-------------\n")
-		(define fml-code (and fml-code-1 fml-code-2))
+		(define fml-code (append (list fml-code-1) fml-code-2))
 		(inspect fml-code-1)
 		(display "\n ###############################################6 \n")
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
@@ -145,7 +145,7 @@
 		(display "\n ###############################################8 \n")
 		;(pretty-print (list fml-cfi fml-code fml-code-bind fml-ass fml-out))
 ;		(and fml-cfi fml-code fml-code-bind))
-		(and fml-cfi fml-code fml-code-bind fml-ass fml-out))
+		(append (list fml-cfi) fml-code fml-code-bind (list fml-ass) (list fml-out)))
 
 	(list mac soft-cons hard-cons))
 
@@ -376,7 +376,6 @@
 		(define trigger-summary? in-target?) ;updated later
 ;		(imap-set-selector id)
 
-#|
 		(set! line-counter (+ line-counter 1))
 		(display (~a "Lines of code: " line-counter))
 		(defer-eval "instruction: " inst)
@@ -385,7 +384,6 @@
 		(pretty-print id)
 		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
 		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
-		|#
 
 		(if (not in-target?) (assert id) #f)
 
@@ -437,8 +435,8 @@
 		(define (iassert-pc-branch fml-op cnd-t cnd-f label)
 ;			(set! fml-op #t)
 			(if summary? #t
-				(letrec ([fml-t (equal? cnd-t (label-mark label))]
-						 [fml-f (equal? cnd-f (next-mark))]
+				(letrec ([fml-t (select-fml? (equal? cnd-t (label-mark label)))]
+						 [fml-f (select-fml? (equal? cnd-f (next-mark)))]
 						 [fml-cnd (and fml-t fml-f)]
 						 [fml-br (or (label-mark label) (next-mark))]
 						 [fml-path (implies mark (and fml-cnd fml-br fml-op))])
@@ -841,7 +839,7 @@
 					(define lmap (function-lmap func))
 					(define cnd (car (expr-eval condition mac-eval-ctxt)))
 					(define fml-update #t)
-					(define fml-new (iassert-pc-branch (select-fml? fml-update) (select-fml? cnd) (select-fml? (not cnd)) label))
+					(define fml-new (iassert-pc-branch (select-fml? fml-update) cnd (not cnd) label))
 					(define pc-br (imap-get (function-lmap func) label default-type))
 					(if summary? 
 						(update-rbstate-verbose fml-new mem-in pc-br (not cnd) cnd)
