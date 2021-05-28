@@ -717,30 +717,29 @@
 						(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
 						(define fml-sum (if trigger-summary? (memory-sym-summary mem-ret.tmp2 summary?) #t))
 
-						(define mem-ret (memory-sym-reset (if summary? mem-0 (memory-sym-new summary?)) mem-ret.tmp2 summary?))
-;						(pretty-print mem-ret)
-						(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
-						(if summary? #f (defer-eval inst ret-val))
-						(define mem-pop (memory-spop (memory-spop mem-ret)))
-						(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0 
-							(jtype->mtype (function-ret (function-formula-func fcan))))))
-						(define fml-ret (memory-sym-summary mem-ass summary?))
 						(define cnd (equal? (function-formula-sid fcan) true-func-invoked-sid))
-						(list func-fml-in cnd fml-in mem-ass fml-ret funcs-ret fml-sum)))
-					
+						(list func-fml-in cnd fml-in mem-ret.tmp2 funcs-ret fml-sum)))
+
 					(define ret-pack (map invoke-candidate funcs-invoked))
 
-					(define func-fml-ins (map first ret-pack))
 					(define cnds (map second ret-pack))
-					(defer-eval "Virtual call conditions:" cnds)
+
+					(define mem-ret.tmp2 (memory-select (map cons cnds (map fourth ret-pack)) summary?))
+					(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
+					(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
+					(define mem-pop (memory-spop (memory-spop mem-ret)))
+					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0 
+						(jtype->mtype (function-ret (function-formula-func (car funcs-invoked)))))))
+					(define fml-ret (memory-sym-summary mem-ass summary?))
+
+					(define func-fml-ins (map first ret-pack))
 					(define fml-call (and
 						(andmap third ret-pack)
-						(andmap fifth ret-pack)
-						(andmap seventh ret-pack)))
-					(define mem-ass (memory-select (map cons cnds (map fourth ret-pack)) summary?))
-					(define funcs-ret (map sixth ret-pack))
+						(andmap sixth ret-pack)))
 
-					(define fml-op (select-fml? (and fml-this fml-call)))
+					(define funcs-ret (map fifth ret-pack))
+
+					(define fml-op (select-fml? (and fml-ret fml-this fml-call)))
 					(define fml-new (iassert-pc-invoke #t fml-op func-fml-ins cnds))
 
 					(std:struct-copy rbstate (update-rbstate fml-new mem-ass #f) [funcs (append funcs-ret funcs)]))))]
