@@ -42,6 +42,8 @@
 			class-names-clinit
 			funcs-clinit)))
 
+	(display (~a "total locations: " (length soft) "\n"))
+
 	(define ret (localize-bug-in-funcs ast mac soft hard spec funcs-init))
 	(pretty-print string-id-table)
 	ret)
@@ -63,8 +65,11 @@
 	(define no-bug (equal? sum (length locations)))
 ;	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) spec)))
 	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) (list (car spec)))))
-	(define max-sat-sum (apply + (map (lambda (l) (if l 1 0)) max-sat-list)))
-	(define debug-max-sat (> max-sat-sum (- (length max-sat-list) 7)))
+	(display (~a "Number of asserts: " (length (asserts)) "\n"))
+;	(define max-sat-sum (apply + (map (lambda (l) (if l 1 0)) max-sat-list)))
+;	(display (~a "Number of asserts: " (length (asserts)) "\n"))
+;	(define debug-max-sat (> max-sat-sum (- (length max-sat-list) 7)))
+;	(display (~a "Number of asserts: " (length (asserts)) "\n"))
 
 	(display "\n Solving: \n")
 	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
@@ -97,8 +102,8 @@
 		#f)
 
 		(begin
-		(DEBUG-DO (display (~a (evaluate max-sat-sum debug-sol) "/" (length max-sat-list) "\n")))
-		(DEBUG-DO ((lambda () (print-pending-eval debug-sol) (display "\n"))))
+;		(DEBUG-DO (display (~a (evaluate max-sat-sum debug-sol) "/" (length max-sat-list) "\n")))
+;		(DEBUG-DO ((lambda () (print-pending-eval debug-sol) (display "\n"))))
 
 		(define bugl (ormap (lambda (l) (if (evaluate (location-selector l) debug-sol) #f l)) locations))
 		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")

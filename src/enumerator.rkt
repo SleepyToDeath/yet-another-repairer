@@ -426,8 +426,8 @@
 						(define vid (vfunc-id func-getter mac cls-name func-name arg-types))
 						(define sids-invoked 
 							(map second
-								(filter (lambda (fsv) (and (not (is-interface-func? (first fsv))) (equal? (third fsv) vid)))
-									(all-vf-sid-vids mac))))
+								(filter (lambda (fsv) (and (not (is-interface-func? (func-getter (first fsv)))) (equal? (third fsv) vid)))
+									(all-vf-sid-vids func-getter mac))))
 						(ormap (lambda (sid) (contains-target? func-getter mac sid target-sids)) sids-invoked)))]
 				[(inst-special-call ret obj-name cls-name func-name arg-types args)
 					(if (model-lookup cls-name func-name) #f
@@ -472,8 +472,8 @@
 						(define vid (vfunc-id func-getter mac cls-name func-name arg-types))
 						(define sids-invoked 
 							(map second
-								(filter (lambda (fsv) (and (not (is-interface-func? (first fsv))) (equal? (third fsv) vid)))
-									(all-vf-sid-vids mac))))
+								(filter (lambda (fsv) (and (not (is-interface-func? (func-getter (first fsv)))) (equal? (third fsv) vid)))
+									(all-vf-sid-vids func-getter mac))))
 						(ormap (lambda (sid) 
 							(if (member sid target-sids) #t
 								(contains-target-pure? func-getter mac sid target-sids))) sids-invoked)))]

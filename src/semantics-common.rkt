@@ -191,14 +191,14 @@
 			(append (class-sfuncs cls) (class-vfuncs cls))))
 		(machine-classes mac))))
 
-(define (all-vf-sid-vids mac)
+(define (all-vf-sid-vids func-getter mac)
 	(apply append
 		(map (lambda (cls)
 			(map (lambda (func)
 				(list 
 					func
-					(sfunc-id (class-name cls) (function-name func) (map cdr (function-args func)))
-					(vfunc-id-ori mac (class-name cls) (function-name func) (map cdr (function-args func)))))
+					(sfunc-id (class-name cls) (function-name (func-getter func)) (map cdr (function-args (func-getter func))))
+					(vfunc-id func-getter mac (class-name cls) (function-name (func-getter func)) (map cdr (function-args (func-getter func))))))
 			(class-vfuncs cls)))
 		(machine-classes mac))))
 

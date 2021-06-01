@@ -108,8 +108,11 @@
 	(assert (equal? v vs))
 	vs)
 
-(define (andmap+ f l)
-	(foldl (lambda (e fml) (and (f e) fml)) #t l))
+;(define (andmap+ f l)
+;	(foldl (lambda (e fml) (and (f e) fml)) #t l))
+
+(define-syntax-rule (andmap+ f l ...)
+	(andmap identity (map f l ...)))
 
 (define (and+ a b)
 	(and a b))
@@ -174,12 +177,12 @@
 	(pretty-print (asserts))
 	(if fail? (force-error #t "Asserts are infeasible!") #f))
 
-(define max-sat-list null)
-(define (add-max-sat fml)
-	(set! max-sat-list (cons fml max-sat-list)))
+;(define max-sat-list null)
+;(define (add-max-sat fml)
+;	(set! max-sat-list (cons fml max-sat-list)))
 
 (define (inspect fml)
-	(add-max-sat fml)
+;	(add-max-sat fml)
 	(defer-eval "Inspecting formula: " fml))
 
 (define stored-asserts null)
