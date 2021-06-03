@@ -169,7 +169,7 @@
 		identity
 		(ormap 
 			(lambda (var-def) (if (equal? v (car var-def)) (cdr var-def) #f))
-			(append (callee-arg-names (function-args f)) (function-locals f)))))
+			(cons (cons (string-id (variable-name void-receiver)) (string-id "any")) (append (callee-arg-names (function-args f)) (function-locals f))))))
 
 (define (callee-arg-names args)
 	(reset-parameter-names)
@@ -178,6 +178,12 @@
 (define (all-functions mac)
 	(apply append
 		(map (lambda (cls) (append (class-sfuncs cls) (class-vfuncs cls))) (machine-classes mac))))
+
+(define (all-class-functions mac)
+	(apply append
+		(map (lambda (cls) 
+			(map (lambda (func) (cons cls func)) 
+				(append (class-sfuncs cls) (class-vfuncs cls)))) (machine-classes mac))))
 
 (define (all-vfunctions mac)
 	(apply append

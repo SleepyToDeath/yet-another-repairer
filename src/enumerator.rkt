@@ -90,10 +90,9 @@
 	(if (or (not-a-function-error? func) (invalid-function-error? func)) ctxt
 		(begin
 		(define empty-arg-list (map (lambda (x) #f) (function-args func)))
-		(define dummy-type-list (map (lambda (x) (type-name "int")) (function-args func)))
 		(define (def-list-gen node)
 			(match node
-				[(type-list _) dummy-type-list]
+				[(type-list _) (function-args func)]
 				[(argument-caller-list _) empty-arg-list]))
 		(std:struct-copy syntax-context ctxt [def-list-gen def-list-gen]))))
 
@@ -121,6 +120,8 @@
 (struct not-a-function-error (msg) #:transparent)
 (define default-msg -1)
 
+;invoke statement to the invoked function
+;[TODO] return all versions
 (define (ast->func ast mac)
 
 	(define (find-vfunc mac cname fname)
@@ -312,16 +313,15 @@
 
 
 (define (machine-type-check? mac)
-	(define (func-type-check? func)
+	(define (func-type-check? cls.func)
+		(match-define (cons cls func) cls.func)
 		(define (inst-type-check? inst)
-;			(display "type checking instruction: ")
-;			(pretty-print inst)
 			;return expression's type if type checks, #f otherwise
 			(define (expr-type-check? expr) 
 				(match expr
 					[(iexpr-const value type) type]
 					[(iexpr-var name)
-						(if (equal? name var-this-name) (string-id "void") (lookup-type name func))]
+						(if (equal? name var-this-name) (class-name cls) (lookup-type name func))]
 					[(iexpr-binary op expr1 expr2)
 						(begin
 						(define t1 (expr-type-check? expr1))
@@ -379,23 +379,24 @@
 					(begin
 					(define lt (expr-type-check? (ast->expression vl)))
 					(define rt (expr-type-check? vr))
-;					(pretty-print (list lt rt))
-					(and lt rt (is-a? lt rt mac)))]
+					(pretty-print (list lt rt))
+					(and lt rt (or (is-a? rt lt mac) (is-a? lt rt mac))))]
 				[(inst-switch cnd cases default-l) #t]
 				[(inst-jmp condition label) 
 					(expr-type-check? condition)]))
 		(andmap (lambda (i) (if (inst-type-check? i) #t (begin (display "Type error: ") (pretty-print i) #f))) (function-prog func)))
-	(andmap func-type-check? (all-functions mac)))
+	(andmap func-type-check? (all-class-functions mac)))
 
 (define (machine-has-recursion? mac) 
 	(define contains-target-ori? (curry contains-target-or-rec? identity))
 	(define sids (all-sids mac))
 	(ormap (lambda (func)
+		(pretty-print func)
 		(contains-target-ori? mac func (list func)))
 		sids))
 
 (define (machine-all-check? mac)
-	(and (machine-type-check? mac) (not (machine-has-recursion? mac))))
+	(and (machine-type-check? mac) (monitor-reason "recursion" (not (machine-has-recursion? mac)))))
 
 
 (define contains-target-list null)
@@ -403,6 +404,7 @@
 	(set! contains-target-list null))
 ;if a function will (transitively) call any target function
 (define (contains-target? func-getter mac sid target-sids)
+	(pretty-print sid)
 	(if (or (member sid contains-target-list) (member sid target-sids)) #t
 		(begin
 		(define func (func-getter (imap-get (machine-fmap mac) sid default-type)))
@@ -446,6 +448,7 @@
 	(contains-target-pure? func-getter mac sid target-sids))
 
 (define (contains-target-pure? func-getter mac sid target-sids)
+	(pretty-print sid)
 	(if (member sid visited-sids) #t
 		(begin
 		(set! visited-sids (cons sid visited-sids))
@@ -485,6 +488,7 @@
 				[(inst-switch cnd cases default-l) #f]
 				[(inst-jmp condition label) #f]))
 			prog))
+		(set! visited-sids (cdr visited-sids))
 		ret)))
 
 

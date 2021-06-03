@@ -93,18 +93,13 @@ public class Test
 {
 	public static int main(int, int, int)
 	{
-		int r1, r2, r3;
-		int r4, r44;
+		int r4;
 		int r5;
-		A r6;
-		r1 := @parameter0: int;
-		r2 := @parameter1: int;
-		r3 := @parameter2: int;
-		r6 = new A;
-		specialinvoke r6.<A: void <init>(int)>(r1);
-		r44 = virtualinvoke r6.<A: int add(int)>(r2);
-		r4 = r1 - r2;
-		r5 = r4 + r3;
+		r5 = 0;
+		r4 = 0;
+		if r4 != 1 goto label1;
+		r5 = 15;
+		label1:
 		return r5;
 	}
 }

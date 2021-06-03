@@ -185,8 +185,6 @@
 			(imap-summary (memory-heap m)))
 		(define fml-2
 			(stack-summary (memory-stack m)))
-		(inspect fml-1)
-		(inspect fml-2)
 		(and+ fml-1 fml-2))))
 
 (define (memory-sym-ssummary m)

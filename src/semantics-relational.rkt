@@ -140,7 +140,6 @@
 
 		(display "---------fml0-------------\n")
 		(define fml-code (append (list fml-code-1) fml-code-2))
-		(inspect fml-code-1)
 		(display (~a "Number of asserts: " (length (asserts)) "\n"))
 		(display "\n ###############################################6 \n")
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
@@ -526,23 +525,16 @@
 				(update-rbstate-verbose fml-new mem-out pc-opt-br mark mark)))
 
 		(define (update-rbstate-verbose fml-new mem-out pc-opt-br cnd-next cnd-br)
-;			(test-assert! fml-new)
-			(inspect fml-new)
-;			(display "++++++++++++++ Encoding: ++++++++++++\n")
-;			(print-fml fml-new)
 			(define pc-next (+ 1 pc))
-			(define func-fml-next (append-mem-in func-fml cnd-next mem-out pc-next))
-			(define func-fml-br (if pc-opt-br (append-mem-in func-fml-next cnd-br mem-out pc-opt-br) func-fml-next))
+			(define func-fml-next (prepend-mem-in func-fml cnd-next mem-out pc-next))
+			(define func-fml-br (if pc-opt-br (prepend-mem-in func-fml-next cnd-br mem-out pc-opt-br) func-fml-next))
 			(define func-fml-new (append-fml func-fml-br fml-new))
-;			(pretty-print inst)
-;			(display (~a "Output state id: " (memory-id mem-out) "\n"))
 			(std:struct-copy rbstate st [pc pc-next] [func-fml func-fml-new]))
 
 		;cases: (list of (cnd X pc))
 		(define (update-rbstate-switch fml-new mem-out cases)
 ;			(display "Switch encoded.\n")
 ;			(pretty-print cases)
-			(inspect fml-new)
 ;			(print-fml fml-new)
 			(define func-fml-br (foldl (lambda (cnd.pc func-fml-cur)
 					(append-mem-in func-fml-cur (car cnd.pc) mem-out (cdr cnd.pc)))
@@ -567,7 +559,6 @@
 				(begin
 				(define addr (memory-sforce-read mem-0 var-this-name 1))
 				(define fid-class-name (vfield-id mac classname field-name-class))
-				(defer-eval "fid-class-name" fid-class-name)
 				(define maybe-old-name (memory-fread mem-0 fid-class-name addr addr-type))
 				(define maybe-class-name (if (equal? maybe-old-name (not-found name-type)) classname maybe-old-name))
 				(define mem-bind (memory-fwrite mem-0 fid-class-name addr maybe-class-name name-type))
@@ -598,8 +589,8 @@
 			[(inst-ret v-expr) 
 				(begin
 				(define ret-value (car (expr-eval v-expr mac-eval-ctxt)))
+				(defer-eval "returned: " ret-value)
 				(define ret-jtype (function-ret func))
-				(if summary? #f (defer-eval inst ret-value))
 				(define mem-ret.tmp (memory-sforce-write mem-0 var-ret-name ret-value 0 (jtype->mtype ret-jtype)))
 				(define mem-ret (memory-sym-commit mem-ret.tmp))
 				(define fml-update (memory-sym-summary mem-ret summary?))
@@ -612,7 +603,6 @@
 				(define func-fml-new (append-fml func-fml-ret fml-path))
 				(assert id)
 ;				(pretty-print inst)
-				(inspect fml-path)
 ;				(test-assert! fml-path)
 ;				(display "++++++++++++++ Encoding: ++++++++++++\n")
 ;				(print-fml fml-path)
@@ -635,7 +625,6 @@
 
 				(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
 				(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
-				(if summary? #f (defer-eval inst ret-val))
 				(define mem-ass (memory-sym-commit (memory-sforce-write mem-ret var-ret-name ret-val 0 
 					(jtype->mtype (function-ret (function-formula-func func-invoked))))))
 				(define fml-ret (memory-sym-summary mem-ass summary?))
@@ -670,7 +659,6 @@
 
 					(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
 					(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
-					(if summary? #f (defer-eval inst ret-val))
 					(define mem-pop (memory-spop mem-ret))
 					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0 
 						(jtype->mtype (function-ret (function-formula-func func-invoked))))))
@@ -726,7 +714,6 @@
 
 					(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
 					(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
-					(if summary? #f (defer-eval inst ret-val))
 					(define mem-pop (memory-spop (memory-spop mem-ret)))
 					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0 
 						(jtype->mtype (function-ret (function-formula-func fcan))))))
@@ -843,7 +830,6 @@
 
 					(define mem-ret (memory-sym-reset mem-0 mem-ret.tmp2 summary?))
 					(define ret-val (memory-sforce-read mem-ret var-ret-name 0))
-					(if summary? #f (defer-eval inst ret-val))
 					(define mem-pop (memory-spop (memory-spop mem-ret)))
 					(define mem-ass (memory-sym-commit (memory-sforce-write mem-pop ret ret-val 0 
 						(jtype->mtype (function-ret (function-formula-func func-invoked))))))
@@ -858,7 +844,6 @@
 				(begin
 				(if (equal? vr (iexpr-var var-this-name)) (assert id) #f)
 				(match-define (cons value jtype) (expr-eval vr mac-eval-ctxt))
-				(if summary? #f (defer-eval inst value))
 				(define rhs (lexpr-rhs vl))
 				(define mem-new 
 					(match rhs
@@ -905,6 +890,7 @@
 					(begin
 					(define lmap (function-lmap func))
 					(define cnd (car (expr-eval condition mac-eval-ctxt)))
+					(defer-eval "condition: " cnd)
 					(define fml-update #t)
 					(define fml-new (iassert-pc-branch (select-fml? fml-update) cnd (not cnd) label))
 					(define pc-br (imap-get (function-lmap func) label default-type))

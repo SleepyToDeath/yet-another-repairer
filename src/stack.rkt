@@ -143,11 +143,11 @@ stack-empty)
 			(define ret (equal?
 				(list-ref (static-scope-array sc) (car key))
 				(list-ref (static-scope-array-out sc) (car key))))
-			(defer-eval "stack-fml: " (list ret 
-				key
-				(list-ref (static-scope-array sc) (car key))
-				(list-ref (static-scope-array-out sc) (car key))))
-			(inspect ret)
+;			(defer-eval "stack-fml: " (list ret 
+;				key
+;				(list-ref (static-scope-array sc) (car key))
+;				(list-ref (static-scope-array-out sc) (car key))))
+;			(inspect ret)
 ;			(pretty-print eval-pending)
 ;			(print-fml ret)
 			ret)

@@ -98,12 +98,13 @@
 
 	(if (unsat? debug-sol)
 		(begin
-		(match (core (∃-debug (append hard (list one-bug) (asserts)) #:muc #t)) [l (map print-fml l)])
+;		(match (core (∃-debug (append hard (list one-bug) (asserts)) #:muc #t)) [l (map print-fml l)])
 		#f)
 
 		(begin
 ;		(DEBUG-DO (display (~a (evaluate max-sat-sum debug-sol) "/" (length max-sat-list) "\n")))
 ;		(DEBUG-DO ((lambda () (print-pending-eval debug-sol) (display "\n"))))
+		((lambda () (print-pending-eval debug-sol) (display "\n")))
 
 		(define bugl (ormap (lambda (l) (if (evaluate (location-selector l) debug-sol) #f l)) locations))
 		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
@@ -143,6 +144,7 @@
 
 (define (try-fixing ast spec bugl)
 
+
 	(++ meta-counter)
 	(display (~a "============ Tried " meta-counter " iterations =============\n"))
 
@@ -151,6 +153,11 @@
 	(define ctxt (location->ctxt ast bugl mac))
 	(display "============ context collected =============:\n")
 	(pretty-print ctxt)
+
+(if (not (and
+		(equal? (location-line bugl) 3)
+		(equal? (function-name (location-func bugl)) (string-id "setServerID")))) #f
+	(begin
 
 	(define (search-first)
 		(define verifier
@@ -180,9 +187,8 @@
 				(pretty-print first-counter)
 				(pretty-print second-counter)
 
-				(define invoke-sketch+ (fix-arg-type invoke-sketch bugl))
-				(pretty-print invoke-sketch+)
-				(define prog-sketch (define-bridge-var (insert-stat ast invoke-sketch+ bugl) invoke-sketch+ (get-invoke-ret-type invoke-sketch+ mac) bugl))
+				(pretty-print invoke-sketch)
+				(define prog-sketch (define-bridge-var (insert-stat ast invoke-sketch bugl) invoke-sketch (get-invoke-ret-type invoke-sketch mac) bugl))
 				(monitor-reason "spec" (program-sketch->constraint prog-sketch spec))))
 		(define updater
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
@@ -190,7 +196,7 @@
 			(monitor-reason "pruner" (lambda (ast) (real-pruner ast mac))))
 		(ast-dfs patch-line-2 ctxt verifier pruner updater inf-depth))
 
-	(search-first))
+	(search-first))))
 
 
 (define (program-sketch->constraint prog-sketch spec)
@@ -222,6 +228,6 @@
 	(variable (string-id "r0")) 
 	(type-name (string-id "org.projectfloodlight.openflow.types.IPv4Address"))
 	(func-name (string-id "equals"))
-	(types (type-list (list (type-name (string-id "org.projectfloodlight.openflow.types.IPv4Address")))))
+	(types (type-list (list (type-name (string-id "java.lang.Object")))))
 	(arguments-caller (argument-caller-list (list (dexpr (expr-var (variable (string-id "$r1" ))))))))))
 
