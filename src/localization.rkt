@@ -16,9 +16,12 @@
 (require "semantics-computational.rkt")
 (require "semantics-common.rkt")
 (require "formula.rkt")
+(require "map.rkt")
+(require "memory-common.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 (require "jimple/operators.rkt")
 (require "enumerator.rkt")
+(require "multitask.rkt")
 
 (provide (all-defined-out))
 
@@ -73,7 +76,7 @@
 
 	(display "\n Solving: \n")
 	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
-	(pretty-print (asserts))
+;	(pretty-print (asserts))
 	(output-smt #t)
 
 ;	/* default version one bug */
@@ -94,7 +97,7 @@
 ;			  #:guarantee (assert (and no-bug hard))))
 	
 	(display "\n Model: \n")
-	(pretty-print debug-sol)
+;	(pretty-print debug-sol)
 
 	(if (unsat? debug-sol)
 		(begin
@@ -142,79 +145,157 @@
 (define first-counter 0)
 (define second-counter 0)
 
+(define one-line-candidates null)
+(define first-line-candidates null)
+(define second-line-candidates null)
+
+(define (reset-candidates!)
+	(set! one-line-candidates null)
+	(set! first-line-candidates null)
+	(set! second-line-candidates null))
+
+(define (add-candidate1 mac bugl candi)
+	(define inst (car (ast->instruction candi (imap-empty default-type) 0)))
+	(pretty-print inst)
+	(if (not (inst-type-check? mac (location-class bugl) (location-func bugl) inst)) #f
+		(set! one-line-candidates (cons candi one-line-candidates))))
+
+(define (add-candidate2.1 mac bugl candi)
+	(define inst (car (ast->instruction candi (imap-empty default-type) 0)))
+	(pretty-print inst)
+	(if (not (inst-type-check? mac (location-class bugl) (location-func bugl) inst)) #f
+		(set! first-line-candidates (cons candi first-line-candidates))))
+
+(define (add-candidate2.2 mac bugl candi)
+	;[TODO] remove
+	(if (not (equal? (class-name (ast->cls candi mac)) (string-id "org.projectfloodlight.openflow.types.IPv4Address"))) #f
+	(if (not-a-function-error? (ast->func candi mac)) #f
+		(begin
+		(define inst (car (ast->instruction candi (imap-empty default-type) 0)))
+		(pretty-print inst)
+		(if (not (inst-type-check? mac (location-class bugl) (location-func bugl) inst)) #f
+			(set! second-line-candidates (cons candi second-line-candidates)))))))
+		
+
 (define (try-fixing ast spec bugl)
 
-
+	(clear-asserts!)
 	(++ meta-counter)
+	(reset-candidates!)
 	(display (~a "============ Tried " meta-counter " iterations =============\n"))
 
-	(define mac (ast->machine ast))
+	(define mac (build-virtual-table (ast->machine ast)))
 
 	(define ctxt (location->ctxt ast bugl mac))
 	(display "============ context collected =============:\n")
 	(pretty-print ctxt)
 
-(if (not (and
-		(equal? (location-line bugl) 3)
-		(equal? (function-name (location-func bugl)) (string-id "setServerID")))) #f
-	(begin
-
 	(define (search-first)
-		(define verifier
+		(define dummy-verifier
 			(lambda (stat-sketch)
+;				(std:with-handlers ([std:exn:fail? (lambda (x) (display "Execption!\n") #f)])
+					(begin
+					(display "------- enum first --------\n")
+					(++ first-counter)
+					(pretty-print first-counter)
+					(pretty-print second-counter)
+					(pretty-print stat-sketch)
 
-				(display "------- enum first --------\n")
-				(++ first-counter)
-				(pretty-print first-counter)
-				(pretty-print second-counter)
-
-				(define prog-sketch (replace-stat ast stat-sketch bugl))
-				(if (using-bridge-var? stat-sketch)
-					(search-second prog-sketch)
-					(monitor-reason "spec" (program-sketch->constraint prog-sketch spec)))))
+;					(define prog-sketch (replace-stat ast stat-sketch bugl))
+					(if (using-bridge-var? stat-sketch)
+						(add-candidate2.1 mac bugl stat-sketch)
+						(add-candidate1 mac bugl stat-sketch))
+					#f)))
+;						(monitor-reason "spec" (program-sketch->constraint prog-sketch spec)))))))
 		(define updater
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 		(define pruner
 			(lambda (ast) (monitor-reason "pruner" (real-pruner ast mac))))
-		(ast-dfs patch-line-1 ctxt verifier pruner updater search-depth))
+		(ast-dfs sketch-line-1 ctxt dummy-verifier pruner updater search-depth))
 
-	(define (search-second ast)
-		(define verifier
+	(define (search-second)
+		(define dummy-verifier
 			(lambda (invoke-sketch)
+;				(std:with-handlers ([std:exn:fail? (lambda (x) (display "Execption!\n") #f)])
+					(begin
+					(display "------- enum second --------\n")
+					(++ second-counter)
+					(pretty-print first-counter)
+					(pretty-print second-counter)
 
-				(display "------- enum second --------\n")
-				(++ second-counter)
-				(pretty-print first-counter)
-				(pretty-print second-counter)
-
-				(pretty-print invoke-sketch)
-				(define prog-sketch (define-bridge-var (insert-stat ast invoke-sketch bugl) invoke-sketch (get-invoke-ret-type invoke-sketch mac) bugl))
-				(monitor-reason "spec" (program-sketch->constraint prog-sketch spec))))
+					(pretty-print invoke-sketch)
+;					(define prog-sketch (define-bridge-var (insert-stat ast invoke-sketch bugl) invoke-sketch (get-invoke-ret-type invoke-sketch mac) bugl))
+					(add-candidate2.2 mac bugl invoke-sketch)
+					#f)))
+;					(monitor-reason "spec" (program-sketch->constraint prog-sketch spec))))))
 		(define updater
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 		(define pruner
 			(monitor-reason "pruner" (lambda (ast) (real-pruner ast mac))))
-		(ast-dfs patch-line-2 ctxt verifier pruner updater inf-depth))
+		(ast-dfs sketch-line-2 ctxt dummy-verifier pruner updater inf-depth))
 
-	(search-first))))
+	(search-first)
+	(search-second)
+	
+	(display (~a "***************** Totally " 
+		(length one-line-candidates) " + " 
+		(length first-line-candidates) " + " 
+		(length second-line-candidates) " candidates *********************\n"))
 
+	;[TODO] remove
+	(if (equal? (function-name (location-func bugl)) func-name-main) #f
+		(or 
+			(ormap (lambda (l) 
+					(display "\nChecking candidate: \n")
+					(pretty-print l)
+					(define prog-sketch (replace-stat ast l bugl))
+					(add-task (lambda () 
+						(monitor-reason "spec" (program-sketch->constraint prog-sketch spec))))
+					(ormap identity (exam-tasks)))
+				one-line-candidates)
+
+			(ormap identity (wait-tasks))
+
+			(ormap (lambda (l2)
+					(display "\nChecking candidate: \n")
+					(pretty-print l2)
+					(define prog-sketch (replace-stat ast (car l2) bugl))
+					(define prog-sketch2 (define-bridge-var (insert-stat ast (cadr l2) bugl) (cadr l2) (get-invoke-ret-type (cadr l2) mac) bugl))
+					(add-task (lambda ()
+						(monitor-reason "spec" (program-sketch->constraint prog-sketch2 spec))))
+					(ormap identity (exam-tasks)))
+				(std:cartesian-product first-line-candidates second-line-candidates))
+
+			(ormap identity (wait-tasks))))
+)
+
+(define spec-counter 0)
 
 (define (program-sketch->constraint prog-sketch spec)
-	(define mac-sketch (ast->machine prog-sketch))
-	(if (not (machine-all-check? (build-virtual-table mac-sketch))) #f
+	(std:with-handlers ([std:exn:fail? (lambda (x) (display "Execption!\n") (clear-asserts!) #f)])
 		(begin
-		(define (spec->fml io)
-			(match-define (cons input output) io)
-			(define mac-in (assign-input mac-sketch input))
-			(define mac-fin (compute mac-in))
-			(compare-output mac-fin output))
-		(define constraint (andmap+ spec->fml spec))
-		(if constraint
+		(define mac-sketch (ast->machine prog-sketch))
+		(if (not (machine-all-check? (build-virtual-table mac-sketch))) #f
 			(begin
-			(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
-			(pretty-print prog-sketch)) #f)
-		constraint)))
+			(define (spec->fml io)
+				(match-define (cons input output) io)
+				(define mac-in (assign-input mac-sketch input))
+				(define mac-fin (compute mac-in))
+				(compare-output mac-fin output))
+			(display "---checking spec!---\n")
+			(++ spec-counter)
+			(display (~a "checked spec " spec-counter " times\n"))
+;			(pretty-print (asserts))
+			(define constraint (andmap+ spec->fml spec))
+			(if constraint
+				(begin
+				(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
+				(pretty-print prog-sketch)) #f)
+			constraint)))))
 
+(define sketch-line-1 (stat #f))
+
+(define sketch-line-2 (stat-calls #f))
 
 (define patch-line-1 (stat (stat-jmp 
 	(expr (expr-binary 

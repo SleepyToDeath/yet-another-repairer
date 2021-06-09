@@ -36,9 +36,6 @@
 (define search-depth 3)
 (define inf-depth 100)
 
-(define bridge-var-name (string-id "__bridge__"))
-
-
 ;======================== Enumerator ======================
 ;verifier: check if a completed program satisfies spec
 ;pruner: check if a partial program can be eliminated early
@@ -74,8 +71,9 @@
 	(define fields (map (lambda (fname) (cons cname fname)) 
 		(map car (append (class-vfields cls) (class-sfields cls)))))
 	(define funcs (remove func-name-init (remove-duplicates (map function-name (all-functions mac)))))
-	(define consts (list 0 1 2 3))
-	(define ops (list bvand bvor bvxor op-mod op-cmp equal? op-neq op-gt op-ge op-lt op-le bvlshr op-add op-sub op-mul op-div))
+	(define consts (list 1))
+;	(define ops (list bvand bvor bvxor op-mod op-cmp equal? op-neq op-gt op-ge op-lt op-le bvlshr op-add op-sub op-mul op-div))
+	(define ops (list equal? op-neq))
 	; don't change jump target
 	(define labels 
 		(match (list-ref (function-prog func) line-mac)
@@ -92,7 +90,7 @@
 		(define empty-arg-list (map (lambda (x) #f) (function-args func)))
 		(define (def-list-gen node)
 			(match node
-				[(type-list _) (function-args func)]
+				[(type-list _) (map type-name (map cdr (function-args func)))]
 				[(argument-caller-list _) empty-arg-list]))
 		(std:struct-copy syntax-context ctxt [def-list-gen def-list-gen]))))
 
@@ -123,7 +121,6 @@
 ;invoke statement to the invoked function
 ;[TODO] return all versions
 (define (ast->func ast mac)
-
 	(define (find-vfunc mac cname fname)
 		(define ret
 			(ormap (lambda (cls) 
@@ -168,6 +165,31 @@
 				(define cname (string-id (type-name-name cls-name)))
 				(define fname (string-id (func-name-name func)))
 				(find-sfunc mac cname fname)))]
+
+		[_ (not-a-function-error default-msg)]))
+
+(define (ast->cls ast mac)
+	(match ast
+		[(stat s) (ast->cls s mac)]
+		[(stat-calls s) (ast->cls s mac)]
+
+		[(stat-static-call ret cls-name func arg-types args) 
+			(if (not (and cls-name (type-name-name cls-name) func (func-name-name func))) (not-a-function-error default-msg)
+				(begin
+				(define cname (string-id (type-name-name cls-name)))
+				(imap-get (machine-cmap mac) cname default-type)))]
+
+		[(stat-virtual-call ret obj cls-name func arg-types args)
+			(if (not (and cls-name (type-name-name cls-name) func (func-name-name func))) (not-a-function-error default-msg)
+				(begin
+				(define cname (string-id (type-name-name cls-name)))
+				(imap-get (machine-cmap mac) cname default-type)))]
+
+		[(stat-special-call ret obj cls-name func arg-types args)
+			(if (not (and cls-name (type-name-name cls-name) func (func-name-name func))) (not-a-function-error default-msg)
+				(begin
+				(define cname (string-id (type-name-name cls-name)))
+				(imap-get (machine-cmap mac) cname default-type)))]
 
 		[_ (not-a-function-error default-msg)]))
 
@@ -230,28 +252,28 @@
 							(cons (variable-definition (variable-n-type (variable bridge-var-name) (type-name ret-type))) lst))]))]))]))])))
 		ast-funcs))))
 
-(define (fix-arg-type invoke-stat loc)
-
-	(define (args->types args)
-		(types (type-list
-			(map (lambda (arg)
-				(define func (location-func loc))
-				(type-name 
-					(match (dexpr-rhs arg) 
-						[(expr-var v) (lookup-type (variable-name v) func)]
-						[(expr-const v) (jtype-of (const-v v))])))
-				(argument-caller-list-al (arguments-caller-rhs args))))))
-
-	(match invoke-stat
-		[(stat-calls rhs) (stat (fix-arg-type rhs loc))]
-		[(stat rhs) (stat (fix-arg-type rhs loc))]
-		[(stat-static-call ret cls-name func arg-types args) 
-			(stat-static-call ret cls-name func (args->types args) args)]
-		[(stat-virtual-call ret obj cls-name func arg-types args)
-			(stat-virtual-call ret obj cls-name func (args->types args) args)]
-		[(stat-special-call ret obj cls-name func arg-types args)
-			(stat-special-call ret obj cls-name func (args->types args) args)]))
-
+;(define (fix-arg-type invoke-stat loc)
+;
+;	(define (args->types args)
+;		(types (type-list
+;			(map (lambda (arg)
+;				(define func (location-func loc))
+;				(type-name 
+;					(match (dexpr-rhs arg) 
+;						[(expr-var v) (lookup-type (variable-name v) func)]
+;						[(expr-const v) (jtype-of (const-v v))])))
+;				(argument-caller-list-al (arguments-caller-rhs args))))))
+;
+;	(match invoke-stat
+;		[(stat-calls rhs) (stat (fix-arg-type rhs loc))]
+;		[(stat rhs) (stat (fix-arg-type rhs loc))]
+;		[(stat-static-call ret cls-name func arg-types args) 
+;			(stat-static-call ret cls-name func (args->types args) args)]
+;		[(stat-virtual-call ret obj cls-name func arg-types args)
+;			(stat-virtual-call ret obj cls-name func (args->types args) args)]
+;		[(stat-special-call ret obj cls-name func arg-types args)
+;			(stat-special-call ret obj cls-name func (args->types args) args)]))
+;
 ;	(RHS-C stat-static-call (ret : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 ;	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 ;	(RHS-C stat-special-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
@@ -311,87 +333,89 @@
 
 	(program (class-list clss-ast-sketch)))
 
+(define (inst-type-check? mac cls func inst)
+;	(pretty-print inst)
+	(define (expr-type-check? expr) 
+		(match expr
+			[(iexpr-const value type) type]
+			[(iexpr-var name)
+				(if (equal? name var-this-name) (class-name cls) (lookup-type name func))]
+			[(iexpr-binary op expr1 expr2)
+				(begin
+				(define t1 (expr-type-check? expr1))
+				(define t2 (expr-type-check? expr2))
+;						(pretty-print (list t1 t2))
+				(define op-check? (and t1 t2 (op-type-check? op t1 t2)))
+				(if op-check? (op-return-type op t1 t2) #f))]
+			[(iexpr-array arr-name index)
+				(lookup-type arr-name func)]
+			[(iexpr-field obj-name cls-name fname)
+;						(pretty-print (sfield-id cls-name fname))
+				(if (not (lookup-type obj-name func)) #f
+					(if (and 
+							(not (equal? obj-name (string-id (variable-name void-receiver)))) 
+							(not (is-a? (lookup-type obj-name func) cls-name mac))) 
+						#f
+						(imap-get (machine-tmap mac) (sfield-id cls-name fname) default-type)))]))
+	(match inst
+		[(inst-nop _) #t]
+		[(inst-init classname) #t]
+		[(inst-newarray v-name size-expr) #t]
+		[(inst-new v-name) #t]
+		[(inst-ret v-expr) 
+			(begin
+			(define rt (expr-type-check? v-expr))
+			(if (not rt) #f
+				(is-a? rt (function-ret func) mac)))]
+		[(inst-long-jump cls-name func-name) #t]
+		[(inst-static-call ret cls-name func-name arg-types args) 
+			(pretty-print (sfunc-id cls-name func-name arg-types))
+			(and 
+				(monitor-reason "func not found" (not (is-not-found? (imap-get (machine-fmap mac) (sfunc-id cls-name func-name arg-types) default-type))))
+				(andmap (lambda (at aexpr)
+					(define at+ (expr-type-check? aexpr))
+					(monitor-reason "arg type" (and at+ (is-a? at+ at mac))))
+					arg-types
+					args))]
+		[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
+			(and 
+				(monitor-reason "func not found" (not (is-not-found? (imap-get (machine-fmap mac) (sfunc-id cls-name func-name arg-types) default-type))))
+				(andmap (lambda (at aexpr)
+					(define at+ (expr-type-check? aexpr))
+					(monitor-reason "arg type" (and at+ (is-a? at+ at mac))))
+					arg-types
+					args))]
+		[(inst-special-call ret obj-name cls-name func-name arg-types args)
+			(and 
+				(not (is-not-found? (imap-get (machine-fmap mac) (sfunc-id cls-name func-name arg-types) default-type)))
+				(andmap (lambda (at aexpr)
+					(define at+ (expr-type-check? aexpr))
+					(and at+ (is-a? at+ at mac)))
+					arg-types
+					args))]
+		[(inst-ass vl vr)  
+			(begin
+			(define lt (expr-type-check? (ast->expression vl)))
+			(define rt (expr-type-check? vr))
+;			(pretty-print (list lt rt))
+			(and lt rt (or (is-a? rt lt mac) (is-a? lt rt mac))))]
+		[(inst-switch cnd cases default-l) #t]
+		[(inst-jmp condition label) 
+					(expr-type-check? condition)]))
 
 (define (machine-type-check? mac)
 	(define (func-type-check? cls.func)
 		(match-define (cons cls func) cls.func)
-		(define (inst-type-check? inst)
-			;return expression's type if type checks, #f otherwise
-			(define (expr-type-check? expr) 
-				(match expr
-					[(iexpr-const value type) type]
-					[(iexpr-var name)
-						(if (equal? name var-this-name) (class-name cls) (lookup-type name func))]
-					[(iexpr-binary op expr1 expr2)
-						(begin
-						(define t1 (expr-type-check? expr1))
-						(define t2 (expr-type-check? expr2))
-;						(pretty-print (list t1 t2))
-						(define op-check? (and t1 t2 (op-type-check? op t1 t2)))
-						(if op-check? (op-return-type op t1 t2) #f))]
-					[(iexpr-array arr-name index)
-						(lookup-type arr-name func)]
-					[(iexpr-field obj-name cls-name fname)
-;						(pretty-print (sfield-id cls-name fname))
-						(if (not (lookup-type obj-name func)) #f
-							(if (and 
-									(not (equal? obj-name (string-id (variable-name void-receiver)))) 
-									(not (is-a? (lookup-type obj-name func) cls-name mac))) 
-								#f
-								(imap-get (machine-tmap mac) (sfield-id cls-name fname) default-type)))]))
-
-			(match inst
-				[(inst-nop _) #t]
-				[(inst-init classname) #t]
-				[(inst-newarray v-name size-expr) #t]
-				[(inst-new v-name) #t]
-				[(inst-ret v-expr) 
-					(begin
-					(define rt (expr-type-check? v-expr))
-					(if (not rt) #f
-						(is-a? rt (function-ret func) mac)))]
-				[(inst-long-jump cls-name func-name) #t]
-				[(inst-static-call ret cls-name func-name arg-types args) 
-					(and 
-						(not (is-not-found? (imap-get (machine-fmap mac) (sfunc-id cls-name func-name arg-types) default-type)))
-						(andmap (lambda (at aexpr)
-							(define at+ (expr-type-check? aexpr))
-							(and at+ (is-a? at+ at mac)))
-							arg-types
-							args))]
-				[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
-					(and 
-						(not (is-not-found? (imap-get (machine-fmap mac) (sfunc-id cls-name func-name arg-types) default-type)))
-						(andmap (lambda (at aexpr)
-							(define at+ (expr-type-check? aexpr))
-							(and at+ (is-a? at+ at mac)))
-							arg-types
-							args))]
-				[(inst-special-call ret obj-name cls-name func-name arg-types args)
-					(and 
-						(not (is-not-found? (imap-get (machine-fmap mac) (sfunc-id cls-name func-name arg-types) default-type)))
-						(andmap (lambda (at aexpr)
-							(define at+ (expr-type-check? aexpr))
-							(and at+ (is-a? at+ at mac)))
-							arg-types
-							args))]
-				[(inst-ass vl vr)  
-					(begin
-					(define lt (expr-type-check? (ast->expression vl)))
-					(define rt (expr-type-check? vr))
-					(pretty-print (list lt rt))
-					(and lt rt (or (is-a? rt lt mac) (is-a? lt rt mac))))]
-				[(inst-switch cnd cases default-l) #t]
-				[(inst-jmp condition label) 
-					(expr-type-check? condition)]))
-		(andmap (lambda (i) (if (inst-type-check? i) #t (begin (display "Type error: ") (pretty-print i) #f))) (function-prog func)))
+		(andmap 
+			(lambda (i) (if (inst-type-check? mac cls func i) #t (begin (display "Type error: ") (pretty-print i) #f))) 
+			(function-prog func)))
 	(andmap func-type-check? (all-class-functions mac)))
 
 (define (machine-has-recursion? mac) 
 	(define contains-target-ori? (curry contains-target-or-rec? identity))
 	(define sids (all-sids mac))
 	(ormap (lambda (func)
-		(pretty-print func)
+;		(pretty-print func)
 		(contains-target-ori? mac func (list func)))
 		sids))
 
@@ -404,7 +428,7 @@
 	(set! contains-target-list null))
 ;if a function will (transitively) call any target function
 (define (contains-target? func-getter mac sid target-sids)
-	(pretty-print sid)
+;	(pretty-print sid)
 	(if (or (member sid contains-target-list) (member sid target-sids)) #t
 		(begin
 		(define func (func-getter (imap-get (machine-fmap mac) sid default-type)))
@@ -448,7 +472,7 @@
 	(contains-target-pure? func-getter mac sid target-sids))
 
 (define (contains-target-pure? func-getter mac sid target-sids)
-	(pretty-print sid)
+;	(pretty-print sid)
 	(if (member sid visited-sids) #t
 		(begin
 		(set! visited-sids (cons sid visited-sids))

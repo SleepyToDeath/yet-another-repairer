@@ -63,6 +63,11 @@
 
 ;====================== Memory Types =======================
 
+;a bottom type
+(struct any-type-obj (any) #:transparent)
+
+(define any-type any-type-obj?)
+
 ;[?] signed
 (define bv-type (bitvector bv-width))
 

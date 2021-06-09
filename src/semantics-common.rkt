@@ -68,6 +68,7 @@
 (define delimiter-minor (string-id ","))
 (define field-name-class (string-id "__CLASS__"))
 (define class-name-root (string-id "java.lang.Object"))
+(define bridge-var-name (string-id "__bridge__"))
 
 (define param-prefix "@parameter")
 (define parameter-counter 0)
@@ -169,7 +170,11 @@
 		identity
 		(ormap 
 			(lambda (var-def) (if (equal? v (car var-def)) (cdr var-def) #f))
-			(cons (cons (string-id (variable-name void-receiver)) (string-id "any")) (append (callee-arg-names (function-args f)) (function-locals f))))))
+			(append 
+				(cons 
+					(cons (string-id (variable-name void-receiver)) (string-id "any")) 
+					(append (callee-arg-names (function-args f)) (function-locals f)))
+				(list (cons bridge-var-name (string-id "any")))))))
 
 (define (callee-arg-names args)
 	(reset-parameter-names)

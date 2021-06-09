@@ -21,7 +21,7 @@
 
 (define src-classes (list
 "net.floodlightcontroller.dhcpserver.DHCPInstance$DHCPInstanceBuilder.jimple"
-;"net.floodlightcontroller.dhcpserver.DHCPInstance$1.jimple"
+"net.floodlightcontroller.dhcpserver.DHCPInstance$1.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPInstance.jimple"
 "net.floodlightcontroller.dhcpserver.DHCPInstanceTest.jimple"
 "org.projectfloodlight.openflow.types.IPv4Address.jimple"
