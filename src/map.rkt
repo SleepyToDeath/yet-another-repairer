@@ -11,7 +11,10 @@
 		 imap-new imap-reset imap-commit imap-summary imap-select imap-gen-binding
 		 imap-null imap-empty
 		 imap-typed-null imap-typed-empty
-		 imap-clear-indices!)
+		 imap-clear-indices!
+		 max-map-size imap-size)
+
+(define max-map-size 0)
 
 ;Usage:
 ;	1.The maps should be used in an immutable manner
@@ -41,6 +44,7 @@
 
 ;----------------- Generic --------------------
 (define-generics imap
+	[imap-size imap]
 	[imap-get imap index type]
 	[imap-set imap index value type]
 	[imap-is-conc? imap]
@@ -78,7 +82,7 @@
 
 
 ;----------------- Concrete --------------------
-(struct imap-conc (func) #:transparent
+(struct imap-conc (func elements) #:transparent
 	#:methods gen:imap
 	[
 		(define (imap-get m index type)
@@ -91,7 +95,9 @@
 			(define oldf (imap-conc-func m))
 			(define newf (lambda (args)
 				(if (equal? args index) value (oldf args))))
-			(std:struct-copy imap-conc m [func newf]))
+			(define len (length (imap-conc-elements m)))
+			(if (> len max-map-size) (set! max-map-size len) #f)
+			(std:struct-copy imap-conc m [func newf][elements (cons (cons index value) (imap-conc-elements m))]))
 
 		(define (imap-get-func m)
 			(imap-conc-func m))
@@ -104,6 +110,9 @@
 (struct imap-conc-wrapper (imaps) #:transparent
 	#:methods gen:imap
 	[
+		(define (imap-size m)
+			(apply + (map (lambda (mm) (length (imap-conc-elements mm))) (imap-conc-wrapper-imaps m))))
+
 		(define (imap-get m index type)
 			(imap-get+ (imap-get-type m type) index type))
 
@@ -314,7 +323,7 @@
 (define (default-func type) (lambda (x) (not-found type)))
 
 (define (imap-conc-empty type)
-	(imap-conc (default-func type)))
+	(imap-conc (default-func type) null))
 (define imap-conc-wrapper-empty 
 	(imap-conc-wrapper (map (lambda (type) (imap-conc-empty type)) all-types-ordered)))
 (define imap-empty imap-conc-empty)

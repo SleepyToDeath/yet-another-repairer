@@ -17,6 +17,7 @@
 (require "semantics-common.rkt")
 (require "formula.rkt")
 (require "map.rkt")
+(require "memory.rkt")
 (require "memory-common.rkt")
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 (require "jimple/operators.rkt")
@@ -156,13 +157,13 @@
 
 (define (add-candidate1 mac bugl candi)
 	(define inst (car (ast->instruction candi (imap-empty default-type) 0)))
-	(pretty-print inst)
+;	(pretty-print inst)
 	(if (not (inst-type-check? mac (location-class bugl) (location-func bugl) inst)) #f
 		(set! one-line-candidates (cons candi one-line-candidates))))
 
 (define (add-candidate2.1 mac bugl candi)
 	(define inst (car (ast->instruction candi (imap-empty default-type) 0)))
-	(pretty-print inst)
+;	(pretty-print inst)
 	(if (not (inst-type-check? mac (location-class bugl) (location-func bugl) inst)) #f
 		(set! first-line-candidates (cons candi first-line-candidates))))
 
@@ -172,7 +173,7 @@
 	(if (not-a-function-error? (ast->func candi mac)) #f
 		(begin
 		(define inst (car (ast->instruction candi (imap-empty default-type) 0)))
-		(pretty-print inst)
+;		(pretty-print inst)
 		(if (not (inst-type-check? mac (location-class bugl) (location-func bugl) inst)) #f
 			(set! second-line-candidates (cons candi second-line-candidates)))))))
 		
@@ -195,11 +196,11 @@
 			(lambda (stat-sketch)
 ;				(std:with-handlers ([std:exn:fail? (lambda (x) (display "Execption!\n") #f)])
 					(begin
-					(display "------- enum first --------\n")
-					(++ first-counter)
-					(pretty-print first-counter)
-					(pretty-print second-counter)
-					(pretty-print stat-sketch)
+;					(display "------- enum first --------\n")
+;					(++ first-counter)
+;					(pretty-print first-counter)
+;					(pretty-print second-counter)
+;					(pretty-print stat-sketch)
 
 ;					(define prog-sketch (replace-stat ast stat-sketch bugl))
 					(if (using-bridge-var? stat-sketch)
@@ -218,12 +219,12 @@
 			(lambda (invoke-sketch)
 ;				(std:with-handlers ([std:exn:fail? (lambda (x) (display "Execption!\n") #f)])
 					(begin
-					(display "------- enum second --------\n")
-					(++ second-counter)
-					(pretty-print first-counter)
-					(pretty-print second-counter)
+;					(display "------- enum second --------\n")
+;					(++ second-counter)
+;					(pretty-print first-counter)
+;					(pretty-print second-counter)
 
-					(pretty-print invoke-sketch)
+;					(pretty-print invoke-sketch)
 ;					(define prog-sketch (define-bridge-var (insert-stat ast invoke-sketch bugl) invoke-sketch (get-invoke-ret-type invoke-sketch mac) bugl))
 					(add-candidate2.2 mac bugl invoke-sketch)
 					#f)))
@@ -242,37 +243,38 @@
 		(length first-line-candidates) " + " 
 		(length second-line-candidates) " candidates *********************\n"))
 
+
 	;[TODO] remove
 	(if (equal? (function-name (location-func bugl)) func-name-main) #f
 		(or 
 			(ormap (lambda (l) 
 					(display "\nChecking candidate: \n")
-					(pretty-print l)
+;					(pretty-print l)
 					(define prog-sketch (replace-stat ast l bugl))
-					(add-task (lambda () 
-						(monitor-reason "spec" (program-sketch->constraint prog-sketch spec))))
-					(ormap identity (exam-tasks)))
+					(monitor-reason "spec" (program-sketch->constraint prog-sketch spec l)))
 				one-line-candidates)
-
-			(ormap identity (wait-tasks))
 
 			(ormap (lambda (l2)
 					(display "\nChecking candidate: \n")
-					(pretty-print l2)
+;					(pretty-print l2)
 					(define prog-sketch (replace-stat ast (car l2) bugl))
 					(define prog-sketch2 (define-bridge-var (insert-stat ast (cadr l2) bugl) (cadr l2) (get-invoke-ret-type (cadr l2) mac) bugl))
-					(add-task (lambda ()
-						(monitor-reason "spec" (program-sketch->constraint prog-sketch2 spec))))
-					(ormap identity (exam-tasks)))
-				(std:cartesian-product first-line-candidates second-line-candidates))
+					(monitor-reason "spec" (program-sketch->constraint prog-sketch2 spec l2)))
+				(std:cartesian-product first-line-candidates second-line-candidates))))
 
-			(ormap identity (wait-tasks))))
 )
 
 (define spec-counter 0)
 
-(define (program-sketch->constraint prog-sketch spec)
-	(std:with-handlers ([std:exn:fail? (lambda (x) (display "Execption!\n") (clear-asserts!) #f)])
+(define (program-sketch->constraint prog-sketch spec patch)
+	(define t0 (std:current-inexact-milliseconds))
+	(std:with-handlers ([std:exn:fail? (lambda (x) 
+		(display "Execption!\n") 
+		(clear-asserts!) 
+		(define t1 (std:current-inexact-milliseconds))
+		(display (~a "took " (- t1 t0) " milliseconds\n"))
+		(display (~a "max map size: " max-map-size " \n"))
+		#f)])
 		(begin
 		(define mac-sketch (ast->machine prog-sketch))
 		(if (not (machine-all-check? (build-virtual-table mac-sketch))) #f
@@ -285,8 +287,11 @@
 			(display "---checking spec!---\n")
 			(++ spec-counter)
 			(display (~a "checked spec " spec-counter " times\n"))
-;			(pretty-print (asserts))
+			(pretty-print patch)
 			(define constraint (andmap+ spec->fml spec))
+			(define t1 (std:current-inexact-milliseconds))
+			(display (~a "took " (- t1 t0) " milliseconds\n"))
+			(display (~a "max map size: " max-map-size " \n"))
 			(if constraint
 				(begin
 				(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 

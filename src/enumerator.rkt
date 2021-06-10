@@ -278,6 +278,15 @@
 ;	(RHS-C stat-virtual-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 ;	(RHS-C stat-special-call (ret : variable) (obj : variable) (class : type-name) (func : func-name) (arg-types : types) (args : arguments-caller))
 
+(define (macl->astl sts line)
+	(cdr (foldl (lambda (st ll)
+		(if (<= (car ll) 0) ll
+			(if (stat-label? (stat-rhs st)) 
+				(cons (car ll) (+ (cdr ll 1)))
+				(cons (- (car ll) 1) (+ (cdr ll) 1)))))
+		(cons line 0)
+		sts)))
+
 ;insert before current `newl`
 (define (insert-stat ast stat-sketch newl)
 	(define func (location-func newl))
@@ -286,7 +295,8 @@
 	(update-prog ast newl
 		(lambda (ast) 
 			(update-func ast newl 
-				(lambda (ast) (stats (stat-list (list-insert ast line stat-sketch))))))))
+				(lambda (ast) 
+					(stats (stat-list (list-insert ast (macl->astl ast line) stat-sketch))))))))
 
 (define (replace-stat ast stat-sketch bugl)
 	(define func (location-func bugl))
@@ -295,7 +305,8 @@
 	(update-prog ast bugl
 		(lambda (ast) 
 			(update-func ast bugl 
-				(lambda (ast) (stats (stat-list (std:list-set ast line stat-sketch))))))))
+				(lambda (ast) 
+					(stats (stat-list (std:list-set ast (macl->astl ast line) stat-sketch))))))))
 
 (define (is-target-func? loc func-ast)
 	(define func (location-func loc))
@@ -369,7 +380,7 @@
 				(is-a? rt (function-ret func) mac)))]
 		[(inst-long-jump cls-name func-name) #t]
 		[(inst-static-call ret cls-name func-name arg-types args) 
-			(pretty-print (sfunc-id cls-name func-name arg-types))
+;			(pretty-print (sfunc-id cls-name func-name arg-types))
 			(and 
 				(monitor-reason "func not found" (not (is-not-found? (imap-get (machine-fmap mac) (sfunc-id cls-name func-name arg-types) default-type))))
 				(andmap (lambda (at aexpr)

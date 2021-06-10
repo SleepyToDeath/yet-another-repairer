@@ -20,10 +20,13 @@
 
 (provide (all-defined-out))
 
+(define line-counter-c 0)
+
 ;======================== Execution Interface ===========================
 ;machine(init) X list of names -> machine(fin)
 (define (compute mac)
 	(define mac-init (build-virtual-table mac))
+	(display (~a "mem size 2.1: " (memory-heap-size (machine-mem mac-init)) " \n"))
 ;	(pretty-print string-id-table)
 	(function-call-simple mac-init (machine-boot mac-init)))
 
@@ -35,6 +38,8 @@
 			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)) (jtype->mtype (cdr var-def)))) 
 			(machine-mem mac) 
 			(append (function-args func) (function-locals func) (list (cons var-ret-name (function-ret func)))))]))
+	(display (~a "mem size 2.2: " (memory-heap-size (machine-mem mac-decl)) " \n"))
+	(set! line-counter-c 0)
 	(function-exec (std:struct-copy machine mac-decl [pc pc-init][fc func])))
 
 (define (function-call mac func args)
@@ -58,7 +63,6 @@
 
 	(function-exec mac-input))
 
-(define line-counter-c 0)
 
 (define (function-exec mac)
 	(define func (machine-fc mac))
@@ -72,6 +76,7 @@
 ;			(display "\n")
 ;			(pretty-print inst-cur)
 			(set! line-counter-c (+ line-counter-c 1))
+;			(display (~a "mem size 2.2: " (memory-heap-size (machine-mem mac)) " \n"))
 ;			(display (~a "Lines of code: " line-counter-c))
 ;			(display "\n\n")
 			(set-context! mac)
@@ -114,6 +119,8 @@
 
 
 (define (ast->machine ast)
+	(set! class-names-clinit null)
+	(set! funcs-clinit null)
 	(define classes (foldl 
 		(lambda (class-ast cl) (cons (ast->class class-ast) cl))
 		null
@@ -548,7 +555,7 @@
 			(define classname-true (memory-fread mem-0 fid-class-name obj-addr name-type))
 ;			(display (~a "classname: " classname-true "\n"))
 			(define sid (sfunc-id-pure classname-true func-name (inst-virtual-call-arg-types i)))
-			(display (~a "sid: " sid "\n"))
+;			(display (~a "sid: " sid "\n"))
 			(define func (imap-get (machine-fmap m) sid default-type))
 			;push an extra scope to avoid overwriting "this" of the current scope
 			(define mem-this (memory-sforce-write (memory-spush mem-0) var-this-name obj-addr 0 addr-type))

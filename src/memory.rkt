@@ -141,6 +141,9 @@
 	(std:struct-copy memory memory-empty [heap imap-typed-null]))
 
 (memory-archive invalid-id memory-invalid)
+
+(define (memory-heap-size mem)
+	(imap-size (memory-heap mem)))
 ;========================================
 
 
