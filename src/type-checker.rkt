@@ -19,6 +19,7 @@
 (define memory-map
 	(list
 	(cons "any" any-type)
+	(cons "java.lang.String" string-type)
 	(cons "void" int-type)
 	(cons "null" int-type)
 	(cons "boolean" bool-type)

@@ -20,7 +20,7 @@
 	[expanded-check expanded]
 	[expanded-get count expanded]) ;get first `count` sub-tree
 
-(struct syntax-context (vars types fields funcs consts ops labels def-list-gen) #:transparent)
+(struct syntax-context (vars types fields funcs consts ops labels def-list-gen depth-updater) #:transparent)
 ;==================================================
 
 
@@ -38,13 +38,13 @@
 						((id2pred rhs) __et) ...
 					)
 					(expanded-check __et)))
-				(if flag flag (begin (print name) (display "\n")))
 				flag)
 
 			(define (ast-get __ast)
 				((id2acc name rname) __ast))
 
-			(define (ast-expand-next __ctxt __ast __depth)
+			(define (ast-expand-next __ctxt __ast __depth0)
+				(define __depth ((syntax-context-depth-updater __ctxt) __depth0 __ast))
 				(if (= __depth 0) null
 					(if ((id2acc name rname) __ast)
 						(map (lambda (rhs+) (name rhs+)) (expanded-expand-next __ctxt ((id2acc name rname) __ast) __depth))
@@ -66,13 +66,12 @@
 			(define (expanded-get __lvl __et)
 				(list ((id2acc name lname) __et)))
 
-			(define (expanded-expand-next __ctxt __ast __depth)
-;				(pretty-print __ast)
+			(define (expanded-expand-next __ctxt __ast __depth0)
+				(define __depth ((syntax-context-depth-updater __ctxt) __depth0 __ast))
 				(define __ast+ 
 					(if ((id2acc name lname) __ast)
 						__ast
 						(name ((syntax-context-def-list-gen __ctxt) (name 0)))))
-;				(pretty-print __ast+)
 				(foldl 
 					(lambda (__index __lst)
 						(define (__expander __ast0)
@@ -115,7 +114,8 @@
 				(define __elements (list ((id2acc name lname) __et) ...))
 				(take __elements __lvl))
 
-			(define (expanded-expand-next __ctxt __ast __depth)
+			(define (expanded-expand-next __ctxt __ast __depth0)
+				(define __depth ((syntax-context-depth-updater __ctxt) __depth0 __ast))
 				(foldl (lambda (__expander __lst)
 					(if (equal? (length __lst) 1) 
 						(__expander (car __lst))
@@ -147,7 +147,8 @@
 			(define (ast-get __ast)
 				((id2acc name val) __ast))
 
-			(define (ast-expand-next __ctxt __ast __depth)
+			(define (ast-expand-next __ctxt __ast __depth0)
+				(define __depth ((syntax-context-depth-updater __ctxt) __depth0 __ast))
 				(if (< __depth 0) null
 					(if ((id2acc name val) __ast) (list __ast)
 						((id2enum name) __ctxt __depth))))

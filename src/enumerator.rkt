@@ -79,7 +79,7 @@
 		(match (list-ref (function-prog func) line-mac)
 			[(inst-jmp condition label) (list label)]
 			[_ null]))
-	(syntax-context vars types fields funcs consts ops labels (lambda (x) #f)))
+	(syntax-context vars types fields funcs consts ops labels (lambda (x) #f) real-depth-updater))
 
 ;ast: enumerated statement
 ;set default argument list by function name
@@ -113,6 +113,12 @@
 		(invalid-func-checker)
 		(arg-type-checker)
 	))
+
+
+(define (real-depth-updater depth ast)
+	(match ast
+		[(stat-jmp _ _) (+ depth 0)]
+		[_ depth]))
 
 (struct invalid-function-error (msg) #:transparent)
 (struct not-a-function-error (msg) #:transparent)
@@ -282,7 +288,7 @@
 	(cdr (foldl (lambda (st ll)
 		(if (<= (car ll) 0) ll
 			(if (stat-label? (stat-rhs st)) 
-				(cons (car ll) (+ (cdr ll 1)))
+				(cons (car ll) (+ (cdr ll) 1))
 				(cons (- (car ll) 1) (+ (cdr ll) 1)))))
 		(cons line 0)
 		sts)))

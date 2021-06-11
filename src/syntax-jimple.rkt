@@ -99,7 +99,7 @@
 (LHS-E stat (rhs ::= stat-ass stat-ret stat-jmp))
 (LHS-E lexpr (rhs ::= expr-var))
 (LHS-E dexpr (rhs ::= expr-var expr-const))
-(LHS-E expr (rhs ::= expr-var expr-binary))
+(LHS-E expr (rhs ::= expr-var expr-binary expr-const))
 
 (LHS-E types (rhs ::= type-list))
 (LHS-E arguments-caller (rhs ::= argument-caller-list))

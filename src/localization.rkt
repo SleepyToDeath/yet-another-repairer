@@ -157,25 +157,26 @@
 
 (define (add-candidate1 mac bugl candi)
 	(define inst (car (ast->instruction candi (imap-empty default-type) 0)))
-;	(pretty-print inst)
 	(if (not (inst-type-check? mac (location-class bugl) (location-func bugl) inst)) #f
 		(set! one-line-candidates (cons candi one-line-candidates))))
 
 (define (add-candidate2.1 mac bugl candi)
 	(define inst (car (ast->instruction candi (imap-empty default-type) 0)))
-;	(pretty-print inst)
 	(if (not (inst-type-check? mac (location-class bugl) (location-func bugl) inst)) #f
 		(set! first-line-candidates (cons candi first-line-candidates))))
 
+(define usable-classes (list
+	(string-id "org.projectfloodlight.openflow.types.IPv4Address")
+	(string-id "org.projectfloodlight.openflow.types.MacAddress")
+))
+
 (define (add-candidate2.2 mac bugl candi)
-	;[TODO] remove
-	(if (not (equal? (class-name (ast->cls candi mac)) (string-id "org.projectfloodlight.openflow.types.IPv4Address"))) #f
-	(if (not-a-function-error? (ast->func candi mac)) #f
-		(begin
-		(define inst (car (ast->instruction candi (imap-empty default-type) 0)))
-;		(pretty-print inst)
-		(if (not (inst-type-check? mac (location-class bugl) (location-func bugl) inst)) #f
-			(set! second-line-candidates (cons candi second-line-candidates)))))))
+	(if (not (member (class-name (ast->cls candi mac)) usable-classes)) #f
+		(if (not-a-function-error? (ast->func candi mac)) #f
+			(begin
+			(define inst (car (ast->instruction candi (imap-empty default-type) 0)))
+			(if (not (inst-type-check? mac (location-class bugl) (location-func bugl) inst)) #f
+				(set! second-line-candidates (cons candi second-line-candidates)))))))
 		
 
 (define (try-fixing ast spec bugl)
@@ -184,6 +185,7 @@
 	(++ meta-counter)
 	(reset-candidates!)
 	(display (~a "============ Tried " meta-counter " iterations =============\n"))
+	(eprintf (~a "============ Tried " meta-counter " iterations =============\n"))
 
 	(define mac (build-virtual-table (ast->machine ast)))
 
@@ -194,20 +196,12 @@
 	(define (search-first)
 		(define dummy-verifier
 			(lambda (stat-sketch)
-;				(std:with-handlers ([std:exn:fail? (lambda (x) (display "Execption!\n") #f)])
-					(begin
-;					(display "------- enum first --------\n")
-;					(++ first-counter)
-;					(pretty-print first-counter)
-;					(pretty-print second-counter)
-;					(pretty-print stat-sketch)
-
-;					(define prog-sketch (replace-stat ast stat-sketch bugl))
-					(if (using-bridge-var? stat-sketch)
-						(add-candidate2.1 mac bugl stat-sketch)
-						(add-candidate1 mac bugl stat-sketch))
-					#f)))
-;						(monitor-reason "spec" (program-sketch->constraint prog-sketch spec)))))))
+				(pretty-print stat-sketch)
+				(display "\n")
+				(if (using-bridge-var? stat-sketch)
+					(add-candidate2.1 mac bugl stat-sketch)
+					(add-candidate1 mac bugl stat-sketch))
+				#f))
 		(define updater
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 		(define pruner
@@ -217,18 +211,10 @@
 	(define (search-second)
 		(define dummy-verifier
 			(lambda (invoke-sketch)
-;				(std:with-handlers ([std:exn:fail? (lambda (x) (display "Execption!\n") #f)])
-					(begin
-;					(display "------- enum second --------\n")
-;					(++ second-counter)
-;					(pretty-print first-counter)
-;					(pretty-print second-counter)
-
-;					(pretty-print invoke-sketch)
-;					(define prog-sketch (define-bridge-var (insert-stat ast invoke-sketch bugl) invoke-sketch (get-invoke-ret-type invoke-sketch mac) bugl))
-					(add-candidate2.2 mac bugl invoke-sketch)
-					#f)))
-;					(monitor-reason "spec" (program-sketch->constraint prog-sketch spec))))))
+				(pretty-print invoke-sketch)
+				(display "\n")
+				(add-candidate2.2 mac bugl invoke-sketch)
+				#f))
 		(define updater
 			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 		(define pruner
@@ -242,25 +228,25 @@
 		(length one-line-candidates) " + " 
 		(length first-line-candidates) " + " 
 		(length second-line-candidates) " candidates *********************\n"))
+	(eprintf (~a "***************** Totally " 
+		(length one-line-candidates) " + " 
+		(length first-line-candidates) " + " 
+		(length second-line-candidates) " candidates *********************\n"))
 
 
-	;[TODO] remove
-	(if (equal? (function-name (location-func bugl)) func-name-main) #f
-		(or 
-			(ormap (lambda (l) 
-					(display "\nChecking candidate: \n")
-;					(pretty-print l)
-					(define prog-sketch (replace-stat ast l bugl))
-					(monitor-reason "spec" (program-sketch->constraint prog-sketch spec l)))
-				one-line-candidates)
+	(or 
+		(ormap (lambda (l) 
+				(display "\nChecking candidate: \n")
+				(define prog-sketch (replace-stat ast l bugl))
+				(monitor-reason "spec" (program-sketch->constraint prog-sketch spec l)))
+			one-line-candidates)
 
-			(ormap (lambda (l2)
-					(display "\nChecking candidate: \n")
-;					(pretty-print l2)
-					(define prog-sketch (replace-stat ast (car l2) bugl))
-					(define prog-sketch2 (define-bridge-var (insert-stat ast (cadr l2) bugl) (cadr l2) (get-invoke-ret-type (cadr l2) mac) bugl))
-					(monitor-reason "spec" (program-sketch->constraint prog-sketch2 spec l2)))
-				(std:cartesian-product first-line-candidates second-line-candidates))))
+		(ormap (lambda (l2)
+				(display "\nChecking candidate: \n")
+				(define prog-sketch (replace-stat ast (car l2) bugl))
+				(define prog-sketch2 (define-bridge-var (insert-stat prog-sketch (cadr l2) bugl) (cadr l2) (get-invoke-ret-type (cadr l2) mac) bugl))
+				(monitor-reason "spec" (program-sketch->constraint prog-sketch2 spec l2)))
+			(std:cartesian-product first-line-candidates second-line-candidates)))
 
 )
 
