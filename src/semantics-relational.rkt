@@ -589,25 +589,16 @@
 			[(inst-ret v-expr) 
 				(begin
 				(define ret-value (car (expr-eval v-expr mac-eval-ctxt)))
-				(defer-eval "returned: " ret-value)
 				(define ret-jtype (function-ret func))
 				(define mem-ret.tmp (memory-sforce-write mem-0 var-ret-name ret-value 0 (jtype->mtype ret-jtype)))
 				(define mem-ret (memory-sym-commit mem-ret.tmp))
 				(define fml-update (memory-sym-summary mem-ret summary?))
-;				(pretty-print mem-ret)
-;				(print-fml fml-update)
-;				(define fml-ret (select-fml? fml-update))
 				(define fml-ret fml-update)
 				(define fml-path (iassert-pc-ret #t fml-ret))
 				(define func-fml-ret (prepend-ending-mem-in func-fml (if summary? #t mark) mem-ret))
 				(define func-fml-new (append-fml func-fml-ret fml-path))
 				(assert id)
-;				(pretty-print inst)
-;				(test-assert! fml-path)
-;				(display "++++++++++++++ Encoding: ++++++++++++\n")
-;				(print-fml fml-path)
-
-;				(display (~a "Output state id: " (memory-id mem-ret) "\n"))
+				(if summary? #f (add-spec id mem-in (memory-sym-commit mem-ret) inst inst-ret? #f))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
 
 			[(inst-long-jump cls-name func-name)
@@ -859,6 +850,7 @@
 								([addr (if (equal? obj void-receiver) addr-void-receiver
 									(memory-sforce-read mem-0 (string-id (variable-name obj)) 0))])
 								(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value (jtype->mtype jtype)))]))
+				(if summary? #f (add-spec id mem-in (memory-sym-commit mem-new) inst inst-ass? #f))
 				(update-mem-only mem-new))]
 
 			;[!]there might be bug if reading from heap
@@ -894,7 +886,82 @@
 					(define fml-update #t)
 					(define fml-new (iassert-pc-branch (select-fml? fml-update) cnd (not cnd) label))
 					(define pc-br (imap-get (function-lmap func) label default-type))
+					(if summary? #f (add-spec id mem-in mem-in inst inst-jmp? cnd))
 					(if summary? 
 						(update-rbstate-verbose fml-new mem-in pc-br (not cnd) cnd)
 						(update-rbstate fml-new mem-in pc-br))))]))]))
 
+
+
+
+
+;========================== Local Spec ==========================
+
+(struct local-spec (mem-in mem-out inst-ori inst-type take-branch?) #:transparent)
+
+;selector -> list of 
+(define spec-map (imap-empty default-type))
+
+(define (clear-specs!)
+	(set! spec-map (imap-empty default-type)))
+
+(define (eval-specs! sol)
+	(set! spec-map (evaluate spec-map sol)))
+
+(define (add-spec id0 mem-in mem-out inst-ori inst-type take-branch?)
+	(define id (~a id0))
+	(define cur (imap-get spec-map id default-type))
+	(define cur+ (if (is-not-found? cur) null cur))
+	(set! spec-map (imap-set spec-map id (cons (local-spec mem-in mem-out inst-ori inst-type take-branch?) cur+) default-type)))
+
+;ast: ast of entire program
+;return: spec after this line
+(define (step-spec-0 id0 mac inst)
+	(define id (~a id0))
+	(define spec (imap-get spec-map id default-type))
+	(step-spec spec mac inst))
+
+;ast: ast of entire program
+;return: spec after this line
+(define (step-spec spec mac inst)
+	(define mac-spec (std:struct-copy machine mac [mem (local-spec-mem-in spec)]))
+	(set-context! mac-spec)
+	(define mac-post (inst-exec inst mac-spec #f))
+	(std:struct-copy local-spec spec [mem-in (machine-mem mac-post)]))
+
+;ast: ast of entire program
+;[!] this is an incomplete check. it's based on the assumption that the patch only makes necessary changes
+(define (sat-spec? id0 mac inst)
+	(define id (~a id0))
+	(define specs (imap-get spec-map id default-type))
+	(andmap (lambda (spec)
+		(define mac-spec (std:struct-copy machine mac [mem (local-spec-mem-in spec)]))
+		(if (not ((local-spec-inst-type spec) inst)) #f
+			(match spec [(local-spec mem-in mem-out inst-ori inst-type take-branch?)
+				(match inst 
+					[(inst-jmp condition label) 
+						(begin
+						(define c (car (expr-eval condition mac-spec)))
+						(equal? c take-branch?))]
+					[(inst-ass vl vr)  
+						(if (not (same-vl? inst-ori inst)) #f
+							(begin
+							(match-define (cons v-new v-new-jt) (expr-eval vr mac-spec))
+							(match (lexpr-rhs vl)
+								[(expr-var v) (equal? v-new (memory-sforce-read mem-out (string-id (variable-name v)) 0 (jtype->mtype v-new-jt)))]
+								[_ #f])))]
+					[(inst-ret v-expr)  
+						(begin
+						(match-define (cons ret-value ret-jtype) (expr-eval v-expr mac-spec))
+						(equal? ret-value (memory-sforce-read mem-out var-ret-name 0 (jtype->mtype ret-jtype))))])])))
+		specs))
+
+(define (same-vl? inst1 inst2)
+	(define vl1 (lexpr-rhs (inst-ass-vl inst1)))
+	(define vl2 (lexpr-rhs (inst-ass-vl inst2)))
+	(and 
+		(expr-var? vl1) 
+		(expr-var? vl2)
+		(equal? 
+			(string-id (variable-name (expr-var-name vl1)))
+			(string-id (variable-name (expr-var-name vl2))))))

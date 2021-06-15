@@ -61,6 +61,7 @@
 	(map print-location visited-locations)
 	(clear-asserts!)
 	(clear-pending-eval)
+	(clear-specs!)
 	(reset-contains-target-cache)
 	(assert-visited-locations)
 
@@ -114,7 +115,7 @@
 		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 		(print-location bugl)
 		(add-visited-location bugl)
-;		(map print-location locations)
+		(eval-specs! debug-sol)
 		
 		(DEBUG-DO (pretty-print string-id-table))
 		(DEBUG-DO (std:error "Halt!"))
@@ -187,80 +188,105 @@
 	(display (~a "============ Tried " meta-counter " iterations =============\n"))
 	(eprintf (~a "============ Tried " meta-counter " iterations =============\n"))
 
-	(define mac (build-virtual-table (ast->machine ast)))
+	(print-location bugl)
 
-	(define ctxt (location->ctxt ast bugl mac))
-	(display "============ context collected =============:\n")
-	(pretty-print ctxt)
+	(if (equal? (function-name (location-func bugl)) func-name-main)
+		(begin (display "In main function. Skipped.\n") #f)
+		(begin
 
-	(define (search-first)
-		(define dummy-verifier
-			(lambda (stat-sketch)
-				(pretty-print stat-sketch)
-				(display "\n")
-				(if (using-bridge-var? stat-sketch)
-					(add-candidate2.1 mac bugl stat-sketch)
-					(add-candidate1 mac bugl stat-sketch))
-				#f))
-		(define updater
-			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
-		(define pruner
-			(lambda (ast) (monitor-reason "pruner" (real-pruner ast mac))))
-		(ast-dfs sketch-line-1 ctxt dummy-verifier pruner updater search-depth))
+		(define mac (build-virtual-table (ast->machine ast)))
 
-	(define (search-second)
-		(define dummy-verifier
-			(lambda (invoke-sketch)
-				(pretty-print invoke-sketch)
-				(display "\n")
-				(add-candidate2.2 mac bugl invoke-sketch)
-				#f))
-		(define updater
-			(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
-		(define pruner
-			(monitor-reason "pruner" (lambda (ast) (real-pruner ast mac))))
-		(ast-dfs sketch-line-2 ctxt dummy-verifier pruner updater inf-depth))
+		(define ctxt (location->ctxt ast bugl mac))
+		(display "============ context collected =============:\n")
+		(pretty-print ctxt)
 
-	(search-first)
-	(search-second)
-	
-	(display (~a "***************** Totally " 
-		(length one-line-candidates) " + " 
-		(length first-line-candidates) " + " 
-		(length second-line-candidates) " candidates *********************\n"))
-	(eprintf (~a "***************** Totally " 
-		(length one-line-candidates) " + " 
-		(length first-line-candidates) " + " 
-		(length second-line-candidates) " candidates *********************\n"))
+		(define (search-first)
+			(define dummy-verifier
+				(lambda (stat-sketch)
+					(if (using-bridge-var? stat-sketch)
+						(add-candidate2.1 mac bugl stat-sketch)
+						(add-candidate1 mac bugl stat-sketch))
+					#f))
+			(define updater
+				(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
+			(define pruner
+				(lambda (ast) (monitor-reason "pruner" (real-pruner ast mac))))
+			(ast-dfs sketch-line-1 ctxt dummy-verifier pruner updater search-depth))
+
+		(define (search-second)
+			(define dummy-verifier
+				(lambda (invoke-sketch)
+					(add-candidate2.2 mac bugl invoke-sketch)
+					#f))
+			(define updater
+				(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
+			(define pruner
+				(monitor-reason "pruner" (lambda (ast) (real-pruner ast mac))))
+			(ast-dfs sketch-line-2 ctxt dummy-verifier pruner updater inf-depth))
+
+		(search-first)
+		(search-second)
+		
+		(display (~a "***************** Totally " 
+			(length one-line-candidates) " + " 
+			(length first-line-candidates) " + " 
+			(length second-line-candidates) " candidates *********************\n"))
+		(eprintf (~a "***************** Totally " 
+			(length one-line-candidates) " + " 
+			(length first-line-candidates) " + " 
+			(length second-line-candidates) " candidates *********************\n"))
 
 
-	(or 
-		(ormap (lambda (l) 
-				(display "\nChecking candidate: \n")
-				(define prog-sketch (replace-stat ast l bugl))
-				(monitor-reason "spec" (program-sketch->constraint prog-sketch spec l)))
-			one-line-candidates)
+		(or 
+			(ormap (lambda (l) 
+					(display "\nChecking candidate: \n")
+					(define prog-sketch (replace-stat ast l bugl))
+					(define t0 (std:current-inexact-milliseconds))
+					(monitor-reason "spec" 
+						(if (not (monitor-reason "pre check" (pre-check prog-sketch))) #f
+							(begin
+							(define t1 (std:current-inexact-milliseconds))
+							(display (~a "pre check took " (- t1 t0) " milliseconds\n"))
+							(define ret (sat-spec? (location-selector bugl) mac l))
+							(define t2 (std:current-inexact-milliseconds))
+							(display (~a "spec check took " (- t2 t1) " milliseconds\n"))
+							ret))))
 
-		(ormap (lambda (l2)
-				(display "\nChecking candidate: \n")
-				(define prog-sketch (replace-stat ast (car l2) bugl))
-				(define prog-sketch2 (define-bridge-var (insert-stat prog-sketch (cadr l2) bugl) (cadr l2) (get-invoke-ret-type (cadr l2) mac) bugl))
-				(monitor-reason "spec" (program-sketch->constraint prog-sketch2 spec l2)))
-			(std:cartesian-product first-line-candidates second-line-candidates)))
+;					(program-sketch->constraint prog-sketch spec l)))
+				one-line-candidates)
 
-)
+			(ormap (lambda (l2)
+					(display "\nChecking candidate: \n")
+					(define prog-sketch (replace-stat ast (car l2) bugl))
+					(define prog-sketch2 (define-bridge-var 
+						(insert-stat prog-sketch (cadr l2) bugl) 
+						(cadr l2) 
+						(get-invoke-ret-type (cadr l2) mac) bugl))
+					(monitor-reason "spec" (program-sketch->constraint prog-sketch2 spec l2)))
+				(std:cartesian-product first-line-candidates second-line-candidates)))
+
+)))
 
 (define spec-counter 0)
+
+(define (pre-check prog-sketch)
+	(std:with-handlers ([std:exn:fail? (lambda (x) 
+			(display "Execption!\n") 
+			(clear-asserts!) 
+			#f)])
+		(begin
+		(define mac-sketch (ast->machine prog-sketch))
+		(machine-all-check? (build-virtual-table mac-sketch)))))
 
 (define (program-sketch->constraint prog-sketch spec patch)
 	(define t0 (std:current-inexact-milliseconds))
 	(std:with-handlers ([std:exn:fail? (lambda (x) 
-		(display "Execption!\n") 
-		(clear-asserts!) 
-		(define t1 (std:current-inexact-milliseconds))
-		(display (~a "took " (- t1 t0) " milliseconds\n"))
-		(display (~a "max map size: " max-map-size " \n"))
-		#f)])
+			(display "Execption!\n") 
+			(clear-asserts!) 
+			(define t1 (std:current-inexact-milliseconds))
+			(display (~a "took " (- t1 t0) " milliseconds\n"))
+			(display (~a "max map size: " max-map-size " \n"))
+			#f)])
 		(begin
 		(define mac-sketch (ast->machine prog-sketch))
 		(if (not (machine-all-check? (build-virtual-table mac-sketch))) #f
@@ -283,6 +309,7 @@
 				(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
 				(pretty-print prog-sketch)) #f)
 			constraint)))))
+
 
 (define sketch-line-1 (stat #f))
 
