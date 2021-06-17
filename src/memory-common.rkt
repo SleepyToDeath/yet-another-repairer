@@ -44,7 +44,7 @@
 
 ;[+]
 ;scope-size = max number of different variable names
-(define scope-size 500)
+(define scope-size 100)
 
 ;[-]
 (define vt-base-addr 0)

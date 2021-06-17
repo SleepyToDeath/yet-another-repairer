@@ -34,6 +34,13 @@
 
 ;cnd: the entire subtree is considered only if cnd is true
 (struct invoke-tree (root cnd subtrees) #:transparent)
+
+(define valid-selectors null)
+(define (clear-valid-selectors!)
+	(set! valid-selectors null))
+(define (add-valid-selector! l)
+	(set! valid-selectors (cons l valid-selectors)))
+(register-reset! clear-valid-selectors!)
 ;============================= Top Level Interface ====================================
 ;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
 (define (ast->relation ast)
@@ -88,7 +95,7 @@
 
 		(define mac-ass (build-virtual-table-alt mac-ass0))
 
-		(define fml-ass (and fml-ass0 (memory-sym-ssummary (machine-mem mac-ass))))
+		(define fml-ass (and (memory-sym-ssummary (machine-mem mac-ass)) fml-ass0))
 
 		(define boot-lstate (prepend-starting-mem-in (alloc-lstate (machine-boot mac-ass)) #t (machine-mem mac-ass)))
 
@@ -384,8 +391,12 @@
 ;		(imap-set-selector id)
 
 		(set! line-counter (+ line-counter 1))
+		(add-valid-selector! id)
+
 		(display (~a "Lines of code: " line-counter "\n"))
 		(defer-eval "instruction: " inst)
+		(defer-eval "path mark " mark)
+;		(defer-eval "mem-in " (get-mem-in-list func-fml pc))
 		(println inst)
 		(pretty-print mark)
 		(pretty-print id)
@@ -597,8 +608,9 @@
 				(define fml-path (iassert-pc-ret #t fml-ret))
 				(define func-fml-ret (prepend-ending-mem-in func-fml (if summary? #t mark) mem-ret))
 				(define func-fml-new (append-fml func-fml-ret fml-path))
+				(defer-eval "return value" ret-value)
 				(assert id)
-				(if summary? #f (add-spec id mem-in (memory-sym-commit mem-ret) inst inst-ret? #f))
+				(if summary? #f (add-spec id mem-in (memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-ret) summary?) inst inst-ret? #f))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
 
 			[(inst-long-jump cls-name func-name)
@@ -850,7 +862,8 @@
 								([addr (if (equal? obj void-receiver) addr-void-receiver
 									(memory-sforce-read mem-0 (string-id (variable-name obj)) 0))])
 								(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value (jtype->mtype jtype)))]))
-				(if summary? #f (add-spec id mem-in (memory-sym-commit mem-new) inst inst-ass? #f))
+				(defer-eval "new-v" value)
+				(if summary? #f (add-spec id mem-in (memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-new) summary?) inst inst-ass? #f))
 				(update-mem-only mem-new))]
 
 			;[!]there might be bug if reading from heap
@@ -905,8 +918,8 @@
 (define (clear-specs!)
 	(set! spec-map (imap-empty default-type)))
 
-(define (eval-specs! sol)
-	(set! spec-map (evaluate spec-map sol)))
+;(define (eval-specs! sol)
+;	(set! spec-map (evaluate spec-map sol)))
 
 (define (add-spec id0 mem-in mem-out inst-ori inst-type take-branch?)
 	(define id (~a id0))
@@ -916,28 +929,29 @@
 
 ;ast: ast of entire program
 ;return: spec after this line
-(define (step-spec-0 id0 mac inst)
+(define (step-spec-0 id0 mac inst sol)
 	(define id (~a id0))
 	(define spec (imap-get spec-map id default-type))
-	(step-spec spec mac inst))
+	(step-spec spec mac inst sol))
 
 ;ast: ast of entire program
 ;return: spec after this line
-(define (step-spec spec mac inst)
-	(define mac-spec (std:struct-copy machine mac [mem (local-spec-mem-in spec)]))
+(define (step-spec spec mac inst sol)
+	(define mac-spec (std:struct-copy machine mac [mem (evaluate (local-spec-mem-in spec) sol)]))
 	(set-context! mac-spec)
 	(define mac-post (inst-exec inst mac-spec #f))
 	(std:struct-copy local-spec spec [mem-in (machine-mem mac-post)]))
 
 ;ast: ast of entire program
 ;[!] this is an incomplete check. it's based on the assumption that the patch only makes necessary changes
-(define (sat-spec? id0 mac inst)
+(define (sat-spec? id0 mac inst sol)
 	(define id (~a id0))
-	(define specs (imap-get spec-map id default-type))
+	(define specs (evaluate (imap-get spec-map id default-type) sol))
 	(andmap (lambda (spec)
 		(define mac-spec (std:struct-copy machine mac [mem (local-spec-mem-in spec)]))
 		(if (not ((local-spec-inst-type spec) inst)) #f
 			(match spec [(local-spec mem-in mem-out inst-ori inst-type take-branch?)
+				(begin
 				(match inst 
 					[(inst-jmp condition label) 
 						(begin
@@ -947,13 +961,14 @@
 						(if (not (same-vl? inst-ori inst)) #f
 							(begin
 							(match-define (cons v-new v-new-jt) (expr-eval vr mac-spec))
+							(pretty-print v-new)
 							(match (lexpr-rhs vl)
-								[(expr-var v) (equal? v-new (memory-sforce-read mem-out (string-id (variable-name v)) 0 (jtype->mtype v-new-jt)))]
+								[(expr-var v) (equal? v-new (do-n-ret pretty-print (memory-sforce-read mem-out (string-id (variable-name v)) 0)))]
 								[_ #f])))]
 					[(inst-ret v-expr)  
 						(begin
 						(match-define (cons ret-value ret-jtype) (expr-eval v-expr mac-spec))
-						(equal? ret-value (memory-sforce-read mem-out var-ret-name 0 (jtype->mtype ret-jtype))))])])))
+						(equal? ret-value (memory-sforce-read mem-out var-ret-name 0)))]))])))
 		specs))
 
 (define (same-vl? inst1 inst2)

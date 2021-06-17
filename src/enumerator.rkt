@@ -532,9 +532,19 @@
 		(set! visited-sids (cdr visited-sids))
 		ret)))
 
+(define (find-new-func mac oldc oldf)
+	(ormap (lambda (newcf) 
+		(if (and 
+			(equal? (class-name oldc) (class-name (car newcf)))
+			(equal? (function-name oldf) (function-name (cdr newcf)))
+			(equal? (function-args oldf) (function-args (cdr newcf))))
+			(cdr newcf)
+			#f))
+		(all-class-functions mac)))
 
 
-	;======================== Debug ========================
-	(define (monitor-reason msg result)
-		(if (not result) (display (~a "Fail check " msg "\n")) #f)
-		result)
+
+;======================== Debug ========================
+(define (monitor-reason msg result)
+	(if (not result) (display (~a "Fail check " msg "\n")) #f)
+	result)

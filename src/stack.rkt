@@ -12,15 +12,19 @@
 (provide stack-read stack-write
 stack-force-read stack-force-write 
 stack-push stack-pop stack-decl
-stack-new stack-reset stack-select stack-summary
+stack-new stack-reset stack-select stack-summary stack-gen-binding
 stack-empty)
 
 
 ;====================== Static Version ==========================
 ;key: (cons name type)
 (struct static-scope (keys array array-out) #:transparent)
-(struct static-stack (scopes) #:transparent)
 
+;scopes: list of static-scope
+;updates: list of list of keys, each list of keys correspond to a scope
+(struct static-stack (scopes updates) #:transparent)
+
+;banned
 (define (stack-static-read mem name type)
 	(define ret.maybe (ormap 
 		(lambda (sc) (if (member name (map car (static-scope-keys sc))) 
@@ -29,6 +33,7 @@ stack-empty)
 		(static-stack-scopes (memory-stack mem))))
 	(if ret.maybe ret.maybe (not-found type)))
 
+;banned
 (define (stack-static-write mem name value)
 	(define found? #f)
 	(std:struct-copy memory mem [stack
@@ -50,17 +55,20 @@ stack-empty)
 (define (stack-static-force-write mem name value lvl type)
 	(define mem-decl (if (zero? lvl) (stack-static-decl mem name type) mem))
 	(define scs (static-stack-scopes (memory-stack mem-decl)))
-	(if (is-invalid? (list-ref (static-scope-array (list-ref scs lvl)) name))
-		mem
-		(std:struct-copy memory mem-decl [stack
-			(static-stack 
+	(define updates (static-stack-updates (memory-stack mem-decl)))
+	(std:struct-copy memory mem-decl [stack
+		(static-stack 
+			(if (is-invalid? (list-ref (static-scope-array (list-ref scs lvl)) name))
+				scs
 				(std:list-set scs lvl 
-					(std:struct-copy static-scope (list-ref scs lvl) [array (std:list-set (static-scope-array (list-ref scs lvl)) name value)])))])))
+					(std:struct-copy static-scope (list-ref scs lvl) [array (std:list-set (static-scope-array (list-ref scs lvl)) name value)])))
+			(std:list-set updates lvl
+				(cons name (list-ref updates lvl))))]))
 
 (define (stack-static-decl mem name type)
-;	(pretty-print (list mem name type))
 	(define st (memory-stack mem))
 	(define scs (static-stack-scopes st))
+	(define updates (static-stack-updates st))
 	(define sc (car scs))
 	(define keys (static-scope-keys sc))
 	(define array (static-scope-array sc))
@@ -77,28 +85,33 @@ stack-empty)
 						(std:struct-copy static-scope sc 
 							[array array.new] 
 							[array-out array-out.new] 
-							[keys (std:sort (std:remove-duplicates (cons (cons name type) keys)) (lambda (x y) (< (car x) (car y))))])
-						(cdr scs)))])))
+							[keys (std:sort (remove-duplicates (cons (cons name type) keys)) (lambda (x y) (< (car x) (car y))))])
+						(cdr scs))
+					updates)])))
 	ret)
 	
 (define (stack-static-push mem)
 	(define scs (static-stack-scopes (memory-stack mem)))
+	(define updates (static-stack-updates (memory-stack mem)))
 	(std:struct-copy memory mem 
 		[stack 
 			(static-stack 
-				(cons (static-scope-empty null) scs))]))
+				(cons (static-scope-empty null) scs)
+				(cons null updates))]))
 
 (define (stack-static-pop mem)
 	(define scs (static-stack-scopes (memory-stack mem)))
+	(define updates (static-stack-updates (memory-stack mem)))
 	(std:struct-copy memory mem 
 		[stack 
 			(static-stack 
-				(cdr scs))]))
+				(cdr scs)
+				(cdr updates))]))
 
 (define (stack-static-reset st st-base)
 	(define scs-base (static-stack-scopes st-base))
-;	(pretty-print scs-base)
-	(define ret (static-stack
+	(define updates-base (static-stack-updates st-base))
+	(static-stack
 		(map (lambda (sc-base) 
 			(define keys (static-scope-keys sc-base))
 			(define array-empty (static-scope-array (static-scope-empty keys)))
@@ -113,46 +126,58 @@ stack-empty)
 				array-empty
 				keys))
 			(static-scope keys array.new array-out.new))
-			scs-base)))
-;	(display "Reset stack:\n")
-;	(pretty-print ret)
-	ret)
+			scs-base)
+		(map (lambda (x) null) updates-base)))
 
 ;candidates: list of (cnd . stack)
 (define (stack-static-select candidates summary?)
+	(display "stack select:\n")
 	(define template (cdar candidates))
 	;keys are static, should be consistant even in invalid states
-	(define stack-invalid (static-stack 
+	(define scs-invalid
 		(map (lambda (sc) 
 			(std:struct-copy static-scope 
 				(static-scope-invalid (static-scope-keys sc)) 
 				[keys (static-scope-keys sc)])) 
-			(static-stack-scopes template))))
-	(define f-select (maybe-select stack-invalid (lambda (st) (is-invalid? (last (static-scope-array (car (static-stack-scopes st))))))))
-	(f-select candidates #f))
+			(static-stack-scopes template)))
+	(define f-select (maybe-select scs-invalid (lambda (scs) (is-invalid? (last (static-scope-array (car scs)))))))
+	(define scs-new (f-select (map (lambda (cnd.st) (cons (car cnd.st) (static-stack-scopes (cdr cnd.st)))) candidates) #f))
+	(define all-updates (map static-stack-updates (map cdr candidates)))
+	(pretty-print all-updates)
+	(define empty-updates (map (lambda (x) null) (car all-updates)))
+	(define union-updates (foldl (lambda (updates union) (map append updates union)) empty-updates all-updates))
+	(define updates-new (map remove-duplicates union-updates))
+	(static-stack scs-new updates-new))
 
 ;do nothing; generate real content at reset
 (define (stack-static-new)
 	static-stack-empty)
 
 (define (stack-static-summary st)
-;	(display "Finish stack:\n")
-;	(pretty-print st)
-	(andmap+ (lambda (sc)
-		(andmap+ (lambda (key)
-			(define ret (equal?
-				(list-ref (static-scope-array sc) (car key))
-				(list-ref (static-scope-array-out sc) (car key))))
-;			(defer-eval "stack-fml: " (list ret 
-;				key
-;				(list-ref (static-scope-array sc) (car key))
-;				(list-ref (static-scope-array-out sc) (car key))))
-;			(inspect ret)
-;			(pretty-print eval-pending)
-;			(print-fml ret)
-			ret)
+	(andmap+ (lambda (sc updates)
+		(pending-always-right! (andmap+
+			(lambda (key)
+				(if (member (car key) updates) #t
+					(equal?
+						(list-ref (static-scope-array sc) (car key))
+						(list-ref (static-scope-array-out sc) (car key)))))
 			(static-scope-keys sc)))
-		(static-stack-scopes st)))
+		(andmap+ (lambda (key)
+			(equal?
+				(list-ref (static-scope-array sc) key)
+				(list-ref (static-scope-array-out sc) key)))
+			updates))
+		(static-stack-scopes st) (static-stack-updates st)))
+
+(define (stack-static-gen-binding)
+	(andmap+ identity always-right-fmls))
+
+(define always-right-fmls null)
+(define (clear-always-right!)
+	(set! always-right-fmls null))
+(define (pending-always-right! fml)
+	(set! always-right-fmls (cons fml always-right-fmls)))
+(register-reset! clear-always-right!)
 
 (define (arr-gen keys value-gen)
 	(foldl (lambda (key arr) 
@@ -169,7 +194,7 @@ stack-empty)
 	(static-scope null empty-array empty-array))
 
 (define static-stack-empty
-	(static-stack null))
+	(static-stack null null))
 
 
 
@@ -211,3 +236,4 @@ stack-empty)
 
 (define stack-empty static-stack-empty)
 
+(define stack-gen-binding stack-static-gen-binding)

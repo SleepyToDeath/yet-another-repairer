@@ -64,17 +64,16 @@
 	(clear-specs!)
 	(reset-contains-target-cache)
 	(assert-visited-locations)
+	(do-all-resets!)
 
-	(define sum (apply + (map (lambda (l) (if (location-selector l) 1 0)) locations)))
-	(define one-bug (equal? sum (- (length locations) 1)))
-	(define no-bug (equal? sum (length locations)))
 ;	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) spec)))
 	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) (list (car spec)))))
+
+	(define sum (apply + (map (lambda (id) (if id 1 0)) (remove-duplicates valid-selectors))))
+	(define one-bug (equal? sum (- (length (remove-duplicates valid-selectors)) 1)))
+	(define no-bug (equal? sum (length locations)))
+
 	(display (~a "Number of asserts: " (length (asserts)) "\n"))
-;	(define max-sat-sum (apply + (map (lambda (l) (if l 1 0)) max-sat-list)))
-;	(display (~a "Number of asserts: " (length (asserts)) "\n"))
-;	(define debug-max-sat (> max-sat-sum (- (length max-sat-list) 7)))
-;	(display (~a "Number of asserts: " (length (asserts)) "\n"))
 
 	(display "\n Solving: \n")
 	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
@@ -82,7 +81,7 @@
 	(output-smt #t)
 
 ;	/* default version one bug */
-	(define debug-sol (solve (assert (and (andmap+ identity hard) one-bug) "TTTTTTTEST!!!!!!!!!!!!!!")))
+	(define debug-sol (solve (assert (and (andmap+ identity hard) one-bug))))
 
 ;	/* no bug */
 ;	(define debug-sol (solve (assert (and hard no-bug))))
@@ -99,7 +98,7 @@
 ;			  #:guarantee (assert (and no-bug hard))))
 	
 	(display "\n Model: \n")
-;	(pretty-print debug-sol)
+	(pretty-print debug-sol)
 
 	(if (unsat? debug-sol)
 		(begin
@@ -109,13 +108,13 @@
 		(begin
 ;		(DEBUG-DO (display (~a (evaluate max-sat-sum debug-sol) "/" (length max-sat-list) "\n")))
 ;		(DEBUG-DO ((lambda () (print-pending-eval debug-sol) (display "\n"))))
-		((lambda () (print-pending-eval debug-sol) (display "\n")))
+;		((lambda () (print-pending-eval debug-sol) (display "\n")))
 
 		(define bugl (ormap (lambda (l) (if (evaluate (location-selector l) debug-sol) #f l)) locations))
 		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 		(print-location bugl)
 		(add-visited-location bugl)
-		(eval-specs! debug-sol)
+;		(eval-specs! debug-sol)
 		
 		(DEBUG-DO (pretty-print string-id-table))
 		(DEBUG-DO (std:error "Halt!"))
@@ -139,7 +138,7 @@
 					(localize-bug-in-funcs ast mac locations encoder spec 
 						(map function-formula-sid vfuncs)))]
 
-			[_ (try-fixing ast spec bugl)]))
+			[_ (try-fixing ast spec bugl debug-sol)]))
 
 		(if maybe-l maybe-l (localize-bug-in-funcs ast mac locations encoder spec funcs)))))
 
@@ -180,7 +179,7 @@
 				(set! second-line-candidates (cons candi second-line-candidates)))))))
 		
 
-(define (try-fixing ast spec bugl)
+(define (try-fixing ast spec bugl sol)
 
 	(clear-asserts!)
 	(++ meta-counter)
@@ -190,11 +189,13 @@
 
 	(print-location bugl)
 
-	(if (equal? (function-name (location-func bugl)) func-name-main)
+	(if #f;(equal? (function-name (location-func bugl)) func-name-main)
 		(begin (display "In main function. Skipped.\n") #f)
 		(begin
 
-		(define mac (build-virtual-table (ast->machine ast)))
+		(define mac.tmp (build-virtual-table (ast->machine ast)))
+		(define func-new (find-new-func mac.tmp (location-class bugl) (location-func bugl)))
+		(define mac (std:struct-copy machine mac.tmp [fc func-new]))
 
 		(define ctxt (location->ctxt ast bugl mac))
 		(display "============ context collected =============:\n")
@@ -240,6 +241,7 @@
 		(or 
 			(ormap (lambda (l) 
 					(display "\nChecking candidate: \n")
+					(pretty-print l)
 					(define prog-sketch (replace-stat ast l bugl))
 					(define t0 (std:current-inexact-milliseconds))
 					(monitor-reason "spec" 
@@ -247,7 +249,7 @@
 							(begin
 							(define t1 (std:current-inexact-milliseconds))
 							(display (~a "pre check took " (- t1 t0) " milliseconds\n"))
-							(define ret (sat-spec? (location-selector bugl) mac l))
+							(define ret (sat-spec? (location-selector bugl) mac (car (ast->instruction l #f #f)) sol))
 							(define t2 (std:current-inexact-milliseconds))
 							(display (~a "spec check took " (- t2 t1) " milliseconds\n"))
 							ret))))

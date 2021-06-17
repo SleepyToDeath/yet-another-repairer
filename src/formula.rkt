@@ -11,6 +11,13 @@
 
 (provide (all-defined-out))
 
+(define all-resets null)
+(define (register-reset! f)
+	(set! all-resets (cons f all-resets)))
+(define (do-all-resets!)
+	(map (lambda (f) (f)) all-resets))
+
+
 (struct expr-fp (op children) #:transparent)
 (struct const-fp (id type) #:transparent)
 
