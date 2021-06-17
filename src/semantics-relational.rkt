@@ -39,7 +39,7 @@
 (define (clear-valid-selectors!)
 	(set! valid-selectors null))
 (define (add-valid-selector! l)
-	(set! valid-selectors (cons l valid-selectors)))
+	(set! valid-selectors (remove-duplicates (cons l valid-selectors) (lambda (a b) (equal? (~a a) (~a b))))))
 (register-reset! clear-valid-selectors!)
 ;============================= Top Level Interface ====================================
 ;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
@@ -899,7 +899,7 @@
 					(define fml-update #t)
 					(define fml-new (iassert-pc-branch (select-fml? fml-update) cnd (not cnd) label))
 					(define pc-br (imap-get (function-lmap func) label default-type))
-					(if summary? #f (add-spec id mem-in mem-in inst inst-jmp? cnd))
+					(if summary? #f (add-spec id mem-in mem-in inst inst-jmp? (not cnd)))
 					(if summary? 
 						(update-rbstate-verbose fml-new mem-in pc-br (not cnd) cnd)
 						(update-rbstate fml-new mem-in pc-br))))]))]))

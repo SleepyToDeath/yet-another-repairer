@@ -69,9 +69,11 @@
 ;	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) spec)))
 	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) (list (car spec)))))
 
-	(define sum (apply + (map (lambda (id) (if id 1 0)) (remove-duplicates valid-selectors))))
-	(define one-bug (equal? sum (- (length (remove-duplicates valid-selectors)) 1)))
-	(define no-bug (equal? sum (length locations)))
+	(pretty-print valid-selectors)
+
+	(define sum (apply + (map (lambda (id) (if id 1 0)) valid-selectors)))
+	(define one-bug (equal? sum (- (length valid-selectors) 1)))
+	(define no-bug (equal? sum (length valid-selectors)))
 
 	(display (~a "Number of asserts: " (length (asserts)) "\n"))
 
@@ -110,7 +112,14 @@
 ;		(DEBUG-DO ((lambda () (print-pending-eval debug-sol) (display "\n"))))
 ;		((lambda () (print-pending-eval debug-sol) (display "\n")))
 
-		(define bugl (ormap (lambda (l) (if (evaluate (location-selector l) debug-sol) #f l)) locations))
+		(define bugl (ormap (lambda (l) 
+			(define id (location-selector l))
+			(if	(and 
+					(member (~a id) (map (lambda (b) (~a b)) valid-selectors))
+					(not (evaluate id debug-sol)))
+				l
+				#f))
+			locations))
 		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 		(print-location bugl)
 		(add-visited-location bugl)

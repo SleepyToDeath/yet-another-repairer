@@ -216,7 +216,7 @@
 ;generate real formulae for preserved and updated states
 (define (memory-gen-binding)
 	(define f1 (stack-gen-binding))
-	(define f2 (imap-gen-binding))
-	(and f1 f2))
+	(define l2 (imap-gen-binding))
+	(cons f1 l2))
 
 ;====================================================================
