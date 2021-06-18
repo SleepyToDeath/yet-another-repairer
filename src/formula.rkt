@@ -4,6 +4,7 @@
 (require (prefix-in std: racket/base))
 
 (require "memory-common.rkt")
+(require (prefix-in std: racket/list))
 (require racket/format)
 (require racket/pretty)
 (require rosette/lib/match)   ; provides `match`
@@ -157,20 +158,22 @@
 (define-syntax-rule (DEBUG-DO something)
 	(if DEBUG-ON something #f))
 
-(define eval-pending null)
-(define (defer-eval msg value)
-	(set! eval-pending (cons (cons msg value) eval-pending)))
 
-(define (print-pending-eval sol)
-	(pretty-print (evaluate eval-pending sol)))
-;	(map (lambda (m.v) 
-;			(display (~a (car m.v) " : " ))
-;			(pretty-print (evaluate (cdr m.v) sol)))
-;			(display  "\n"))
-;		eval-pending))
+(define eval-pending (list null null))
+
+(define (defer-eval id msg value)
+	(set! eval-pending 
+		(std:list-set eval-pending id
+			(cons (cons msg value) (list-ref eval-pending id)))))
+
+(define (print-pending-eval id sol)
+	(pretty-print (evaluate (list-ref eval-pending id) sol)))
 
 (define (clear-pending-eval)
-	(set! eval-pending null))
+	(set! eval-pending (list null null)))
+(register-reset! clear-pending-eval)
+
+
 
 (define cons-pending null)
 (define (defer-cons v)

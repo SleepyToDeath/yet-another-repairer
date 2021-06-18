@@ -35,7 +35,7 @@
 
 ;spec: list of (input . output)
 ;ast X spec -> location
-(define (localize-bug ast spec)
+(define (localize-bug ast spec-bad spec-good)
 
 	(match-define (list mac soft hard) (ast->relation ast))
 
@@ -48,13 +48,13 @@
 
 	(display (~a "total locations: " (length soft) "\n"))
 
-	(define ret (localize-bug-in-funcs ast mac soft hard spec funcs-init))
+	(define ret (localize-bug-in-funcs ast mac soft hard spec-bad spec-good funcs-init))
 	(pretty-print string-id-table)
 	ret)
 
 ;selectors: list of 
 ;funcs: list of sid
-(define (localize-bug-in-funcs ast mac locations encoder spec funcs)
+(define (localize-bug-in-funcs ast mac locations encoder spec-bad spec-good funcs)
 	(display "\n Encoding: \n")
 	(display (~a "target funcs: " funcs "\n"))
 	(display "visited: \n") 
@@ -66,90 +66,90 @@
 	(assert-visited-locations)
 	(do-all-resets!)
 
-;	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) spec)))
-	(define hard (andmap identity (map (lambda (io) (encoder (car io) (cdr io) funcs)) (list (car spec)))))
+;	[TODO] solve all examples, add jmp condition based on correct/incorrect examples
 
-	(pretty-print valid-selectors)
+	(define hard-bad (andmap identity (map (lambda (io) (encoder (car io) (cdr io) spec-id-bad funcs)) spec-bad)))
+	(define hard-good (andmap identity (map (lambda (io) (encoder (car io) (cdr io) spec-id-good funcs)) spec-good)))
+	
+	(finalize-selectors!)
+
+;	(pretty-print valid-selectors)
 
 	(define sum (apply + (map (lambda (id) (if id 1 0)) valid-selectors)))
 	(define one-bug (equal? sum (- (length valid-selectors) 1)))
 	(define no-bug (equal? sum (length valid-selectors)))
 
-	(display (~a "Number of asserts: " (length (asserts)) "\n"))
-
 	(display "\n Solving: \n")
-	(display (~a "!!!!!!!!!!!!!!!#n Asserts: " (length (asserts)) "\n"))
-;	(pretty-print (asserts))
-	(output-smt #t)
-
 ;	/* default version one bug */
-	(define debug-sol (solve (assert (and (andmap+ identity hard) one-bug))))
+	(define sol-bad (solve (assert (and (andmap+ identity hard-bad) one-bug))))
+	(define sol-good (solve (assert (and (andmap+ identity hard-good) no-bug))))
 
 ;	/* no bug */
-;	(define debug-sol (solve (assert (and hard no-bug))))
+;	(define sol-bad (solve (assert (and hard no-bug))))
 
 ;	/* maximize satisfiable lines */
-;	(define debug-sol (optimize #:maximize (list sum)
+;	(define sol-bad (optimize #:maximize (list sum)
 ;			  #:guarantee (assert (and hard))))
 
 ;	/* ??? */
-;	(define debug-sol (solve (assert (and hard debug-max-sat))))
+;	(define sol-bad (solve (assert (and hard debug-max-sat))))
 
 ;	/* maximize satisfiable clauses, more detailed than lines, for debugging this tool itself only */
-;	(define debug-sol (optimize #:maximize (list max-sat-sum)
+;	(define sol-bad (optimize #:maximize (list max-sat-sum)
 ;			  #:guarantee (assert (and no-bug hard))))
 	
 	(display "\n Model: \n")
-	(pretty-print debug-sol)
+;	(pretty-print sol-bad)
 
-	(if (unsat? debug-sol)
+	(if (or (unsat? sol-bad) (unsat? sol-good))
 		(begin
 ;		(match (core (∃-debug (append hard (list one-bug) (asserts)) #:muc #t)) [l (map print-fml l)])
 		#f)
 
 		(begin
-;		(DEBUG-DO (display (~a (evaluate max-sat-sum debug-sol) "/" (length max-sat-list) "\n")))
-;		(DEBUG-DO ((lambda () (print-pending-eval debug-sol) (display "\n"))))
-;		((lambda () (print-pending-eval debug-sol) (display "\n")))
-
 		(define bugl (ormap (lambda (l) 
 			(define id (location-selector l))
 			(if	(and 
 					(member (~a id) (map (lambda (b) (~a b)) valid-selectors))
-					(not (evaluate id debug-sol)))
+					(not (evaluate id sol-bad)))
 				l
 				#f))
 			locations))
 		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 		(print-location bugl)
 		(add-visited-location bugl)
-;		(eval-specs! debug-sol)
+;		(eval-specs! sol-bad)
 		
 		(DEBUG-DO (pretty-print string-id-table))
 		(DEBUG-DO (std:error "Halt!"))
 
 		(pretty-print string-id-table)
-	;	(std:error "Halt!")
+
+;		(display "\nbad deferred values:\n")
+;		(print-pending-eval spec-id-bad sol-bad)
+;		(display "good deferred values:\n")
+;		(print-pending-eval spec-id-good sol-good)
+;		(std:error "Halt!")
 
 		(define maybe-l (match (location-inst bugl)
 			[(inst-static-call ret cls-name func-name arg-types args) 
-				(localize-bug-in-funcs ast mac locations encoder spec 
+				(localize-bug-in-funcs ast mac locations encoder spec-bad spec-good
 					(list (sfunc-id cls-name func-name arg-types)))]
 
 			[(inst-special-call ret obj-name cls-name func-name arg-types args)
-				(localize-bug-in-funcs ast mac locations encoder spec 
+				(localize-bug-in-funcs ast mac locations encoder spec-bad spec-good
 					(list (sfunc-id cls-name func-name arg-types)))]
 
 			[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
 				(letrec
 					([vid (vfunc-id-alt mac cls-name func-name arg-types)]
 					 [vfuncs (filter (lambda (f) (equal? (function-formula-vid f) vid)) (all-vfunctions mac))])
-					(localize-bug-in-funcs ast mac locations encoder spec 
+					(localize-bug-in-funcs ast mac locations encoder spec-bad spec-good
 						(map function-formula-sid vfuncs)))]
 
-			[_ (try-fixing ast spec bugl debug-sol)]))
+			[_ (try-fixing ast spec-bad spec-good bugl sol-bad sol-good)]))
 
-		(if maybe-l maybe-l (localize-bug-in-funcs ast mac locations encoder spec funcs)))))
+		(if maybe-l maybe-l (localize-bug-in-funcs ast mac locations encoder spec-bad spec-good funcs)))))
 
 (define meta-counter 0)
 (define first-counter 0)
@@ -188,7 +188,7 @@
 				(set! second-line-candidates (cons candi second-line-candidates)))))))
 		
 
-(define (try-fixing ast spec bugl sol)
+(define (try-fixing ast spec-bad spec-good bugl sol-bad sol-good)
 
 	(clear-asserts!)
 	(++ meta-counter)
@@ -247,6 +247,7 @@
 			(length second-line-candidates) " candidates *********************\n"))
 
 
+
 		(or 
 			(ormap (lambda (l) 
 					(display "\nChecking candidate: \n")
@@ -258,7 +259,7 @@
 							(begin
 							(define t1 (std:current-inexact-milliseconds))
 							(display (~a "pre check took " (- t1 t0) " milliseconds\n"))
-							(define ret (sat-spec? (location-selector bugl) mac (car (ast->instruction l #f #f)) sol))
+							(define ret (sat-spec? (location-selector bugl) mac (car (ast->instruction l #f #f)) sol-bad sol-good))
 							(define t2 (std:current-inexact-milliseconds))
 							(display (~a "spec check took " (- t2 t1) " milliseconds\n"))
 							ret))))
@@ -273,7 +274,7 @@
 						(insert-stat prog-sketch (cadr l2) bugl) 
 						(cadr l2) 
 						(get-invoke-ret-type (cadr l2) mac) bugl))
-					(monitor-reason "spec" (program-sketch->constraint prog-sketch2 spec l2)))
+					(monitor-reason "spec" (program-sketch->constraint prog-sketch2 (append spec-bad spec-good) l2)))
 				(std:cartesian-product first-line-candidates second-line-candidates)))
 
 )))

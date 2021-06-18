@@ -194,13 +194,14 @@
 			(define ms (imap-get-type m type))
 			(imap-add-index (cons index type))
 			(do-n-ret
-				(lambda (ret) (begin (defer-eval "imap get" (list index ret type))))
+				;(lambda (ret) (begin (defer-eval "imap get" (list index ret type))))
+				identity
 				(if (not (imap-sym? ms))
 					(not-found type)
 					(imap-get+ ms index type))))
 
 		(define (imap-set m index value type)
-			(defer-eval "imap set" (list index value type))
+			;(defer-eval "imap set" (list index value type))
 			(define ms (imap-get-type m type))
 			(if (not (imap-sym? ms)) m
 				(imap-sym-wrapper (imap-set-type m type (imap-set+ ms index value type)))))
@@ -276,7 +277,6 @@
 		(display "imap-gen-binding:\n")
 
 		(apply append (map (lambda (type)
-			(display "++++++++++++++++++++++++\n")
 			(define (mem-get-typed id type)
 				(imap-get-type (memory-heap (vector-ref memory-id-map id)) type))
 			(define (id2keys id)
@@ -313,7 +313,6 @@
 					all-typed-keys))
 				memory-id-list))
 
-			(pretty-print (append fml-maybe-wrong fml-always-right))
 			(display "++++++++++++++++++++++++\n")
 
 			(append fml-maybe-wrong fml-always-right))

@@ -35,11 +35,16 @@
 ;cnd: the entire subtree is considered only if cnd is true
 (struct invoke-tree (root cnd subtrees) #:transparent)
 
+(define spec-id-good 1)
+(define spec-id-bad 0)
+
 (define valid-selectors null)
 (define (clear-valid-selectors!)
 	(set! valid-selectors null))
 (define (add-valid-selector! l)
-	(set! valid-selectors (remove-duplicates (cons l valid-selectors) (lambda (a b) (equal? (~a a) (~a b))))))
+	(set! valid-selectors (cons l valid-selectors)))
+(define (finalize-selectors!)
+	(set! valid-selectors (remove-duplicates valid-selectors (lambda (a b) (equal? (~a a) (~a b))))))
 (register-reset! clear-valid-selectors!)
 ;============================= Top Level Interface ====================================
 ;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
@@ -62,7 +67,7 @@
 	(define sum (apply + (map (lambda (l) (if (location-selector l) 1 0)) soft-cons)))
 	(define no-bug (equal? sum (length soft-cons)))
 
-	(define (hard-cons input output target-sids) 
+	(define (hard-cons input output spec-id target-sids) 
 
 		(memory-clear-id-list!)
 		(imap-clear-indices!)
@@ -105,11 +110,8 @@
 
 		(display "\n ###############################################0 \n")
 		(set-context! mac-ass)
-		(display (~a "Number of asserts: " (length (asserts)) "\n"))
 		(map (lambda (cls) (pretty-print (cons (class-name cls) (class-vfields cls)))) (machine-classes mac-ass))
-		(display (~a "Number of asserts: " (length (asserts)) "\n"))
-		(define all-invokes (invoke->relation boot-lstate mac-ass target-sids #f))
-		(display (~a "Number of asserts: " (length (asserts)) "\n"))
+		(define all-invokes (invoke->relation boot-lstate mac-ass spec-id target-sids #f))
 		(display "\n ###############################################1 \n")
 		(define mem-done-sym (root-invoke-ret-mem all-invokes #f))
 		(define mem-done (memory-sym-reset (memory-sym-new #f) mem-done-sym #f))
@@ -118,13 +120,12 @@
 		(define fml-out (compare-output mac-done output))
 		(display "\n ###############################################5 \n")
 		(define mem-all-done (memory-sym-commit mem-done))
-		(display (~a "Number of asserts: " (length (asserts)) "\n"))
 
 		(define (extract-fml itree) 
 			(match itree
 				[(invoke-tree root cnd subs)
 					(begin
-					(display "v---------fml-------------v\n")
+;					(display "v---------fml-------------v\n")
 					(match root
 						[(function-formula func lids _ _ _ _ _ class)
 							(pretty-print (list (function-name func) class))])
@@ -138,23 +139,20 @@
 					(match root
 						[(function-formula func lids _ _ _ _ _ class)
 							(pretty-print (list (function-name func) class))])
-					(display "^---------fml-------------^\n")
+;					(display "^---------fml-------------^\n")
 					ret)]))
-		(display (~a "Number of asserts: " (length (asserts)) "\n"))
 
 		(define fml-code-1 (memory-sym-summary mem-all-done #f))
 		(define fml-code-2 (extract-fml all-invokes))
 
 		(display "---------fml0-------------\n")
 		(define fml-code (append (list fml-code-1) fml-code-2))
-		(display (~a "Number of asserts: " (length (asserts)) "\n"))
 		(display "\n ###############################################6 \n")
 		(define fml-boot-is-correct (andmap identity (function-formula-lids boot-lstate)))
 		(display "\n ###############################################7 \n")
 ;		(test-assert! fml-code)
 		(define fml-code-bind (memory-gen-binding))
 ;		(test-assert! fml-code-bind)
-		(display (~a "Number of asserts: " (length (asserts)) "\n"))
 		(display "\n ###############################################8 \n")
 		;(pretty-print (list fml-cfi fml-code fml-code-bind fml-ass fml-out))
 ;		(and fml-cfi fml-code fml-code-bind))
@@ -338,16 +336,16 @@
 
 ;relation building state
 ;pc : not true pc, just the position when scanning through the program
-(struct rbstate (funcs pc func-fml mac target-sids summary?) #:transparent)
+(struct rbstate (funcs pc func-fml mac spec-id target-sids summary?) #:transparent)
 
 
 ; function X machine -> invoke-tree of function-formula from all functions in `mac` transitively invoked by `func`
 ; if summary? then this will compute a summary (root-invoke-ret-mem will contain all updates)
 ; otherwise it is guaranteed to encode this invoked function (but may not recursively do so)
-(define (invoke->relation func-fml mac target-sids summary?)
+(define (invoke->relation func-fml mac spec-id target-sids summary?)
 ;	(display (~a "sid for invoked function is: " (function-formula-sid func-fml) "\n"))
 ;	(display "\n ###############################################2 \n")
-	(define ret (insts->relation func-fml mac target-sids summary?))
+	(define ret (insts->relation func-fml mac spec-id target-sids summary?))
 ;	(display (~a "sid for invoked function is: " (function-formula-sid func-fml) "\n"))
 ;	(display "\n ###############################################3 \n")
 	ret)
@@ -359,11 +357,11 @@
 (define (root-invoke-ret-mem itree summary?)
 	(memory-select (lstate-mem-in-list (ending-lstate (root-invoke itree))) summary?))
 	
-(define (insts->relation func-fml mac target-sids summary?)
+(define (insts->relation func-fml mac spec-id target-sids summary?)
 	(match (foldl inst->relation
-					(rbstate null pc-init func-fml mac target-sids summary?) 
+					(rbstate null pc-init func-fml mac spec-id target-sids summary?) 
 					(function-prog (function-formula-func func-fml)))
-		[(rbstate funcs pc func-fml mac sid sum?) 
+		[(rbstate funcs pc func-fml mac spec-id sid sum?) 
 				(invoke-tree func-fml #t funcs)]))
 
 (define (inst->relation inst st)
@@ -379,7 +377,7 @@
 (define (inst->relation.real inst st)
 
 
-	(match st [(rbstate funcs pc func-fml mac target-sids summary?)
+	(match st [(rbstate funcs pc func-fml mac spec-id target-sids summary?)
 		(begin
 
 
@@ -393,15 +391,15 @@
 		(set! line-counter (+ line-counter 1))
 		(add-valid-selector! id)
 
-		(display (~a "Lines of code: " line-counter "\n"))
-		(defer-eval "instruction: " inst)
-		(defer-eval "path mark " mark)
-;		(defer-eval "mem-in " (get-mem-in-list func-fml pc))
-		(println inst)
-		(pretty-print mark)
-		(pretty-print id)
-		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
-		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
+;		(display (~a "Lines of code: " line-counter "\n"))
+		(defer-eval spec-id "instruction: " inst)
+		(defer-eval spec-id "path mark " mark)
+;		(defer-eval spec-id "mem-in " (get-mem-in-list func-fml pc))
+;		(println inst)
+;		(pretty-print mark)
+;		(pretty-print id)
+;		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
+;		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
 
 		(if (not in-target?) (assert id) #f)
 
@@ -608,9 +606,9 @@
 				(define fml-path (iassert-pc-ret #t fml-ret))
 				(define func-fml-ret (prepend-ending-mem-in func-fml (if summary? #t mark) mem-ret))
 				(define func-fml-new (append-fml func-fml-ret fml-path))
-				(defer-eval "return value" ret-value)
+				(defer-eval spec-id "return value" ret-value)
 				(assert id)
-				(if summary? #f (add-spec id mem-in (memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-ret) summary?) inst inst-ret? #f))
+				(if summary? #f (add-spec id spec-id mem-in (memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-ret) summary?) inst inst-ret? #f))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
 
 			[(inst-long-jump cls-name func-name)
@@ -620,7 +618,7 @@
 
 				(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
 				(match-define (cons func-fml-in fml-in) (long-jump-setup func-invoked mem-in))
-				(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? trigger-summary?)))
+				(define funcs-ret (invoke->relation func-fml-in mac spec-id target-sids (or summary? trigger-summary?)))
 
 				(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 				(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
@@ -653,7 +651,7 @@
 
 					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
 					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-in args))
-					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? trigger-summary?)))
+					(define funcs-ret (invoke->relation func-fml-in mac spec-id target-sids (or summary? trigger-summary?)))
 ;					(pretty-print inst)
 
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
@@ -707,7 +705,7 @@
 					(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target-alt? mac (function-formula-sid fcan) target-sids)))))
 
 					(match-define (cons func-fml-in fml-in) (invoke-setup fcan mem-this args))
-					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or trigger-summary? summary?)))
+					(define funcs-ret (invoke->relation func-fml-in mac spec-id target-sids (or trigger-summary? summary?)))
 
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 					(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
@@ -768,7 +766,7 @@
 
 						(match-define (cons func-fml-in fml-in) (invoke-setup fcan mem-this args))
 						;an invoke tree without condition
-						(define funcs-ret (invoke->relation func-fml-in mac target-sids (or summary? trigger-summary?)))
+						(define funcs-ret (invoke->relation func-fml-in mac spec-id target-sids (or summary? trigger-summary?)))
 ;						(pretty-print inst)
 
 						(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
@@ -824,7 +822,7 @@
 					(define fml-this (memory-sym-summary mem-this summary?))
 
 					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
-					(define funcs-ret (invoke->relation func-fml-in mac target-sids (or trigger-summary? summary?)))
+					(define funcs-ret (invoke->relation func-fml-in mac spec-id target-sids (or trigger-summary? summary?)))
 ;					(pretty-print inst)
 
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
@@ -862,8 +860,8 @@
 								([addr (if (equal? obj void-receiver) addr-void-receiver
 									(memory-sforce-read mem-0 (string-id (variable-name obj)) 0))])
 								(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value (jtype->mtype jtype)))]))
-				(defer-eval "new-v" value)
-				(if summary? #f (add-spec id mem-in (memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-new) summary?) inst inst-ass? #f))
+				(defer-eval spec-id "new-v" value)
+				(if summary? #f (add-spec id spec-id mem-in (memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-new) summary?) inst inst-ass? #f))
 				(update-mem-only mem-new))]
 
 			;[!]there might be bug if reading from heap
@@ -895,11 +893,12 @@
 					(begin
 					(define lmap (function-lmap func))
 					(define cnd (car (expr-eval condition mac-eval-ctxt)))
-					(defer-eval "condition: " cnd)
+;					(defer-eval spec-id "condition: " cnd)
+;					(defer-eval spec-id "next mark: " (not (next-mark)))
 					(define fml-update #t)
 					(define fml-new (iassert-pc-branch (select-fml? fml-update) cnd (not cnd) label))
 					(define pc-br (imap-get (function-lmap func) label default-type))
-					(if summary? #f (add-spec id mem-in mem-in inst inst-jmp? (not cnd)))
+					(if summary? #f (add-spec id spec-id mem-in mem-in inst inst-jmp? (not (next-mark))))
 					(if summary? 
 						(update-rbstate-verbose fml-new mem-in pc-br (not cnd) cnd)
 						(update-rbstate fml-new mem-in pc-br))))]))]))
@@ -910,7 +909,7 @@
 
 ;========================== Local Spec ==========================
 
-(struct local-spec (mem-in mem-out inst-ori inst-type take-branch?) #:transparent)
+(struct local-spec (spec-id mem-in mem-out inst-ori inst-type take-branch?) #:transparent)
 
 ;selector -> list of 
 (define spec-map (imap-empty default-type))
@@ -921,11 +920,11 @@
 ;(define (eval-specs! sol)
 ;	(set! spec-map (evaluate spec-map sol)))
 
-(define (add-spec id0 mem-in mem-out inst-ori inst-type take-branch?)
+(define (add-spec id0 spec-id mem-in mem-out inst-ori inst-type take-branch?)
 	(define id (~a id0))
 	(define cur (imap-get spec-map id default-type))
 	(define cur+ (if (is-not-found? cur) null cur))
-	(set! spec-map (imap-set spec-map id (cons (local-spec mem-in mem-out inst-ori inst-type take-branch?) cur+) default-type)))
+	(set! spec-map (imap-set spec-map id (cons (local-spec spec-id mem-in mem-out inst-ori inst-type take-branch?) cur+) default-type)))
 
 ;ast: ast of entire program
 ;return: spec after this line
@@ -944,14 +943,17 @@
 
 ;ast: ast of entire program
 ;[!] this is an incomplete check. it's based on the assumption that the patch only makes necessary changes
-(define (sat-spec? id0 mac inst sol)
+(define (sat-spec? id0 mac inst sol-bad sol-good)
 	(define id (~a id0))
-	(define specs (evaluate (imap-get spec-map id default-type) sol))
-	(andmap (lambda (spec)
-		(define mac-spec (std:struct-copy machine mac [mem (local-spec-mem-in spec)]))
-		(if (not ((local-spec-inst-type spec) inst)) #f
-			(match spec [(local-spec mem-in mem-out inst-ori inst-type take-branch?)
+	(define specs (imap-get spec-map id default-type))
+	(andmap (lambda (spec-sym)
+		(if (not ((local-spec-inst-type spec-sym) inst)) #f
+			(begin
+			(define spec (if (equal? (local-spec-spec-id spec-sym) spec-id-good) (evaluate spec-sym sol-good) (evaluate spec-sym sol-bad)))
+			(match spec [(local-spec spec-id mem-in mem-out inst-ori inst-type take-branch?)
 				(begin
+				(define mac-spec (std:struct-copy machine mac [mem (local-spec-mem-in spec)]))
+;				(pretty-print (list inst-ori inst-type take-branch?))
 				(match inst 
 					[(inst-jmp condition label) 
 						(begin
@@ -961,14 +963,14 @@
 						(if (not (same-vl? inst-ori inst)) #f
 							(begin
 							(match-define (cons v-new v-new-jt) (expr-eval vr mac-spec))
-							(pretty-print v-new)
+			;				(pretty-print v-new)
 							(match (lexpr-rhs vl)
 								[(expr-var v) (equal? v-new (do-n-ret pretty-print (memory-sforce-read mem-out (string-id (variable-name v)) 0)))]
 								[_ #f])))]
 					[(inst-ret v-expr)  
 						(begin
 						(match-define (cons ret-value ret-jtype) (expr-eval v-expr mac-spec))
-						(equal? ret-value (memory-sforce-read mem-out var-ret-name 0)))]))])))
+						(equal? ret-value (memory-sforce-read mem-out var-ret-name 0)))]))]))))
 		specs))
 
 (define (same-vl? inst1 inst2)

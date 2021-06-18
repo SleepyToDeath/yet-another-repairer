@@ -131,7 +131,6 @@ stack-empty)
 
 ;candidates: list of (cnd . stack)
 (define (stack-static-select candidates summary?)
-	(display "stack select:\n")
 	(define template (cdar candidates))
 	;keys are static, should be consistant even in invalid states
 	(define scs-invalid
@@ -143,7 +142,6 @@ stack-empty)
 	(define f-select (maybe-select scs-invalid (lambda (scs) (is-invalid? (last (static-scope-array (car scs)))))))
 	(define scs-new (f-select (map (lambda (cnd.st) (cons (car cnd.st) (static-stack-scopes (cdr cnd.st)))) candidates) #f))
 	(define all-updates (map static-stack-updates (map cdr candidates)))
-	(pretty-print all-updates)
 	(define empty-updates (map (lambda (x) null) (car all-updates)))
 	(define union-updates (foldl (lambda (updates union) (map append updates union)) empty-updates all-updates))
 	(define updates-new (map remove-duplicates union-updates))

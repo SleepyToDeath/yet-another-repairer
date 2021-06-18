@@ -58,7 +58,7 @@ result
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1) (cons input2 output2))))
+(define bugl (localize-bug buggy (list (cons input1 output1)) (list (cons input2 output2))))
 (pretty-print bugl)
 
 
