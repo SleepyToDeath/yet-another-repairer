@@ -125,10 +125,10 @@
 
 		(pretty-print string-id-table)
 
-;		(display "\nbad deferred values:\n")
-;		(print-pending-eval spec-id-bad sol-bad)
-;		(display "good deferred values:\n")
-;		(print-pending-eval spec-id-good sol-good)
+		(display "\nbad deferred values:\n")
+		(print-pending-eval spec-id-bad sol-bad)
+		(display "good deferred values:\n")
+		(print-pending-eval spec-id-good sol-good)
 ;		(std:error "Halt!")
 
 		(define maybe-l (match (location-inst bugl)
@@ -268,14 +268,44 @@
 				one-line-candidates)
 
 			(ormap (lambda (l2)
+				(define spec-step1 #f)
+				(ormap (lambda (l1)
+					(++ second-counter)
 					(display "\nChecking candidate: \n")
-					(define prog-sketch (replace-stat ast (car l2) bugl))
+					(pretty-print l2)
+					(pretty-print l1)
+					(display (~a "Checked " second-counter " patches\n"))
+					(eprintf (~a "Checked " second-counter " patches\n"))
+					(define t0 (std:current-inexact-milliseconds))
+					(define prog-sketch (replace-stat ast l1 bugl))
 					(define prog-sketch2 (define-bridge-var 
-						(insert-stat prog-sketch (cadr l2) bugl) 
-						(cadr l2) 
-						(get-invoke-ret-type (cadr l2) mac) bugl))
-					(monitor-reason "spec" (program-sketch->constraint prog-sketch2 (append spec-bad spec-good) l2)))
-				(std:cartesian-product first-line-candidates second-line-candidates)))
+						(insert-stat prog-sketch l2 bugl) 
+						l2
+						(get-invoke-ret-type l2 mac) bugl))
+					(if (not (monitor-reason "pre check" (pre-check prog-sketch2))) #f
+						(std:with-handlers ([std:exn:fail? (lambda (x) 
+								(display "Execption!\n") 
+								(clear-asserts!) 
+								#f)])
+						(begin
+						;renew machine
+						(define mac.tmp (build-virtual-table (ast->machine prog-sketch2)))
+						(define func-new (find-new-func mac.tmp (location-class bugl) (location-func bugl)))
+						(define mac (std:struct-copy machine mac.tmp [fc func-new]))
+						;timer
+						(define t1 (std:current-inexact-milliseconds))
+						(display (~a "pre check took " (- t1 t0) " milliseconds\n"))
+						;spec check
+						(set! spec-step1 (if spec-step1 spec-step1 
+							(step-spec-0 (location-selector bugl) mac (car (ast->instruction l2 #f #f)) sol-bad sol-good)))
+						(define ret (monitor-reason "spec" (sat-spec-continue? spec-step1 mac (car (ast->instruction l1 #f #f)) sol-bad sol-good)))
+						;timer
+						(define t2 (std:current-inexact-milliseconds))
+						(display (~a "spec check took " (- t2 t1) " milliseconds\n"))
+						;return
+						ret))))
+					first-line-candidates))
+				second-line-candidates))
 
 )))
 

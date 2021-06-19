@@ -385,6 +385,7 @@
 		(define mem0 (machine-mem m))
 		(match-define (cons v-new v-new-jt) (expr-eval (inst-ass-vr i) m))
 
+		(display (~a "assignment lvalue: " (inst-ass-vl i) " rvalue: " v-new "\n"))
 		(define rhs (lexpr-rhs (inst-ass-vl i)))
 		(define mem-new 
 			(match rhs

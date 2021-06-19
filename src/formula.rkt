@@ -162,12 +162,18 @@
 (define eval-pending (list null null))
 
 (define (defer-eval id msg value)
+	(defer-eval-f id msg (lambda (sol) (evaluate value sol))))
+
+(define (defer-eval-f id msg f)
 	(set! eval-pending 
 		(std:list-set eval-pending id
-			(cons (cons msg value) (list-ref eval-pending id)))))
+			(cons (cons msg f) (list-ref eval-pending id)))))
 
 (define (print-pending-eval id sol)
-	(pretty-print (evaluate (list-ref eval-pending id) sol)))
+	(map (lambda (m.f) 
+		(display (~a (car m.f) " : "))
+		(pretty-print ((cdr m.f) sol)))
+	(list-ref eval-pending id)))
 
 (define (clear-pending-eval)
 	(set! eval-pending (list null null)))

@@ -394,7 +394,6 @@
 ;		(display (~a "Lines of code: " line-counter "\n"))
 		(defer-eval spec-id "instruction: " inst)
 		(defer-eval spec-id "path mark " mark)
-;		(defer-eval spec-id "mem-in " (get-mem-in-list func-fml pc))
 ;		(println inst)
 ;		(pretty-print mark)
 ;		(pretty-print id)
@@ -407,11 +406,12 @@
 		(if (not summary?) (assert fml-feasible-path) #f)
 
 		(define mem-in (memory-select (get-mem-in-list func-fml pc) summary?))
-;		(pretty-print mem-in)
 		(define mem-0 (memory-sym-reset (get-mem-out func-fml pc) mem-in summary?))
-;		(display "State id: ")  
-;		(print (fml-to-struct (imap-sym-func-dummy (imap-sym-tracked-imap (imap-sym-scoped-imap (memory-addr-space mem-0))))))
-;		(display " \n")
+
+		(defer-eval-f spec-id "mem-in heap" (lambda (sol) 
+			(define-symbolic* x int-type) 
+			(memory-hread (evaluate mem-in sol) x int-type)))
+
 		;used only for expr-eval
 		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0][fc func]))
 
@@ -893,8 +893,7 @@
 					(begin
 					(define lmap (function-lmap func))
 					(define cnd (car (expr-eval condition mac-eval-ctxt)))
-;					(defer-eval spec-id "condition: " cnd)
-;					(defer-eval spec-id "next mark: " (not (next-mark)))
+					(defer-eval spec-id "condition: " cnd)
 					(define fml-update #t)
 					(define fml-new (iassert-pc-branch (select-fml? fml-update) cnd (not cnd) label))
 					(define pc-br (imap-get (function-lmap func) label default-type))
@@ -928,24 +927,34 @@
 
 ;ast: ast of entire program
 ;return: spec after this line
-(define (step-spec-0 id0 mac inst sol)
+(define (step-spec-0 id0 mac inst sol-bad sol-good)
 	(define id (~a id0))
-	(define spec (imap-get spec-map id default-type))
-	(step-spec spec mac inst sol))
+	(define specs (imap-get spec-map id default-type))
+	(step-spec specs mac inst sol-bad sol-good))
 
 ;ast: ast of entire program
 ;return: spec after this line
-(define (step-spec spec mac inst sol)
-	(define mac-spec (std:struct-copy machine mac [mem (evaluate (local-spec-mem-in spec) sol)]))
-	(set-context! mac-spec)
-	(define mac-post (inst-exec inst mac-spec #f))
-	(std:struct-copy local-spec spec [mem-in (machine-mem mac-post)]))
+(define (step-spec specs mac inst sol-bad sol-good)
+	(map (lambda (spec)
+		(define mac-spec (std:struct-copy machine mac [mem 
+			(if (equal? (local-spec-spec-id spec) spec-id-good)
+				(evaluate (local-spec-mem-in spec) sol-good)
+				(evaluate (local-spec-mem-in spec) sol-bad))]))
+		(set-context! mac-spec)
+		(define-symbolic* x integer?)
+		(pretty-print (memory-hread (machine-mem mac-spec) x integer?))
+		(define mac-post (inst-exec inst mac-spec #f))
+		(std:struct-copy local-spec spec [mem-in (machine-mem mac-post)]))
+	specs))
 
 ;ast: ast of entire program
 ;[!] this is an incomplete check. it's based on the assumption that the patch only makes necessary changes
 (define (sat-spec? id0 mac inst sol-bad sol-good)
 	(define id (~a id0))
 	(define specs (imap-get spec-map id default-type))
+	(sat-spec-continue? specs mac inst sol-bad sol-good))
+
+(define (sat-spec-continue? specs mac inst sol-bad sol-good)
 	(andmap (lambda (spec-sym)
 		(if (not ((local-spec-inst-type spec-sym) inst)) #f
 			(begin
@@ -953,11 +962,14 @@
 			(match spec [(local-spec spec-id mem-in mem-out inst-ori inst-type take-branch?)
 				(begin
 				(define mac-spec (std:struct-copy machine mac [mem (local-spec-mem-in spec)]))
-;				(pretty-print (list inst-ori inst-type take-branch?))
+				(pretty-print (list inst-ori inst-type take-branch?))
 				(match inst 
 					[(inst-jmp condition label) 
 						(begin
 						(define c (car (expr-eval condition mac-spec)))
+						(pretty-print condition)
+						(pretty-print (if (iexpr-binary? condition) (expr-eval (iexpr-binary-expr1 condition) mac-spec) #f))
+						(pretty-print c)
 						(equal? c take-branch?))]
 					[(inst-ass vl vr)  
 						(if (not (same-vl? inst-ori inst)) #f
