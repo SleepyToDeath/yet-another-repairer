@@ -68,7 +68,9 @@
 
 ;	[TODO] solve all examples, add jmp condition based on correct/incorrect examples
 
+	(set-spec-id! spec-id-bad)
 	(define hard-bad (andmap identity (map (lambda (io) (encoder (car io) (cdr io) spec-id-bad funcs)) spec-bad)))
+	(set-spec-id! spec-id-good)
 	(define hard-good (andmap identity (map (lambda (io) (encoder (car io) (cdr io) spec-id-good funcs)) spec-good)))
 	
 	(finalize-selectors!)

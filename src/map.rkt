@@ -203,6 +203,7 @@
 		(define (imap-set m index value type)
 			;(defer-eval "imap set" (list index value type))
 			(define ms (imap-get-type m type))
+			(imap-add-index (cons index type))
 			(if (not (imap-sym? ms)) m
 				(imap-sym-wrapper (imap-set-type m type (imap-set+ ms index value type)))))
 
@@ -308,8 +309,11 @@
 				(map (lambda (mem-id)
 					(define ms (mem-get-typed mem-id type))
 					(andmap+ (lambda (key) 
-					 	(if (contain-key? mem-id key) #t
-							((smart-preserve ms) key)))
+						(define ret
+							(if (contain-key? mem-id key) #t
+								((smart-preserve ms) key)))
+						(defer-eval current-spec-id "preserve " (list mem-id key ret))
+						ret)
 					all-typed-keys))
 				memory-id-list))
 

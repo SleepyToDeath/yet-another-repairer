@@ -35,9 +35,6 @@
 ;cnd: the entire subtree is considered only if cnd is true
 (struct invoke-tree (root cnd subtrees) #:transparent)
 
-(define spec-id-good 1)
-(define spec-id-bad 0)
-
 (define valid-selectors null)
 (define (clear-valid-selectors!)
 	(set! valid-selectors null))
@@ -394,9 +391,9 @@
 ;		(display (~a "Lines of code: " line-counter "\n"))
 		(defer-eval spec-id "instruction: " inst)
 		(defer-eval spec-id "path mark " mark)
-;		(println inst)
-;		(pretty-print mark)
-;		(pretty-print id)
+		(println inst)
+		(pretty-print mark)
+		(pretty-print id)
 ;		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
 ;		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
 
@@ -408,12 +405,17 @@
 		(define mem-in (memory-select (get-mem-in-list func-fml pc) summary?))
 		(define mem-0 (memory-sym-reset (get-mem-out func-fml pc) mem-in summary?))
 
-		(defer-eval-f spec-id "mem-in heap" (lambda (sol) 
+		(defer-eval-f spec-id "mem-in heap 5001" (lambda (sol) 
 			(define-symbolic* x int-type) 
-			(memory-hread (evaluate mem-in sol) x int-type)))
+			(cons
+				(memory-hread (evaluate mem-in sol) 5001 int-type)
+				(memory-hread (evaluate mem-in sol) x int-type))))
 
 		;used only for expr-eval
 		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0][fc func]))
+
+		(display (~a "mem-id: " (memory-id mem-0) "\n"))
+		(display "\n")
 
 
 ;	(pretty-print mem-0)
@@ -961,8 +963,10 @@
 			(define spec (if (equal? (local-spec-spec-id spec-sym) spec-id-good) (evaluate spec-sym sol-good) (evaluate spec-sym sol-bad)))
 			(match spec [(local-spec spec-id mem-in mem-out inst-ori inst-type take-branch?)
 				(begin
-				(define mac-spec (std:struct-copy machine mac [mem (local-spec-mem-in spec)]))
+				(define mac-spec (std:struct-copy machine mac [mem mem-in]))
 				(pretty-print (list inst-ori inst-type take-branch?))
+				(define-symbolic* x integer?)
+				(pretty-print (memory-hread mem-in x integer?))
 				(match inst 
 					[(inst-jmp condition label) 
 						(begin

@@ -126,6 +126,12 @@
 	(and a b))
 
 
+(define spec-id-good 1)
+(define spec-id-bad 0)
+(define current-spec-id 0)
+(define (set-spec-id! id)
+	(set! current-spec-id id))
+
 ;========================== Optional Type ===================================
 (define (maybe-do+ s f)
 	(maybe-do identity #f s f))
@@ -157,7 +163,6 @@
 (define DEBUG-ON #f)
 (define-syntax-rule (DEBUG-DO something)
 	(if DEBUG-ON something #f))
-
 
 (define eval-pending (list null null))
 
