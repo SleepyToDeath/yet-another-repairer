@@ -389,11 +389,11 @@
 		(add-valid-selector! id)
 
 ;		(display (~a "Lines of code: " line-counter "\n"))
-		(defer-eval spec-id "instruction: " inst)
-		(defer-eval spec-id "path mark " mark)
-		(println inst)
-		(pretty-print mark)
-		(pretty-print id)
+;		(defer-eval spec-id "instruction: " inst)
+;		(defer-eval spec-id "path mark " mark)
+;		(println inst)
+;		(pretty-print mark)
+;		(pretty-print id)
 ;		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
 ;		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
 
@@ -405,17 +405,17 @@
 		(define mem-in (memory-select (get-mem-in-list func-fml pc) summary?))
 		(define mem-0 (memory-sym-reset (get-mem-out func-fml pc) mem-in summary?))
 
-		(defer-eval-f spec-id "mem-in heap 5001" (lambda (sol) 
-			(define-symbolic* x int-type) 
-			(cons
-				(memory-hread (evaluate mem-in sol) 5001 int-type)
-				(memory-hread (evaluate mem-in sol) x int-type))))
+;		(defer-eval-f spec-id "mem-in heap 5001" (lambda (sol) 
+;			(define-symbolic* x int-type) 
+;			(cons
+;				(memory-hread (evaluate mem-in sol) 5001 int-type)
+;				(memory-hread (evaluate mem-in sol) x int-type))))
 
 		;used only for expr-eval
 		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0][fc func]))
 
-		(display (~a "mem-id: " (memory-id mem-0) "\n"))
-		(display "\n")
+;		(display (~a "mem-id: " (memory-id mem-0) "\n"))
+;		(display "\n")
 
 
 ;	(pretty-print mem-0)
@@ -943,8 +943,8 @@
 				(evaluate (local-spec-mem-in spec) sol-good)
 				(evaluate (local-spec-mem-in spec) sol-bad))]))
 		(set-context! mac-spec)
-		(define-symbolic* x integer?)
-		(pretty-print (memory-hread (machine-mem mac-spec) x integer?))
+;		(define-symbolic* x integer?)
+;		(pretty-print (memory-hread (machine-mem mac-spec) x integer?))
 		(define mac-post (inst-exec inst mac-spec #f))
 		(std:struct-copy local-spec spec [mem-in (machine-mem mac-post)]))
 	specs))
@@ -971,9 +971,9 @@
 					[(inst-jmp condition label) 
 						(begin
 						(define c (car (expr-eval condition mac-spec)))
-						(pretty-print condition)
-						(pretty-print (if (iexpr-binary? condition) (expr-eval (iexpr-binary-expr1 condition) mac-spec) #f))
-						(pretty-print c)
+;						(pretty-print condition)
+;						(pretty-print (if (iexpr-binary? condition) (expr-eval (iexpr-binary-expr1 condition) mac-spec) #f))
+;						(pretty-print c)
 						(equal? c take-branch?))]
 					[(inst-ass vl vr)  
 						(if (not (same-vl? inst-ori inst)) #f
