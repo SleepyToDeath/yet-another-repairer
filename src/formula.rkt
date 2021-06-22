@@ -150,7 +150,8 @@
 					(cdr cnd.v)
 					#f))
 			candidates))
-		(if (or summary? ret.maybe) ret.maybe invalid-state)))
+		(if ret.maybe ret.maybe invalid-state)))
+;		(if (or summary? ret.maybe) ret.maybe invalid-state)))
 
 ;============================= Timer ========================================
 (define last-time 0)

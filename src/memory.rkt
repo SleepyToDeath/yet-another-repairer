@@ -49,7 +49,6 @@
 ;-----------------Heap Operations---------------
 ;read from heap
 (define (memory-hread mem addr type)
-	(pretty-print addr)
 	(imap-get (memory-heap mem) addr type))
 
 ;write to heap

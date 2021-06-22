@@ -73,8 +73,8 @@
 ;			(pretty-print (machine-mem mac))
 ;			(display "\n")
 ;			(println string-id-map)
-			(display "\n")
-			(pretty-print inst-cur)
+;			(display "\n")
+;			(pretty-print inst-cur)
 			(set! line-counter-c (+ line-counter-c 1))
 ;			(display (~a "mem size 2.2: " (memory-heap-size (machine-mem mac)) " \n"))
 ;			(display (~a "Lines of code: " line-counter-c))
@@ -385,7 +385,7 @@
 		(define mem0 (machine-mem m))
 		(match-define (cons v-new v-new-jt) (expr-eval (inst-ass-vr i) m))
 
-		(display (~a "assignment lvalue: " (inst-ass-vl i) " rvalue: " v-new "\n"))
+;		(display (~a "assignment lvalue: " (inst-ass-vl i) " rvalue: " v-new "\n"))
 		(define rhs (lexpr-rhs (inst-ass-vl i)))
 		(define mem-new 
 			(match rhs

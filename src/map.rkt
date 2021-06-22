@@ -140,11 +140,11 @@
 	#:methods gen:imap
 	[	;ignore types
 		(define (imap-get m index type)
-			(force-error (equal? (imap-sym-id m) invalid-id) "reading from mem 0!")
+			(force-error (imap-invalid? m) "reading from mem 0!")
 			(imap-sym-real-get m index type))
 
 		(define (imap-set m index value type)
-			(force-error (equal? (imap-sym-id m) invalid-id) "writing to mem 0!")
+			(force-error (imap-invalid? m) "writing to mem 0!")
 			(std:struct-copy imap-sym m [updates (cons (cons index value) (imap-sym-updates m))]))
 
 		(define (imap-get-func m)
@@ -171,7 +171,7 @@
 			(std:struct-copy imap-sym m [updates null] [updates-committed (append (imap-sym-updates m) (imap-sym-updates-committed m))]))
 
 		(define (imap-summary m)
-			(force-error (equal? (imap-sym-id m) invalid-id) "getting fml from mem 0!")
+;			(force-error (imap-invalid? m) "getting fml from mem 0!")
 			(imap-sym-fml-deferred m))
 
 		(define (imap-preserve m index)
@@ -196,7 +196,7 @@
 			(do-n-ret
 				;(lambda (ret) (begin (defer-eval "imap get" (list index ret type))))
 				identity
-				(if (not (imap-sym? ms))
+				(if (imap-invalid? ms)
 					(not-found type)
 					(imap-get+ ms index type))))
 
@@ -204,7 +204,8 @@
 			;(defer-eval "imap set" (list index value type))
 			(define ms (imap-get-type m type))
 			(imap-add-index (cons index type))
-			(if (not (imap-sym? ms)) m
+;			(if (not (imap-sym? ms)) m
+			(if (imap-invalid? ms) m
 				(imap-sym-wrapper (imap-set-type m type (imap-set+ ms index value type)))))
 
 		(define (imap-get-func m)
@@ -247,12 +248,14 @@
 			(list-set (imap-sym-wrapper-imaps m) (type->ordinal type) ms))
 	])
 
+	(define imap-invalid?
+		(lambda (m) (equal? (imap-sym-id m) invalid-id)))
 
 	(define (imap-select candidates summary?)
 		(imap-sym-wrapper
 			(map
 				(lambda (type)
-					(define f-select (maybe-select (imap-sym-null type) (lambda (m) (equal? (imap-sym-id m) invalid-id))))
+					(define f-select (maybe-select (imap-sym-null type) imap-invalid?))
 					(define (unwrap cnd.m)
 						(cons (car cnd.m) 
 							  (list-ref (imap-sym-wrapper-imaps (cdr cnd.m)) (type->ordinal type))))
@@ -333,7 +336,8 @@
 (define imap-typed-empty imap-conc-wrapper-empty)
 
 (define (imap-sym-null type)
-	(imap-sym (invalid-state type) (invalid-state type) (default-func type) (default-func type) null null #t type))
+	(imap-sym invalid-id invalid-id (default-func type) (default-func type) null null #t type))
+;	(imap-sym (invalid-state type) (invalid-state type) (default-func type) (default-func type) null null #t type))
 (define imap-sym-wrapper-null
 	(imap-sym-wrapper (map (lambda (type) (imap-sym-null type)) all-types-ordered)))
 (define imap-null imap-sym-null)

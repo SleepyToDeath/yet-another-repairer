@@ -69,9 +69,11 @@
 ;	[TODO] solve all examples, add jmp condition based on correct/incorrect examples
 
 	(set-spec-id! spec-id-bad)
-	(define hard-bad (andmap identity (map (lambda (io) (encoder (car io) (cdr io) spec-id-bad funcs)) spec-bad)))
+	(define hard-bad (apply append (map (lambda (io) (encoder (car io) (cdr io) spec-id-bad funcs)) spec-bad)))
 	(set-spec-id! spec-id-good)
-	(define hard-good (andmap identity (map (lambda (io) (encoder (car io) (cdr io) spec-id-good funcs)) spec-good)))
+	(define hard-good (apply append (map (lambda (io) (encoder (car io) (cdr io) spec-id-good funcs)) spec-good)))
+
+;	(pretty-print (asserts))
 	
 	(finalize-selectors!)
 
@@ -106,6 +108,8 @@
 	(if (or (unsat? sol-bad) (unsat? sol-good))
 		(begin
 ;		(match (core (∃-debug (append hard (list one-bug) (asserts)) #:muc #t)) [l (map print-fml l)])
+		(if (unsat? sol-bad) (display "bad unsat!\n") #f)
+		(if (unsat? sol-good) (display "good unsat!\n") #f)
 		#f)
 
 		(begin
@@ -127,10 +131,10 @@
 
 		(pretty-print string-id-table)
 
-		(display "\nbad deferred values:\n")
-		(print-pending-eval spec-id-bad sol-bad)
-		(display "good deferred values:\n")
-		(print-pending-eval spec-id-good sol-good)
+;		(display "\nbad deferred values:\n")
+;		(print-pending-eval spec-id-bad sol-bad)
+;		(display "good deferred values:\n")
+;		(print-pending-eval spec-id-good sol-good)
 ;		(std:error "Halt!")
 
 		(define maybe-l (match (location-inst bugl)

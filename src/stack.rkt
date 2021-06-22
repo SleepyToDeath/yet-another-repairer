@@ -26,6 +26,7 @@ stack-empty)
 
 ;banned
 (define (stack-static-read mem name type)
+	(force-error #t "banned read operation!\n")
 	(define ret.maybe (ormap 
 		(lambda (sc) (if (member name (map car (static-scope-keys sc))) 
 						 (list-ref (static-scope-array sc) name) 
@@ -35,6 +36,7 @@ stack-empty)
 
 ;banned
 (define (stack-static-write mem name value)
+	(force-error #t "banned write operation!\n")
 	(define found? #f)
 	(std:struct-copy memory mem [stack
 		(static-stack 
@@ -58,7 +60,8 @@ stack-empty)
 	(define updates (static-stack-updates (memory-stack mem-decl)))
 	(std:struct-copy memory mem-decl [stack
 		(static-stack 
-			(if (is-invalid? (list-ref (static-scope-array (list-ref scs lvl)) name))
+;			(if (is-invalid? (list-ref (static-scope-array (list-ref scs lvl)) name))
+			(if (is-invalid-scs? scs)
 				scs
 				(std:list-set scs lvl 
 					(std:struct-copy static-scope (list-ref scs lvl) [array (std:list-set (static-scope-array (list-ref scs lvl)) name value)])))
@@ -76,7 +79,8 @@ stack-empty)
 	(define array.new (if (member (cons name type) keys) array (std:list-set array name (nullptr type))))
 	(define array-out.new (if (member (cons name type) keys) array-out (std:list-set array-out name 
 		((lambda () (define-symbolic* vs type) vs)))))
-	(define ret (if (is-invalid? (list-ref (static-scope-array (car scs)) name))
+;	(define ret (if (is-invalid? (list-ref (static-scope-array (car scs)) name))
+	(define ret (if (is-invalid-scs? scs)
 		mem
 		(std:struct-copy memory mem 
 			[stack 
@@ -139,7 +143,7 @@ stack-empty)
 				(static-scope-invalid (static-scope-keys sc)) 
 				[keys (static-scope-keys sc)])) 
 			(static-stack-scopes template)))
-	(define f-select (maybe-select scs-invalid (lambda (scs) (is-invalid? (last (static-scope-array (car scs)))))))
+	(define f-select (maybe-select scs-invalid is-invalid-scs?))
 	(define scs-new (f-select (map (lambda (cnd.st) (cons (car cnd.st) (static-stack-scopes (cdr cnd.st)))) candidates) #f))
 	(define all-updates (map static-stack-updates (map cdr candidates)))
 	(define empty-updates (map (lambda (x) null) (car all-updates)))
@@ -182,6 +186,8 @@ stack-empty)
 		(list-set arr (car key) (value-gen (cdr key))))
 		(std:build-list scope-size (lambda (x) (value-gen default-type)))
 		keys))
+
+(define is-invalid-scs? (lambda (scs) (is-invalid? (last (static-scope-array (car scs))))))
 
 (define (static-scope-invalid keys)
 	(define invalid-array (arr-gen keys invalid-state))

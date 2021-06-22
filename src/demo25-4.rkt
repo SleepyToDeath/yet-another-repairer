@@ -70,19 +70,32 @@ public class A extends java.lang.Object {
 	public static void <init>(int)
 	{
 		A r0;
-		int $r1;
 		r0 := @this: A;
         specialinvoke r0.<java.lang.Object: void <init>()>();
-		$r1 := @parameter0: int;
-		r0.<A: int n> = $r1;
 		return r0;
 	}
 
-	public int add(int)
+	public static boolean add()
 	{
-		int $r1;
-		$r1 := @parameter0: int;
-		return $r1;
+		int r0, r1, $z0, $z1, r3;
+		r0 = 1;
+		r1 = 1;
+
+        if r0 != r1 goto label1;
+
+        $z0 = 1; 
+
+        if $z0 != 0 goto label2;
+
+        $z1 = 1;
+
+        if $z1 != 0 goto label2;
+
+     label1:
+        return 0;
+
+     label2:
+        return 0;
 	}
 }
 ")))
@@ -93,14 +106,9 @@ public class Test
 {
 	public static int main(int, int, int)
 	{
-		int r4;
-		int r5;
-		r5 = 0;
-		r4 = 0;
-		if r4 != 1 goto label1;
-		r5 = 15;
-		label1:
-		return r5;
+		boolean b;
+        b = staticinvoke <A: boolean add()>();
+		return 0;
 	}
 }
 ")))
@@ -131,7 +139,7 @@ public class Test
 (pretty-print buggy)
 
 (define input1 (list (cons 6 "int") (cons 5 "int") (cons 4 "int")))
-(define output1 (list (cons var-ret-name 15)))
+(define output1 (list (cons var-ret-name 1)))
 
 ;(define input1 (list (cons 1 "int") (cons 2 "int")))
 ;(define output1 (list (cons var-ret-name 2)))
@@ -158,7 +166,7 @@ result
 (output-smt #t)
 (pretty-print (solver-features (current-solver)))
 (pretty-print (solver-options (current-solver)))
-(define bugl (localize-bug buggy (list (cons input1 output1))))
+(define bugl (localize-bug buggy (list (cons input1 output1)) null))
 (pretty-print bugl)
 
 

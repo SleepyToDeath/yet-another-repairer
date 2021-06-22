@@ -44,7 +44,7 @@
 (define input1 (list (cons (bv 100 bv-type) "long")))
 (define output1 (list (cons var-ret-name 1)))
 
-(define input2 (list (cons (bv 100 bv-type) "long")))
+(define input2 (list (cons (bv 200 bv-type) "long")))
 (define output2 (list (cons var-ret-name 0)))
 
 (define mac (ast->machine buggy))
@@ -64,7 +64,7 @@ result
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1) (cons input2 output2))))
+(define bugl (localize-bug buggy (list (cons input1 output1)) null));(list (cons input2 output2))))
 (pretty-print bugl)
 
 ;(match-define (cons soft hard) (ast->relation buggy))
