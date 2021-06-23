@@ -35,6 +35,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
 
     // private short constants (OF1.0) to avoid duplication in the code
     // should not have to use these outside this class
+	/*
     private static final short OFPP_ANY_SHORT = (short) 0xFFff;
     private static final short OFPP_LOCAL_SHORT = (short) 0xFFfe;
     private static final short OFPP_CONTROLLER_SHORT = (short) 0xFFfd;
@@ -45,56 +46,57 @@ public class OFPort /* implements OFValueType<OFPort> */ {
     private static final short OFPP_IN_PORT_SHORT = (short) 0xFFf8;
     private static final short OFPP_MAX_SHORT = (short) 0xFF00;
     private static final int OFPP_MAX_SHORT_UNSIGNED = 0xFF00;
+	*/
 
     // ////////////// public constants - use to access well known OpenFlow ports
 
     /** Maximum number of physical and logical switch ports. */
-    public final static OFPort MAX = new NamedPort(OFPP_MAX_INT, "max");
+//    public final static OFPort MAX = new NamedPort(OFPP_MAX_INT, "max");
 
     /**
      * Send the packet out the input port. This reserved port must be explicitly
      * used in order to send back out of the input port.
      */
-    public final static OFPort IN_PORT = new NamedPort(OFPP_IN_PORT_INT, "in_port");
+//    public final static OFPort IN_PORT = new NamedPort(OFPP_IN_PORT_INT, "in_port");
 
     /**
      * Submit the packet to the first flow table NB: This destination port can
      * only be used in packet-out messages.
      */
-    public final static OFPort TABLE = new NamedPort(OFPP_TABLE_INT, "table");
+//    public final static OFPort TABLE = new NamedPort(OFPP_TABLE_INT, "table");
 
     /** Process with normal L2/L3 switching. */
-    public final static OFPort NORMAL = new NamedPort(OFPP_NORMAL_INT, "normal");
+//    public final static OFPort NORMAL = new NamedPort(OFPP_NORMAL_INT, "normal");
 
     /**
      * All physical ports in VLAN, except input port and those blocked or link
      * down
      */
-    public final static OFPort FLOOD = new NamedPort(OFPP_FLOOD_INT, "flood");
+//    public final static OFPort FLOOD = new NamedPort(OFPP_FLOOD_INT, "flood");
 
     /** All physical ports except input port */
-    public final static OFPort ALL = new NamedPort(OFPP_ALL_INT, "all");
+//    public final static OFPort ALL = new NamedPort(OFPP_ALL_INT, "all");
 
     /** Send to controller */
-    public final static OFPort CONTROLLER =
-            new NamedPort(OFPP_CONTROLLER_INT, "controller");
+//    public final static OFPort CONTROLLER =
+//            new NamedPort(OFPP_CONTROLLER_INT, "controller");
 
     /** local openflow "port" */
-    public final static OFPort LOCAL = new NamedPort(OFPP_LOCAL_INT, "local");
+//    public final static OFPort LOCAL = new NamedPort(OFPP_LOCAL_INT, "local");
 
     /**
      * Wildcard port used only for flow mod (delete) and flow stats requests.
      * Selects all flows regardless of output port (including flows with no
      * output port). NOTE: OpenFlow 1.0 calls this 'NONE'
      */
-    public final static OFPort ANY = new NamedPort(OFPP_ANY_INT, "any");
+//    public final static OFPort ANY = new NamedPort(OFPP_ANY_INT, "any");
     /** the wildcarded default for OpenFlow 1.0 (value: 0). Elsewhere in OpenFlow
      *  we need "ANY" as the default
      */
-    public static final OFPort ZERO = OFPort.of(0);
+//    public static final OFPort ZERO = OFPort.of(0);
 
-    public static final OFPort NO_MASK = OFPort.of(0xFFFFFFFF);
-    public static final OFPort FULL_MASK = ZERO;
+//    public static final OFPort NO_MASK = OFPort.of(0xFFFFFFFF);
+//    public static final OFPort FULL_MASK = ZERO;
 
     /** cache of frequently used ports */
     private static class PrecachedPort {
@@ -104,6 +106,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
         private final static OFPort p3 = new OFPort(3);
         private final static OFPort p4 = new OFPort(4);
         private final static OFPort p5 = new OFPort(5);
+		/*
         private final static OFPort p6 = new OFPort(6);
         private final static OFPort p7 = new OFPort(7);
         private final static OFPort p8 = new OFPort(8);
@@ -146,6 +149,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
         private final static OFPort p46 = new OFPort(46);
         private final static OFPort p47 = new OFPort(47);
         private final static OFPort p48 = new OFPort(48);
+		*/
     }
 
     /** raw openflow port number as a signed 32 bit integer */
@@ -178,6 +182,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
                 return PrecachedPort.p4;
             case 5:
                 return PrecachedPort.p5;
+				/*
             case 6:
                 return PrecachedPort.p6;
             case 7:
@@ -262,6 +267,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
                 return PrecachedPort.p47;
             case 48:
                 return PrecachedPort.p48;
+				*/
 				/*
             case OFPP_MAX_INT:
                 return MAX;

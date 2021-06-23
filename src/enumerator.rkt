@@ -66,7 +66,7 @@
 	(define line-mac (location-line bugl))
 	(define line-ast (if (equal? fname func-name-init) (- line-mac 1) line-mac))
 
-	(define vars (cons bridge-var-name (map car (function-locals func))))
+	(define vars (cons bridge-var-name (location->vars bugl)))
 	(define types (map class-name (machine-classes mac)))
 	(define fields (map (lambda (fname) (cons cname fname)) 
 		(map car (append (class-vfields cls) (class-sfields cls)))))
@@ -80,6 +80,59 @@
 			[(inst-jmp condition label) (list label)]
 			[_ null]))
 	(syntax-context vars types fields funcs consts ops labels (lambda (x) #f) real-depth-updater))
+
+(define var-use-threshold 2)
+
+(define (location->vars bugl)
+	(define func (location-func bugl))
+	(define line (location-line bugl))
+	(define insts (function-prog func))
+	(define local-vars (map car (append (function-args func) (function-locals func))))
+	(define (vars-at-line l)
+		(if (or (< l 0) (>= l (length insts))) null
+			(inst->vars (list-ref insts l))))
+	(define near-vars (remove-duplicates (append (vars-at-line line) (vars-at-line (- line 1)) (vars-at-line (+ line 1)))))
+	(define all-vars-bag (apply append (map inst->vars insts)))
+	(define all-vars (remove-duplicates all-vars-bag))
+	(define (var-count name)
+		(count (lambda (name+) (equal? name name+)) all-vars-bag))
+	(define frequent-vars (filter 
+		(lambda (name) (> (var-count name) var-use-threshold)) 
+		all-vars))
+	(filter (lambda (name) (member name local-vars)) (remove-duplicates (append near-vars frequent-vars))))
+
+(define (inst->vars inst)
+	(match inst
+		[(inst-newarray v-name size-expr) (list v-name)]
+		[(inst-new v-name) (list v-name)]
+		[(inst-ret v-expr) (iexpr->vars v-expr)]
+		[(inst-static-call ret cls-name func-name arg-types args) (cons ret (apply append (map iexpr->vars args)))]
+		[(inst-virtual-call ret obj-name cls-name func-name arg-types args) (cons obj-name (cons ret (apply append (map iexpr->vars args))))]
+		[(inst-special-call ret obj-name cls-name func-name arg-types args) (cons obj-name (cons ret (apply append (map iexpr->vars args))))]
+		[(inst-ass vl vr) (append (expr->vars vl) (iexpr->vars vr))]
+		[(inst-jmp condition label) (iexpr->vars condition)]
+		[(inst-switch cnd cases default-l) (iexpr->vars cnd)]
+		[_ null]))
+
+(define (expr->vars e)
+	(match e
+		[(lexpr rhs) (expr->vars rhs)]
+		[(dexpr rhs) (expr->vars rhs)]
+		[(expr rhs) (expr->vars rhs)]
+		[(expr-const value) (expr->vars value)]
+		[(expr-var name) (expr->vars name)]
+		[(expr-binary operand1 operator operand2) (append (expr->vars operand1) (expr->vars operand2))]
+		[(expr-array array index) (append (expr->vars array) (expr->vars index))]
+		[(expr-field obj class fname) (expr->vars obj)]
+		[(variable name) (list (string-id name))]))
+
+(define (iexpr->vars e)
+	(match e
+		[(iexpr-const value type) null]
+		[(iexpr-var name) (list name)]
+		[(iexpr-binary op expr1 expr2) (append (iexpr->vars expr1) (iexpr->vars expr2))]
+		[(iexpr-array arr-name index) (cons arr-name (iexpr->vars index))]
+		[(iexpr-field obj-name cls-name fname) (list obj-name)]))
 
 ;ast: enumerated statement
 ;set default argument list by function name

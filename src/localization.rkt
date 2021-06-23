@@ -203,6 +203,7 @@
 	(eprintf (~a "============ Tried " meta-counter " iterations =============\n"))
 
 	(print-location bugl)
+	(eprint-location bugl)
 
 	(if #f;(equal? (function-name (location-func bugl)) func-name-main)
 		(begin (display "In main function. Skipped.\n") #f)

@@ -44,6 +44,9 @@
 (define input1 (list (cons 5 "int")))
 (define output1 (list (cons var-ret-name 3)))
 
+(define input2 (list (cons 2 "int")))
+(define output2 (list (cons var-ret-name 0)))
+
 (define mac (ast->machine buggy))
 (pretty-print string-id-table)
 
@@ -61,7 +64,7 @@ result
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1))))
+(define bugl (localize-bug buggy (list (cons input1 output1)) null))
 (pretty-print bugl)
 
 ;(match-define (cons soft hard) (ast->relation buggy))

@@ -222,4 +222,8 @@
 			[(location cls func line inst selector)
 				(location (class-name cls) (function-name func) line inst selector)])))
 
-
+(define (eprint-location l)
+	(eprintf
+		(~a (match l
+			[(location cls func line inst selector)
+				(location (class-name cls) (function-name func) line inst selector)]) "\n")))
