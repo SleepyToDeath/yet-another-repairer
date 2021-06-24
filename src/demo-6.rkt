@@ -44,17 +44,20 @@
 (define input1 (list (cons 5 "int")))
 (define output1 (list (cons var-ret-name 3)))
 
+(define input1.1 (list (cons 6 "int")))
+(define output1.1 (list (cons var-ret-name 4)))
+
 (define input2 (list (cons 2 "int")))
 (define output2 (list (cons var-ret-name 0)))
 
 (define mac (ast->machine buggy))
 (pretty-print string-id-table)
 
-(define mac-in (assign-input mac input1))
+(define mac-in (assign-input mac input1.1))
 
 (define mac-fin (compute mac-in))
 
-(define result (compare-output mac-fin output1))
+(define result (compare-output mac-fin output1.1))
 
 result
 
@@ -64,7 +67,7 @@ result
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1)) null))
+(define bugl (localize-bug buggy (list (cons input1 output1) (cons input1.1 output1.1)) (list (cons input2 output2))))
 (pretty-print bugl)
 
 ;(match-define (cons soft hard) (ast->relation buggy))

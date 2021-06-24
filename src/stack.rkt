@@ -179,7 +179,7 @@ stack-empty)
 	(set! always-right-fmls null))
 (define (pending-always-right! fml)
 	(set! always-right-fmls (cons fml always-right-fmls)))
-(register-reset! clear-always-right!)
+(register-reset! clear-always-right! #f)
 
 (define (arr-gen keys value-gen)
 	(foldl (lambda (key arr) 

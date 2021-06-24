@@ -42,7 +42,7 @@
 ;updater: update context by current ast
 (define (ast-dfs ast ctxt verifier pruner updater depth)
 	(if (not (pruner ast)) 
-		(begin (display "pruned\n") #f)
+		#f
 		(if (ast-check ast)
 			;finished
 			(verifier ast)
@@ -73,7 +73,7 @@
 	(define funcs (remove func-name-init (remove-duplicates (map function-name (all-functions mac)))))
 	(define consts (list 1))
 ;	(define ops (list bvand bvor bvxor op-mod op-cmp equal? op-neq op-gt op-ge op-lt op-le bvlshr op-add op-sub op-mul op-div))
-	(define ops (list equal? op-neq))
+	(define ops (list op-add op-sub))
 	; don't change jump target
 	(define labels 
 		(match (list-ref (function-prog func) line-mac)
@@ -171,6 +171,7 @@
 (define (real-depth-updater depth ast)
 	(match ast
 		[(stat-jmp _ _) (+ depth 0)]
+		[(stat-ass _ _) (+ depth 0)]
 		[_ depth]))
 
 (struct invalid-function-error (msg) #:transparent)
@@ -251,6 +252,20 @@
 				(imap-get (machine-cmap mac) cname default-type)))]
 
 		[_ (not-a-function-error default-msg)]))
+
+(define (ast->sid ast)
+	(match (car (ast->instruction ast #f #f))
+		[(inst-static-call ret cls-name func-name arg-types args) 
+			(sfunc-id cls-name func-name arg-types)]
+		[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
+			(sfunc-id cls-name func-name arg-types)]
+		[(inst-special-call ret obj-name cls-name func-name arg-types args)
+			(sfunc-id cls-name func-name arg-types)]))
+
+(define (location->sid bugl)
+	(define cls (location-class bugl))
+	(define func (location-func bugl))
+	(sfunc-id (class-name cls) (function-name func) (map cdr (function-args func))))
 
 (define (using-bridge-var? ast)
 	(match ast
@@ -414,7 +429,7 @@
 				(begin
 				(define t1 (expr-type-check? expr1))
 				(define t2 (expr-type-check? expr2))
-;						(pretty-print (list t1 t2))
+;				(pretty-print (list t1 t2))
 				(define op-check? (and t1 t2 (op-type-check? op t1 t2)))
 				(if op-check? (op-return-type op t1 t2) #f))]
 			[(iexpr-array arr-name index)
@@ -481,6 +496,20 @@
 			(function-prog func)))
 	(andmap func-type-check? (all-class-functions mac)))
 
+(define visited-sid-map (imap-empty default-type))
+(register-reset! (lambda () (set! visited-sid-map (imap-empty default-type))) #t)
+
+(define (machine-prepare-recursion mac) 
+	(define all-visited-sids-0 (curry all-visited-sids identity))
+	(define sids (all-sids mac))
+	(map (lambda (func)
+		(set! visited-sid-map (imap-set visited-sid-map func (do-n-ret pretty-print (all-visited-sids-0 mac func)) default-type)))
+		sids))
+
+(define (contains-target-quick? sid target-sid)
+	(member target-sid (imap-get visited-sid-map sid default-type)))
+
+#|
 (define (machine-has-recursion? mac) 
 	(define contains-target-ori? (curry contains-target-or-rec? identity))
 	(define sids (all-sids mac))
@@ -491,11 +520,13 @@
 
 (define (machine-all-check? mac)
 	(and (machine-type-check? mac) (monitor-reason "recursion" (not (machine-has-recursion? mac)))))
+|#
 
 
 (define contains-target-list null)
-(define (reset-contains-target-cache)
+(define (reset-contains-target-cache!)
 	(set! contains-target-list null))
+(register-reset! reset-contains-target-cache! #f)
 ;if a function will (transitively) call any target function
 (define (contains-target? func-getter mac sid target-sids)
 ;	(pretty-print sid)
@@ -536,6 +567,11 @@
 		ret)))
 
 (define visited-sids null)
+
+(define (all-visited-sids func-getter mac sid)
+	(set! visited-sids null)
+	(contains-target-pure? func-getter mac sid null)
+	visited-sids)
 
 (define (contains-target-or-rec? func-getter mac sid target-sids)
 	(set! visited-sids null)
@@ -598,6 +634,9 @@
 
 
 ;======================== Debug ========================
+;(define (monitor-reason msg result)
+;	result) 
+
 (define (monitor-reason msg result)
 	(if (not result) (display (~a "Fail check " msg "\n")) #f)
 	result)

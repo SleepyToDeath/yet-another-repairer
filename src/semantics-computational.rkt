@@ -26,7 +26,7 @@
 ;machine(init) X list of names -> machine(fin)
 (define (compute mac)
 	(define mac-init (build-virtual-table mac))
-	(display (~a "mem size 2.1: " (memory-heap-size (machine-mem mac-init)) " \n"))
+;	(display (~a "mem size 2.1: " (memory-heap-size (machine-mem mac-init)) " \n"))
 ;	(pretty-print string-id-table)
 	(function-call-simple mac-init (machine-boot mac-init)))
 
@@ -38,7 +38,7 @@
 			(lambda (var-def mem) (memory-sdecl mem (string-id (car var-def)) (jtype->mtype (cdr var-def)))) 
 			(machine-mem mac) 
 			(append (function-args func) (function-locals func) (list (cons var-ret-name (function-ret func)))))]))
-	(display (~a "mem size 2.2: " (memory-heap-size (machine-mem mac-decl)) " \n"))
+;	(display (~a "mem size 2.2: " (memory-heap-size (machine-mem mac-decl)) " \n"))
 	(set! line-counter-c 0)
 	(function-exec (std:struct-copy machine mac-decl [pc pc-init][fc func])))
 

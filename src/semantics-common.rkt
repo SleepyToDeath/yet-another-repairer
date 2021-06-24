@@ -161,6 +161,11 @@
 		(list cls delimiter-static func)
 		(foldl (lambda (s l) (cons delimiter-minor (cons s l))) null arg-types)))
 
+(define type-injection null)
+(define (inject-type! l)
+	(set! type-injection l))
+(register-reset! (lambda () (inject-type! null)) #f)
+
 ;look up type of a local variable/parameter in a function 
 (define (lookup-type v f)
 ;	(pretty-print (list v f))
@@ -171,6 +176,7 @@
 		(ormap 
 			(lambda (var-def) (if (equal? v (car var-def)) (cdr var-def) #f))
 			(append 
+				type-injection
 				(cons 
 					(cons (string-id (variable-name void-receiver)) (string-id "any")) 
 					(append (callee-arg-names (function-args f)) (function-locals f)))

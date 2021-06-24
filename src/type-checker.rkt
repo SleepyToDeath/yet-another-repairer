@@ -55,7 +55,7 @@
 		(list bvand bv-type bv-type)
 		(list bvor bv-type bv-type)
 		(list bvxor bv-type bv-type)
-		(list bvlshr bv-type bv-type)))
+		(list bvlshr bv-type int-type)))
 
 (define (op-return-type op t1 t2)
 	(define mt1 (jtype->mtype t1))

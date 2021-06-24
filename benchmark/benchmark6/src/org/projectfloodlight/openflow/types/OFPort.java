@@ -545,9 +545,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
 
     @Override
     public int hashCode() {
-        final int prime = 53;
         int result = 1;
-        result = prime * result + portNumber;
         return result;
     }
 

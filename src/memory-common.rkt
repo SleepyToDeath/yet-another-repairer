@@ -50,7 +50,7 @@
 (define vt-base-addr 0)
 
 ;[-]
-(define max-program-length 10000)
+(define max-program-length 1000000)
 
 ;[-]
 (define invalid-id 0)

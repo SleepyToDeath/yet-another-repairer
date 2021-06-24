@@ -42,7 +42,7 @@
 	(set! valid-selectors (cons l valid-selectors)))
 (define (finalize-selectors!)
 	(set! valid-selectors (remove-duplicates valid-selectors (lambda (a b) (equal? (~a a) (~a b))))))
-(register-reset! clear-valid-selectors!)
+(register-reset! clear-valid-selectors! #f)
 ;============================= Top Level Interface ====================================
 ;ast ->  line ids(list of sym bool) X (input(list of key & value) -> output(list of key & value) -> relation)
 (define (ast->relation ast)
@@ -123,9 +123,9 @@
 				[(invoke-tree root cnd subs)
 					(begin
 ;					(display "v---------fml-------------v\n")
-					(match root
-						[(function-formula func lids _ _ _ _ _ class)
-							(pretty-print (list (function-name func) class))])
+;					(match root
+;						[(function-formula func lids _ _ _ _ _ class)
+;							(pretty-print (list (function-name func) class))])
 ;					(print-fml (function-formula-fmls root))
 ;					(test-assert! (function-formula-fmls root))
 					(define ret1 
@@ -133,9 +133,9 @@
 					(define ret2
 						(apply append (map extract-fml subs)))
 					(define ret (append ret2 (list ret1)))
-					(match root
-						[(function-formula func lids _ _ _ _ _ class)
-							(pretty-print (list (function-name func) class))])
+;					(match root
+;						[(function-formula func lids _ _ _ _ _ class)
+;							(pretty-print (list (function-name func) class))])
 ;					(display "^---------fml-------------^\n")
 					ret)]))
 
@@ -389,13 +389,13 @@
 		(add-valid-selector! id)
 
 ;		(display (~a "Lines of code: " line-counter "\n"))
-		(defer-eval spec-id "instruction: " inst)
-		(defer-eval spec-id "path mark " mark)
-		(println inst)
-		(pretty-print mark)
-		(pretty-print id)
-		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
-		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
+;		(defer-eval spec-id "instruction: " inst)
+;		(defer-eval spec-id "path mark " mark)
+;		(println inst)
+;		(pretty-print mark)
+;		(pretty-print id)
+;		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
+;		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
 ;		(pretty-print (asserts))
 
 		(if (not in-target?) (assert id) #f)
@@ -416,7 +416,7 @@
 		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0][fc func]))
 
 ;		(display (~a "mem-id: " (memory-id mem-0) "\n"))
-		(display "\n")
+;		(display "\n")
 
 
 ;	(pretty-print mem-0)
@@ -609,7 +609,7 @@
 				(define fml-path (iassert-pc-ret #t fml-ret))
 				(define func-fml-ret (prepend-ending-mem-in func-fml (if summary? #t mark) mem-ret))
 				(define func-fml-new (append-fml func-fml-ret fml-path))
-				(defer-eval spec-id "return value" ret-value)
+;				(defer-eval spec-id "return value" ret-value)
 ;				(assert id)
 				(if summary? #f (add-spec id spec-id mem-in (memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-ret) summary?) inst inst-ret? #f))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
@@ -801,7 +801,7 @@
 								([addr (if (equal? obj void-receiver) addr-void-receiver
 									(memory-sforce-read mem-0 (string-id (variable-name obj)) 0))])
 								(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value (jtype->mtype jtype)))]))
-				(defer-eval spec-id "new-v" value)
+;				(defer-eval spec-id "new-v" value)
 				(if summary? #f (add-spec id spec-id mem-in (memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-new) summary?) inst inst-ass? #f))
 				(update-mem-only mem-new))]
 
@@ -856,6 +856,7 @@
 
 (define (clear-specs!)
 	(set! spec-map (imap-empty default-type)))
+(register-reset! clear-specs! #t)
 
 ;(define (eval-specs! sol)
 ;	(set! spec-map (evaluate spec-map sol)))

@@ -12,11 +12,18 @@
 
 (provide (all-defined-out))
 
-(define all-resets null)
-(define (register-reset! f)
-	(set! all-resets (cons f all-resets)))
-(define (do-all-resets!)
-	(map (lambda (f) (f)) all-resets))
+(define global-resets null)
+(define task-resets null)
+(define (register-reset! f global?)
+	(if global?
+		(set! global-resets (cons f global-resets))
+		(set! task-resets (cons f task-resets))))
+(define (do-all-resets! global?)
+	(if global? 
+		(map (lambda (f) (f)) global-resets)
+		(map (lambda (f) (f)) task-resets)))
+
+(register-reset! clear-asserts! #f)
 
 
 (struct expr-fp (op children) #:transparent)
@@ -159,6 +166,10 @@
 	(set! last-time (std:current-inexact-milliseconds)))
 (define (timer-check)
 	(- (std:current-inexact-milliseconds) last-time))
+(define (timer-reset)
+	(define ret (- (std:current-inexact-milliseconds) last-time))
+	(timer-on)
+	ret)
 
 ;============================= Debug ========================================
 (define DEBUG-ON #f)
@@ -183,7 +194,7 @@
 
 (define (clear-pending-eval)
 	(set! eval-pending (list null null)))
-(register-reset! clear-pending-eval)
+(register-reset! clear-pending-eval #t)
 
 
 

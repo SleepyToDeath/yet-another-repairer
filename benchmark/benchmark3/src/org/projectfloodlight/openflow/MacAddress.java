@@ -203,10 +203,7 @@ public class MacAddress /* implements OFValueType<MacAddress> */ {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
-        int result = 1;
-        result = prime * result + (int) (rawValue ^ (rawValue >>> 32));
-        return result;
+		return 1;
     }
 
     @Override

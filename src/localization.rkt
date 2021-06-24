@@ -59,49 +59,33 @@
 	(display (~a "target funcs: " funcs "\n"))
 	(display "visited: \n") 
 	(map print-location visited-locations)
-	(clear-asserts!)
-	(clear-pending-eval)
-	(clear-specs!)
-	(reset-contains-target-cache)
-	(assert-visited-locations)
-	(do-all-resets!)
+	(do-all-resets! #t)
 
-;	[TODO] solve all examples, add jmp condition based on correct/incorrect examples
+	(define (solve-localize spec-id spec bug-num)
+		(do-all-resets! #f)
+		(assert-visited-locations)
 
-	(set-spec-id! spec-id-bad)
-	(define hard-bad (apply append (map (lambda (io) (encoder (car io) (cdr io) spec-id-bad funcs)) spec-bad)))
-	(set-spec-id! spec-id-good)
-	(define hard-good (apply append (map (lambda (io) (encoder (car io) (cdr io) spec-id-good funcs)) spec-good)))
+		(set-spec-id! spec-id)
+		(define hard (apply append (map (lambda (io) (encoder (car io) (cdr io) spec-id funcs)) spec)))
 
-;	(pretty-print (asserts))
-	
-	(finalize-selectors!)
+		(finalize-selectors!)
 
-;	(pretty-print valid-selectors)
+		(define sum (apply + (map (lambda (id) (if id 1 0)) valid-selectors)))
+		(define bug-sum (equal? sum (- (length valid-selectors) bug-num)))
 
-	(define sum (apply + (map (lambda (id) (if id 1 0)) valid-selectors)))
-	(define one-bug (equal? sum (- (length valid-selectors) 1)))
-	(define no-bug (equal? sum (length valid-selectors)))
+		(display "\n Solving: \n")
+		(eprintf "\n Solving: \n")
+		(timer-on)
+		(define sol (solve (assert (and (andmap+ identity hard) bug-sum))))
+		(display (~a "\n Solved. Took " (timer-check) " ms \n"))
+		(eprintf (~a "\n Solved. Took " (timer-check) " ms \n"))
 
-	(display "\n Solving: \n")
-;	/* default version one bug */
-	(define sol-bad (solve (assert (and (andmap+ identity hard-bad) one-bug))))
-	(define sol-good (solve (assert (and (andmap+ identity hard-good) no-bug))))
+		sol)
 
-;	/* no bug */
-;	(define sol-bad (solve (assert (and hard no-bug))))
+	(define sol-bad (solve-localize spec-id-bad spec-bad 1))
+	(define bad-selectors valid-selectors)
+	(define sol-good (solve-localize spec-id-good spec-good 0))
 
-;	/* maximize satisfiable lines */
-;	(define sol-bad (optimize #:maximize (list sum)
-;			  #:guarantee (assert (and hard))))
-
-;	/* ??? */
-;	(define sol-bad (solve (assert (and hard debug-max-sat))))
-
-;	/* maximize satisfiable clauses, more detailed than lines, for debugging this tool itself only */
-;	(define sol-bad (optimize #:maximize (list max-sat-sum)
-;			  #:guarantee (assert (and no-bug hard))))
-	
 	(display "\n Model: \n")
 ;	(pretty-print sol-bad)
 
@@ -116,7 +100,7 @@
 		(define bugl (ormap (lambda (l) 
 			(define id (location-selector l))
 			(if	(and 
-					(member (~a id) (map (lambda (b) (~a b)) valid-selectors))
+					(member (~a id) (map (lambda (b) (~a b)) bad-selectors))
 					(not (evaluate id sol-bad)))
 				l
 				#f))
@@ -183,6 +167,7 @@
 (define usable-classes (list
 	(string-id "org.projectfloodlight.openflow.types.IPv4Address")
 	(string-id "org.projectfloodlight.openflow.types.MacAddress")
+	(string-id "org.projectfloodlight.openflow.types.OFPort")
 ))
 
 (define (add-candidate2.2 mac bugl candi)
@@ -253,70 +238,74 @@
 			(length first-line-candidates) " + " 
 			(length second-line-candidates) " candidates *********************\n"))
 
-
+		(machine-prepare-recursion mac)
 
 		(or 
 			(ormap (lambda (l) 
+					(++ second-counter)
 					(display "\nChecking candidate: \n")
 					(pretty-print l)
-					(define prog-sketch (replace-stat ast l bugl))
-					(define t0 (std:current-inexact-milliseconds))
-					(monitor-reason "spec" 
-						(if (not (monitor-reason "pre check" (pre-check prog-sketch))) #f
-							(begin
-							(define t1 (std:current-inexact-milliseconds))
-							(display (~a "pre check took " (- t1 t0) " milliseconds\n"))
-							(define ret (sat-spec? (location-selector bugl) mac (car (ast->instruction l #f #f)) sol-bad sol-good))
-							(define t2 (std:current-inexact-milliseconds))
-							(display (~a "spec check took " (- t2 t1) " milliseconds\n"))
-							ret))))
-
-;					(program-sketch->constraint prog-sketch spec l)))
+					(display (~a "Checked " second-counter " patches\n"))
+					(eprintf (~a "Checked " second-counter " patches\n"))
+					(timer-on)
+					(define ret (monitor-reason "spec" 
+						(sat-spec? (location-selector bugl) mac (car (ast->instruction l #f #f)) sol-bad sol-good)))
+					(display (~a "spec check took " (timer-check) " milliseconds\n"))
+					ret)
 				one-line-candidates)
 
 			(ormap (lambda (l2)
 				(define spec-step1 #f)
-				(ormap (lambda (l1)
-					(++ second-counter)
-					(display "\nChecking candidate: \n")
-					(pretty-print l2)
-					(pretty-print l1)
-					(display (~a "Checked " second-counter " patches\n"))
-					(eprintf (~a "Checked " second-counter " patches\n"))
-					(define t0 (std:current-inexact-milliseconds))
-					(define prog-sketch (replace-stat ast l1 bugl))
-					(define prog-sketch2 (define-bridge-var 
-						(insert-stat prog-sketch l2 bugl) 
-						l2
-						(get-invoke-ret-type l2 mac) bugl))
-					(if (not (monitor-reason "pre check" (pre-check prog-sketch2))) #f
-						(std:with-handlers ([std:exn:fail? (lambda (x) 
-								(display "Execption!\n") 
-								(clear-asserts!) 
-								#f)])
-						(begin
-						;renew machine
-						(define mac.tmp (build-virtual-table (ast->machine prog-sketch2)))
-						(define func-new (find-new-func mac.tmp (location-class bugl) (location-func bugl)))
-						(define mac (std:struct-copy machine mac.tmp [fc func-new]))
-						;timer
-						(define t1 (std:current-inexact-milliseconds))
-						(display (~a "pre check took " (- t1 t0) " milliseconds\n"))
-						;spec check
-						(set! spec-step1 (if spec-step1 spec-step1 
-							(step-spec-0 (location-selector bugl) mac (car (ast->instruction l2 #f #f)) sol-bad sol-good)))
-						(define ret (monitor-reason "spec" (sat-spec-continue? spec-step1 mac (car (ast->instruction l1 #f #f)) sol-bad sol-good)))
-						;timer
-						(define t2 (std:current-inexact-milliseconds))
-						(display (~a "spec check took " (- t2 t1) " milliseconds\n"))
-						;return
-						ret))))
-					first-line-candidates))
+				(define bridge-var-type (get-invoke-ret-type l2 mac))
+				(if (contains-target-quick? (ast->sid l2) (location->sid bugl)) #f
+					(ormap (lambda (l1)
+						(++ second-counter)
+						(display "\nChecking candidate: \n")
+						(pretty-print l2)
+						(pretty-print l1)
+						(display (~a "Checked " second-counter " patches\n"))
+						(eprintf (~a "Checked " second-counter " patches\n"))
+						(timer-on)
+
+	;					(define prog-sketch (replace-stat ast l1 bugl))
+	;					(define prog-sketch2 (define-bridge-var 
+	;						(insert-stat prog-sketch l2 bugl) 
+	;						l2
+	;						(get-invoke-ret-type l2 mac) bugl))
+						(define (pre-check)
+							(inject-type! (list (cons bridge-var-name bridge-var-type)))
+							(inst-type-check? mac (location-class bugl) (location-func bugl) (car (ast->instruction l1 #f #f))))
+
+						(if (not (monitor-reason "pre check" (pre-check))) #f
+							(std:with-handlers ([std:exn:fail? (lambda (x) 
+									(pretty-print x)
+									(display "Execption!\n") 
+									(clear-asserts!) 
+									#f)])
+							(begin
+							;renew machine
+	;						(define mac.tmp (build-virtual-table (ast->machine prog-sketch2)))
+	;						(define func-new (find-new-func mac.tmp (location-class bugl) (location-func bugl)))
+	;						(define mac (std:struct-copy machine mac.tmp [fc func-new]))
+							;timer
+							(display (~a "pre check took " (timer-reset) " milliseconds\n"))
+							;spec check
+							(set! spec-step1 (if spec-step1 spec-step1 
+								(step-spec-0 (location-selector bugl) mac (car (ast->instruction l2 #f #f)) sol-bad sol-good)))
+							(display "~~ first step ~~\n")
+							(define ret (monitor-reason "spec" (sat-spec-continue? spec-step1 mac (car (ast->instruction l1 #f #f)) sol-bad sol-good)))
+							;timer
+							(display (~a "spec check took " (timer-check) " milliseconds\n"))
+							;return
+							ret))))
+						first-line-candidates)))
 				second-line-candidates))
 
 )))
 
 (define spec-counter 0)
+
+#|
 
 (define (pre-check prog-sketch)
 	(std:with-handlers ([std:exn:fail? (lambda (x) 
@@ -358,6 +347,7 @@
 				(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
 				(pretty-print prog-sketch)) #f)
 			constraint)))))
+|#
 
 
 (define sketch-line-1 (stat #f))

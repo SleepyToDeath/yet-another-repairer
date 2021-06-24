@@ -39,7 +39,7 @@
 (define buggy (p:transform-all (program
 	(class-list cls-list))))
 
-(pretty-print buggy)
+;(pretty-print buggy)
 
 (define input1 (list (cons (bv 100 bv-type) "long")))
 (define output1 (list (cons var-ret-name 1)))
@@ -47,16 +47,17 @@
 (define input2 (list (cons (bv 200 bv-type) "long")))
 (define output2 (list (cons var-ret-name 0)))
 
-(define mac (ast->machine buggy))
-(pretty-print string-id-map)
+(define mac1 (ast->machine buggy))
+(define mac-in1 (assign-input mac1 input1))
+(define mac-fin1 (compute mac-in1))
+(define result1 (compare-output mac-fin1 output1))
+result1
 
-(define mac-in (assign-input mac input1))
-
-(define mac-fin (compute mac-in))
-
-(define result (compare-output mac-fin output1))
-
-result
+(define mac2 (ast->machine buggy))
+(define mac-in2 (assign-input mac2 input2))
+(define mac-fin2 (compute mac-in2))
+(define result2 (compare-output mac-fin2 output2))
+result2
 
 (pretty-print string-id-table)
 (display "===============================================================================================================\n")
@@ -64,7 +65,7 @@ result
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1)) null));(list (cons input2 output2))))
+(define bugl (localize-bug buggy (list (cons input1 output1)) (list (cons input2 output2))))
 (pretty-print bugl)
 
 ;(match-define (cons soft hard) (ast->relation buggy))
