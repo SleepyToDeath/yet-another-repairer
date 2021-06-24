@@ -46,7 +46,7 @@ def gen_bench_file(src_path: str, out_path: str, branch_num: int) -> None:
 
 def main(args):
     if not len(args) == 4:
-        print('Usage: python3 gen-bench.py <src_path> <out_path> <branch_num>')
+        print('Usage: python3 gen-bench-cases.py <src_path> <out_path> <branch_num>')
         sys.exit(1)
     src_path = args[1]
     out_path = args[2]
