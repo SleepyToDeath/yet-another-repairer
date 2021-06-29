@@ -142,7 +142,6 @@ public class FirewallRule /* implements Comparable<FirewallRule> */ {
     //public IpProtocol nw_proto;
     //public TransportPort tp_src;
     //public TransportPort tp_dst;
-
     /* Specify whether or not a match field is relevant.
      * true = anything goes; don't care what it is
      * false = field must match (w or w/o mask depending on field)
@@ -237,6 +236,7 @@ public class FirewallRule /* implements Comparable<FirewallRule> */ {
      * @return boolean: true if a match is found
      **/
     public boolean isSameAs(FirewallRule r) {
+		/*
         if (this.action != r.action
                 || this.any_dl_type != r.any_dl_type
                 //|| (this.any_dl_type == false && !this.dl_type.equals(r.dl_type))
@@ -263,6 +263,26 @@ public class FirewallRule /* implements Comparable<FirewallRule> */ {
             return false;
         }
         return true;
+		*/
+        if (
+                (this.any_dl_src == false && !this.dl_src.equals(r.dl_src))
+//				|| this.action != r.action
+//				|| this.any_dl_type != r.any_dl_type
+//				|| this.any_tp_src != r.any_tp_src
+//				|| this.any_tp_dst != r.any_tp_dst
+ //               || this.any_dpid != r.any_dpid
+  //              || this.any_in_port != r.any_in_port
+   //             || this.any_nw_src != r.any_nw_src
+//                || this.any_dl_src != r.any_dl_src
+//                || this.any_nw_proto != r.any_nw_proto
+//                || this.any_nw_dst != r.any_nw_dst
+//                || this.any_dl_dst != r.any_dl_dst
+//                || (this.any_dl_dst == false && this.dl_dst != r.dl_dst)
+		){
+            return false;
+        }
+        return true;
+
     }
 
     /*

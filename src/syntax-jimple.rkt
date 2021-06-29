@@ -165,22 +165,3 @@
 ;=====================================================
 
 
-
-;====================== Helpers ======================
-(define (println++ title any)
-	(begin
-		(display title)
-		(println any)))
-
-(define (println any)
-	(begin
-		(print any)
-		(display "\n")))
-
-(define (ast-print ast)
-	(match ast
-		[(stats rhs) (ast-print rhs)]
-		[(stat-list sl)
-			(map (lambda (st) (print st) #t) sl)]))
-;=====================================================
-

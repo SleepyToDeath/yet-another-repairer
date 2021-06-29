@@ -100,7 +100,7 @@ stack-empty)
 	(std:struct-copy memory mem 
 		[stack 
 			(static-stack 
-				(cons (static-scope-empty null) scs)
+				(cons (if (is-invalid-scs? scs) (static-scope-invalid null) (static-scope-empty null)) scs)
 				(cons null updates))]))
 
 (define (stack-static-pop mem)
@@ -137,6 +137,7 @@ stack-empty)
 (define (stack-static-select candidates summary?)
 	(define template (cdar candidates))
 	;keys are static, should be consistant even in invalid states
+;	(println candidates)
 	(define scs-invalid
 		(map (lambda (sc) 
 			(std:struct-copy static-scope 
@@ -144,26 +145,32 @@ stack-empty)
 				[keys (static-scope-keys sc)])) 
 			(static-stack-scopes template)))
 	(define f-select (maybe-select scs-invalid is-invalid-scs?))
-	(define scs-new (f-select (map (lambda (cnd.st) (cons (car cnd.st) (static-stack-scopes (cdr cnd.st)))) candidates) #f))
+	(define scs-new (f-select (map (lambda (cnd.st) (cons (car cnd.st) (static-stack-scopes (cdr cnd.st)))) candidates) summary?))
 	(define all-updates (map static-stack-updates (map cdr candidates)))
 	(define empty-updates (map (lambda (x) null) (car all-updates)))
 	(define union-updates (foldl (lambda (updates union) (map append updates union)) empty-updates all-updates))
 	(define updates-new (map remove-duplicates union-updates))
+;	(print-fml scs-new)
 	(static-stack scs-new updates-new))
 
 ;do nothing; generate real content at reset
 (define (stack-static-new)
 	static-stack-empty)
 
-(define (stack-static-summary st)
+(define (stack-static-summary st id)
 	(andmap+ (lambda (sc updates)
-		(pending-always-right! (andmap+
-			(lambda (key)
+		(pending-always-right!
+			(andmap+ (lambda (key)
 				(if (member (car key) updates) #t
 					(equal?
 						(list-ref (static-scope-array sc) (car key))
 						(list-ref (static-scope-array-out sc) (car key)))))
-			(static-scope-keys sc)))
+				(static-scope-keys sc)))
+;			(defer-eval current-spec-id "stack preserve " 
+;				(list id key ret
+;					(list-ref (static-scope-array sc) (car key))
+;					(list-ref (static-scope-array-out sc) (car key))
+;				))
 		(andmap+ (lambda (key)
 			(equal?
 				(list-ref (static-scope-array sc) key)
@@ -187,7 +194,7 @@ stack-empty)
 		(std:build-list scope-size (lambda (x) (value-gen default-type)))
 		keys))
 
-(define is-invalid-scs? (lambda (scs) (is-invalid? (last (static-scope-array (car scs))))))
+(define is-invalid-scs? (lambda (scs) (and (not (null? scs)) (is-invalid? (last (static-scope-array (last scs)))))))
 
 (define (static-scope-invalid keys)
 	(define invalid-array (arr-gen keys invalid-state))

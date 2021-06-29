@@ -63,82 +63,78 @@ public class java.lang.Object
 }
 ")))
 
+(define class-B (p:build-ast-file (p:parse-to-stx
+"
+public class B extends java.lang.Object {
+	public static void <init>()
+	{
+		B r0;
+		r0 := @this: B;
+        specialinvoke r0.<java.lang.Object: void <init>()>();
+		return;
+	}
+
+	public boolean funcB()
+	{
+		return 1;
+	}
+}
+")))
+
 (define class-A (p:build-ast-file (p:parse-to-stx
 "
 public class A extends java.lang.Object {
-	public int n;
-	public static void <init>(int)
+	public static void <init>()
 	{
 		A r0;
 		r0 := @this: A;
         specialinvoke r0.<java.lang.Object: void <init>()>();
-		return r0;
+		return;
 	}
 
-	public static boolean add()
+	public boolean funcA2()
 	{
-		int r0, r1, $z0, $z1, r3;
-		r0 = 1;
-		r1 = 1;
+		return 1;
+	}
 
-        if r0 != r1 goto label1;
+	public boolean funcA(A)
+	{
+        A r0;
+        boolean $z1;
 
-        $z0 = 1; 
+        r0 := @this: A;
 
-        if $z0 != 0 goto label2;
+        if r0 != null goto label1;
 
-        $z1 = 1;
-
-        if $z1 != 0 goto label2;
+		$z1 = virtualinvoke r0.<A: boolean funcA2()>();
 
      label1:
-        return 0;
-
-     label2:
-        return 0;
+        return 1;
 	}
+
+
 }
 ")))
 
-(define class-B (p:build-ast-file (p:parse-to-stx
+(define class-Main (p:build-ast-file (p:parse-to-stx
 "
-public class Test
+public class Test extends java.lang.Object
 {
-	public static int main(int, int, int)
+	public static int main(long)
 	{
-		boolean b;
-        b = staticinvoke <A: boolean add()>();
-		return 0;
-	}
-}
-")))
-
-(define class-0 (p:build-ast-file (p:parse-to-stx
-"
-public class Test
-{
-	public static int main(int, int)
-	{
-		int r1, r2, r3;
-		r1 := @parameter0: int;
-		r2 := @parameter1: int;
-		r3 = r1;
-        return r3;
+		A a;
+		a = new A;
+        specialinvoke a.<A: void <init>()>();
+		virtualinvoke a.<A: boolean funcA(A)>(a);
+		return 1;
 	}
 }
 ")))
 
 (define buggy (program
-	(class-list (list class-obj class-A class-B))))
+	(class-list (list class-obj class-A class-B class-Main))))
 
-;(define buggy (program
-;	(class-list (list class-B))))
-
-;(define buggy (program (class-list (list class-0))))
-
-(pretty-print buggy)
-
-(define input1 (list (cons 6 "int") (cons 5 "int") (cons 4 "int")))
+(define input1 (list (cons (bv 200 bv-type) "long")))
 (define output1 (list (cons var-ret-name 1)))
 
 ;(define input1 (list (cons 1 "int") (cons 2 "int")))
@@ -166,7 +162,7 @@ result
 (output-smt #t)
 (pretty-print (solver-features (current-solver)))
 (pretty-print (solver-options (current-solver)))
-(define bugl (localize-bug buggy (list (cons input1 output1)) null))
+(define bugl (localize-bug buggy null (list (cons input1 output1))))
 (pretty-print bugl)
 
 

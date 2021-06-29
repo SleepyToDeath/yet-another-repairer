@@ -252,6 +252,7 @@
 		(lambda (m) (equal? (imap-sym-id m) invalid-id)))
 
 	(define (imap-select candidates summary?)
+;		(println candidates)
 		(imap-sym-wrapper
 			(map
 				(lambda (type)
@@ -303,7 +304,9 @@
 					(define ms (mem-get-typed mem-id type))
 					(define fml-true (andmap+ (smart-preserve ms) (id2keys mem-id)))
 					(define fml-deferred (imap-sym-fml-deferred ms))
-					(equal? fml-deferred fml-true))
+					(define ret (equal? fml-deferred fml-true))
+;					(defer-eval current-spec-id "update " (list mem-id (id2keys mem-id) ret))
+					ret)
 				memory-id-list))
 
 			(display "-------------------------\n")
@@ -312,15 +315,14 @@
 				(map (lambda (mem-id)
 					(define ms (mem-get-typed mem-id type))
 					(andmap+ (lambda (key) 
-						(define ret
-							(if (contain-key? mem-id key) #t
-								((smart-preserve ms) key)))
-						(defer-eval current-spec-id "preserve " (list mem-id key ret))
-						ret)
+						(if (contain-key? mem-id key) #t
+							((smart-preserve ms) key)))
 					all-typed-keys))
 				memory-id-list))
 
 			(display "++++++++++++++++++++++++\n")
+
+			(display (~a (length fml-maybe-wrong) " maybe wrong formulae + " (length fml-always-right) " always right formulae \n"))
 
 			(append fml-maybe-wrong fml-always-right))
 		all-types-ordered)))

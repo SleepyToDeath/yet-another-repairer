@@ -187,11 +187,11 @@
 		(define fml-1 
 			(imap-summary (memory-heap m)))
 		(define fml-2
-			(stack-summary (memory-stack m)))
+			(stack-summary (memory-stack m) (memory-id m)))
 		(and+ fml-1 fml-2))))
 
 (define (memory-sym-ssummary m)
-	(stack-summary (memory-stack m)))
+	(stack-summary (memory-stack m) (memory-id m)))
 
 ;candidates: list of (condition X memory)
 (define (memory-select candidates summary?)
@@ -215,8 +215,8 @@
 
 ;generate real formulae for preserved and updated states
 (define (memory-gen-binding)
-	(define f1 (stack-gen-binding))
+	(define l1 (stack-gen-binding))
 	(define l2 (imap-gen-binding))
-	(cons f1 l2))
+	(cons l1 l2))
 
 ;====================================================================

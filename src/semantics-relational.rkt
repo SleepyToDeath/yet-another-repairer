@@ -122,21 +122,11 @@
 			(match itree
 				[(invoke-tree root cnd subs)
 					(begin
-;					(display "v---------fml-------------v\n")
-;					(match root
-;						[(function-formula func lids _ _ _ _ _ class)
-;							(pretty-print (list (function-name func) class))])
-;					(print-fml (function-formula-fmls root))
-;					(test-assert! (function-formula-fmls root))
 					(define ret1 
 						(function-formula-fmls root))
 					(define ret2
 						(apply append (map extract-fml subs)))
 					(define ret (append ret2 (list ret1)))
-;					(match root
-;						[(function-formula func lids _ _ _ _ _ class)
-;							(pretty-print (list (function-name func) class))])
-;					(display "^---------fml-------------^\n")
 					ret)]))
 
 		(define fml-code-1 (memory-sym-summary mem-all-done #f))
@@ -250,6 +240,7 @@
 
 ;function-formula -> function-formula (with pmark)
 (define (alloc-lstate func-fml)
+	(display "allocating new lstates\n")
 	(std:struct-copy function-formula func-fml 
 		[ret-lstate (lstate-new)]
 		[lstates (map (lambda (any) (lstate-new)) (function-prog (function-formula-func func-fml)))]))
@@ -383,19 +374,19 @@
 		(define id (get-lid func-fml pc))
 		(define in-target? (and (not summary?) (member (function-formula-sid func-fml) target-sids)))
 		(define trigger-summary? in-target?) ;updated later
-;		(imap-set-selector id)
 
 		(set! line-counter (+ line-counter 1))
 		(add-valid-selector! id)
 
 ;		(display (~a "Lines of code: " line-counter "\n"))
-;		(defer-eval spec-id "instruction: " inst)
-;		(defer-eval spec-id "path mark " mark)
-;		(println inst)
-;		(pretty-print mark)
-;		(pretty-print id)
-;		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
-;		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
+		(defer-eval spec-id "instruction: " inst)
+		(defer-eval spec-id "path mark " mark)
+		(defer-eval spec-id "id " id)
+		(println inst)
+		(pretty-print mark)
+		(pretty-print id)
+		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
+		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
 ;		(pretty-print (asserts))
 
 		(if (not in-target?) (assert id) #f)
@@ -416,18 +407,21 @@
 		(define mac-eval-ctxt (std:struct-copy machine mac [mem mem-0][fc func]))
 
 ;		(display (~a "mem-id: " (memory-id mem-0) "\n"))
-;		(display "\n")
+		(defer-eval current-spec-id "mem-id " (memory-id mem-0))
+		(display "\n")
 
 
 ;	(pretty-print mem-0)
 
+		(define (label-pc label)
+			(imap-get (function-lmap func) label default-type))
 
 		(define (next-mark) 
 			(get-pmark func-fml (+ 1 pc)))
 
+
 		(define (label-mark label) 
-			(define new-pc (imap-get (function-lmap func) label default-type))
-			(get-pmark func-fml new-pc))
+			(get-pmark func-fml (label-pc label)))
 
 		(define (select-fml? fml)
 			(if in-target?
@@ -456,7 +450,7 @@
 			(if summary? #t
 				(letrec ([fml-t (select-fml? (equal? cnd-t (label-mark label)))]
 						 [fml-f (select-fml? (equal? cnd-f (next-mark)))]
-						 [fml-cnd (and fml-t fml-f)]
+						 [fml-cnd (if (equal? (+ 1 pc) (label-pc label)) #t (and fml-t fml-f))]
 						 [fml-br (or (label-mark label) (next-mark))]
 						 [fml-path (implies mark (and fml-cnd fml-br fml-op))])
 						fml-path)))
@@ -466,7 +460,7 @@
 			(if summary? #t
 				(begin
 				(define fml-cnds (andmap+ 
-					(lambda (cnd.pc) (equal? (car cnd.pc) (get-pmark func-fml (cdr cnd.pc))))
+					(lambda (cnd.pc) (implies (car cnd.pc) (get-pmark func-fml (cdr cnd.pc))))
 					cases))
 				(define fml-br (ormap 
 					(lambda (cnd.pc) (get-pmark func-fml (cdr cnd.pc)))
@@ -687,23 +681,29 @@
 					(update-mem-only (mfunc mem-0 obj-addr ret args-v)))
 
 					(begin
+;					(display "virtaul call #1\n")
 					(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
 					(define vid (vfunc-id-alt mac cls-name func-name arg-types))
 					(define funcs-invoked (map alloc-lstate 
 						(filter (lambda (f) (and (not (is-interface-func? (function-formula-func f))) (equal? (function-formula-vid f) vid))) 
 							(all-vfunctions mac))))
+;					(display "virtaul call #2\n")
 					(define fid-class-name (vfield-id mac cls-name field-name-class))
 					(define classname-true (memory-fread mem--1 fid-class-name obj-addr name-type))
+;					(display "virtaul call #3\n")
 					(define true-func-invoked-sid (sfunc-id-pure classname-true func-name arg-types))
 
+;					(display "virtaul call #4\n")
 					;push an extra scope to avoid overwriting "this" of the current scope
 					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0 addr-type)))
 					(define fml-this (memory-sym-summary mem-this summary?))
+;					(display "virtaul call #5\n")
 
 					(define (invoke-candidate fcan)
 						(begin
 						;[?] can different styles of callee be mixed in one calling instruction? I think yes, but note for potential bugs
 						(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target-alt? mac (function-formula-sid fcan) target-sids)))))
+;						(display "virtaul call #6\n")
 
 						(match-define (cons func-fml-in fml-in) (invoke-setup fcan mem-this args))
 						;an invoke tree without condition
@@ -835,8 +835,11 @@
 					(define lmap (function-lmap func))
 					(define cnd (car (expr-eval condition mac-eval-ctxt)))
 ;					(defer-eval spec-id "condition: " cnd)
+					(defer-eval current-spec-id "cnd real & cnd expected: " (list cnd (not (next-mark))))
 					(define fml-update #t)
 					(define fml-new (iassert-pc-branch (select-fml? fml-update) cnd (not cnd) label))
+					(pretty-print fml-new)
+					(defer-eval current-spec-id "jmp encoding: " fml-new)
 					(define pc-br (imap-get (function-lmap func) label default-type))
 					(if summary? #f (add-spec id spec-id mem-in mem-in inst inst-jmp? (not (next-mark))))
 					(if summary? 
@@ -857,9 +860,6 @@
 (define (clear-specs!)
 	(set! spec-map (imap-empty default-type)))
 (register-reset! clear-specs! #t)
-
-;(define (eval-specs! sol)
-;	(set! spec-map (evaluate spec-map sol)))
 
 (define (add-spec id0 spec-id mem-in mem-out inst-ori inst-type take-branch?)
 	(define id (~a id0))
@@ -904,16 +904,16 @@
 			(match spec [(local-spec spec-id mem-in mem-out inst-ori inst-type take-branch?)
 				(begin
 				(define mac-spec (std:struct-copy machine mac [mem mem-in]))
-;				(pretty-print (list inst-ori inst-type take-branch?))
+				(pretty-print (list inst-ori inst-type take-branch?))
 ;				(define-symbolic* x integer?)
 ;				(pretty-print (memory-hread mem-in x integer?))
 				(match inst 
 					[(inst-jmp condition label) 
 						(begin
 						(define c (car (expr-eval condition mac-spec)))
-;						(pretty-print condition)
-;						(pretty-print (if (iexpr-binary? condition) (expr-eval (iexpr-binary-expr1 condition) mac-spec) #f))
-;						(pretty-print c)
+						(pretty-print condition)
+						(pretty-print (if (iexpr-binary? condition) (expr-eval (iexpr-binary-expr1 condition) mac-spec) #f))
+						(pretty-print c)
 						(equal? c take-branch?))]
 					[(inst-ass vl vr)  
 						(if (not (same-vl? inst-ori inst)) #f

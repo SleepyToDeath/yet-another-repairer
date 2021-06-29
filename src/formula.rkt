@@ -132,6 +132,13 @@
 (define (and+ a b)
 	(and a b))
 
+(define (count-truth lst)
+	(define weight 1)
+	(apply + (map (lambda (fml) 
+		(set! weight (+ weight 1)) 
+		(if fml (+ 1000 weight) 0)) 
+	lst)))
+
 
 (define spec-id-good 1)
 (define spec-id-bad 0)
@@ -148,6 +155,18 @@
 
 (define (maybe-select invalid-state is-invalid-state?)
 	(lambda (candidates summary?)
+		(foldl 
+			(lambda (cnd.v ret)
+				(if (and 
+						(car cnd.v) 
+						(cdr cnd.v)
+						(not (is-invalid-state? (cdr cnd.v))))
+					(cdr cnd.v)
+					ret))
+			invalid-state
+			candidates)))
+
+#|
 		(define ret.maybe (ormap
 			(lambda (cnd.v)
 				(if (and 
@@ -158,7 +177,7 @@
 					#f))
 			candidates))
 		(if ret.maybe ret.maybe invalid-state)))
-;		(if (or summary? ret.maybe) ret.maybe invalid-state)))
+|#
 
 ;============================= Timer ========================================
 (define last-time 0)
@@ -178,6 +197,10 @@
 
 (define eval-pending (list null null))
 
+;(define (defer-eval id msg value)
+;	#f)
+;(define (defer-eval-f id msg f)
+;	#f)
 (define (defer-eval id msg value)
 	(defer-eval-f id msg (lambda (sol) (evaluate value sol))))
 
@@ -254,3 +277,7 @@
 
 (define-syntax-rule (++ name)
 	(set! name (+ name 1)))
+
+(define (println sth)
+	(print sth)
+	(display "\n"))

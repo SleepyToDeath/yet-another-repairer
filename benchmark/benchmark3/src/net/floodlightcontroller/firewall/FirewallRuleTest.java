@@ -12,6 +12,7 @@ public class FirewallRuleTest {
         FirewallRule rule2 = new FirewallRule();
         rule2.dl_dst = MacAddress.of(input);
         rule2.any_dl_dst = false;
-        return rule1.isSameAs(rule2) ? 1 : 0;
+        rule1.isSameAs(rule2);
+		return 0;
     }
 }

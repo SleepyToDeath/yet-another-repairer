@@ -73,7 +73,7 @@
 	(define funcs (remove func-name-init (remove-duplicates (map function-name (all-functions mac)))))
 	(define consts (list 1))
 ;	(define ops (list bvand bvor bvxor op-mod op-cmp equal? op-neq op-gt op-ge op-lt op-le bvlshr op-add op-sub op-mul op-div))
-	(define ops (list op-add op-sub))
+	(define ops (list equal? op-neq))
 	; don't change jump target
 	(define labels 
 		(match (list-ref (function-prog func) line-mac)

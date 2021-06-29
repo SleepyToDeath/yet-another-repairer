@@ -59,14 +59,20 @@
 	(display (~a "target funcs: " funcs "\n"))
 	(display "visited: \n") 
 	(map print-location visited-locations)
+	(pretty-print global-resets)
 	(do-all-resets! #t)
 
 	(define (solve-localize spec-id spec bug-num)
+		(pretty-print task-resets)
 		(do-all-resets! #f)
 		(assert-visited-locations)
 
+		(timer-on)
 		(set-spec-id! spec-id)
 		(define hard (apply append (map (lambda (io) (encoder (car io) (cdr io) spec-id funcs)) spec)))
+		(define t1 (timer-check))
+		(display (~a "\n Encoded. Took " t1 " ms \n"))
+		(eprintf (~a "\n Encoded. Took " t1 " ms \n"))
 
 		(finalize-selectors!)
 
@@ -76,13 +82,18 @@
 		(display "\n Solving: \n")
 		(eprintf "\n Solving: \n")
 		(timer-on)
+;		(match (core (∃-debug (append hard (list bug-sum) (asserts)) #:muc #t)) [l (map print-fml l)])
 		(define sol (solve (assert (and (andmap+ identity hard) bug-sum))))
-		(display (~a "\n Solved. Took " (timer-check) " ms \n"))
-		(eprintf (~a "\n Solved. Took " (timer-check) " ms \n"))
+;		(define sol (optimize 	#:maximize (list (count-truth hard))
+;								#:guarantee (assert bug-sum)))
+		(define t2 (timer-check))
+		(display (~a "\n Solved. Took " t2 " ms \n"))
+		(eprintf (~a "\n Solved. Took " t2 " ms \n"))
 
 		sol)
 
-	(define sol-bad (solve-localize spec-id-bad spec-bad 1))
+;	(define sol-bad (solve-localize spec-id-bad spec-bad 1))
+	(define sol-bad (solve (assert #t)))
 	(define bad-selectors valid-selectors)
 	(define sol-good (solve-localize spec-id-good spec-good 0))
 
@@ -105,21 +116,18 @@
 				l
 				#f))
 			locations))
-		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
-		(print-location bugl)
-		(add-visited-location bugl)
-;		(eval-specs! sol-bad)
-		
-		(DEBUG-DO (pretty-print string-id-table))
-		(DEBUG-DO (std:error "Halt!"))
 
 		(pretty-print string-id-table)
 
-;		(display "\nbad deferred values:\n")
-;		(print-pending-eval spec-id-bad sol-bad)
-;		(display "good deferred values:\n")
-;		(print-pending-eval spec-id-good sol-good)
-;		(std:error "Halt!")
+		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
+		(print-location bugl)
+		(add-visited-location bugl)
+
+		(display "\nbad deferred values:\n")
+		(print-pending-eval spec-id-bad sol-bad)
+		(display "good deferred values:\n")
+		(print-pending-eval spec-id-good sol-good)
+
 
 		(define maybe-l (match (location-inst bugl)
 			[(inst-static-call ret cls-name func-name arg-types args) 

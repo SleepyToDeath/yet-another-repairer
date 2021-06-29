@@ -1,6 +1,7 @@
 #lang rosette/safe
 
 (require (prefix-in std: racket/base))
+(require racket/format)
 (require racket/pretty)
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
@@ -41,16 +42,16 @@
 (define input2 (list (cons 100 "int")))
 (define output2 (list (cons var-ret-name 1)))
 
-(define mac (ast->machine buggy))
-(pretty-print string-id-map)
+(define (verify-example input output)
+	(define mac (ast->machine buggy))
+	(define mac-in (assign-input mac input))
+	(define mac-fin (compute mac-in))
+	(define result (compare-output mac-fin output))
+	(pretty-print result)
+	(eprintf (~a result)))
 
-(define mac-in (assign-input mac input1))
-
-(define mac-fin (compute mac-in))
-
-(define result (compare-output mac-fin output1))
-
-result
+(verify-example input1 output1)
+(verify-example input2 output2)
 
 (pretty-print string-id-table)
 (display "===============================================================================================================\n")
