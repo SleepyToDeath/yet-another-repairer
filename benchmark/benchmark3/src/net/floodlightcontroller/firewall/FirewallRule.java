@@ -264,8 +264,8 @@ public class FirewallRule /* implements Comparable<FirewallRule> */ {
         }
         return true;
 		*/
-        if (
-                (this.any_dl_src == false && !this.dl_src.equals(r.dl_src))
+//        if (
+//                (this.any_dl_src == false && !this.dl_src.equals(r.dl_src))
 //				|| this.action != r.action
 //				|| this.any_dl_type != r.any_dl_type
 //				|| this.any_tp_src != r.any_tp_src
@@ -278,9 +278,9 @@ public class FirewallRule /* implements Comparable<FirewallRule> */ {
 //                || this.any_nw_dst != r.any_nw_dst
 //                || this.any_dl_dst != r.any_dl_dst
 //                || (this.any_dl_dst == false && this.dl_dst != r.dl_dst)
-		){
-            return false;
-        }
+//		){
+ //           return false;
+  //      }
         return true;
 
     }
