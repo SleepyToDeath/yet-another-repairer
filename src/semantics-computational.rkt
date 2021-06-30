@@ -229,7 +229,7 @@
 		[(stat-special-call ret obj cls-name func arg-types args)
 			;[!] it is assumed that special calls do not have return value
 			(cons 
-				(inst-special-call var-ret-name (string-id (variable-name obj)) 
+				(inst-special-call var-void-ret (string-id (variable-name obj)) 
 					(string-id (type-name-name cls-name)) (string-id (func-name-name func))
 					(map (lambda (ast) (string-id (type-name-name ast))) (type-list-tl (types-rhs arg-types)))
 					(map ast->expression (argument-caller-list-al (arguments-caller-rhs args))))

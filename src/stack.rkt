@@ -66,7 +66,7 @@ stack-empty)
 				(std:list-set scs lvl 
 					(std:struct-copy static-scope (list-ref scs lvl) [array (std:list-set (static-scope-array (list-ref scs lvl)) name value)])))
 			(std:list-set updates lvl
-				(cons name (list-ref updates lvl))))]))
+				(remove-duplicates (cons name (list-ref updates lvl)))))]))
 
 (define (stack-static-decl mem name type)
 	(define st (memory-stack mem))
@@ -74,25 +74,22 @@ stack-empty)
 	(define updates (static-stack-updates st))
 	(define sc (car scs))
 	(define keys (static-scope-keys sc))
+	(define keys.new (std:sort (remove-duplicates (cons (cons name type) keys)) (lambda (x y) (< (car x) (car y)))))
 	(define array (static-scope-array sc))
 	(define array-out (static-scope-array-out sc))
 	(define array.new (if (member (cons name type) keys) array (std:list-set array name (nullptr type))))
 	(define array-out.new (if (member (cons name type) keys) array-out (std:list-set array-out name 
 		((lambda () (define-symbolic* vs type) vs)))))
-;	(define ret (if (is-invalid? (list-ref (static-scope-array (car scs)) name))
-	(define ret (if (is-invalid-scs? scs)
-		mem
-		(std:struct-copy memory mem 
-			[stack 
-				(static-stack 
-					(cons 
-						(std:struct-copy static-scope sc 
-							[array array.new] 
-							[array-out array-out.new] 
-							[keys (std:sort (remove-duplicates (cons (cons name type) keys)) (lambda (x y) (< (car x) (car y))))])
-						(cdr scs))
-					updates)])))
-	ret)
+	(std:struct-copy memory mem 
+		[stack 
+			(static-stack 
+				(cons 
+					(std:struct-copy static-scope sc 
+						[array (if (is-invalid-scs? scs) array array.new)] 
+						[array-out (if (is-invalid-scs? scs) array-out array-out.new)] 
+						[keys keys.new]) ;static part, always successful
+					(cdr scs))
+				updates)]))
 	
 (define (stack-static-push mem)
 	(define scs (static-stack-scopes (memory-stack mem)))
@@ -138,6 +135,8 @@ stack-empty)
 	(define template (cdar candidates))
 	;keys are static, should be consistant even in invalid states
 ;	(println candidates)
+;	(display " ######################### Select Candidates ######################### \n")
+;	(map (lambda (cnd.st) (pretty-print (car cnd.st)) (print-stack (cdr cnd.st))) candidates)
 	(define scs-invalid
 		(map (lambda (sc) 
 			(std:struct-copy static-scope 
@@ -151,6 +150,9 @@ stack-empty)
 	(define union-updates (foldl (lambda (updates union) (map append updates union)) empty-updates all-updates))
 	(define updates-new (map remove-duplicates union-updates))
 ;	(print-fml scs-new)
+;	(display "Asserts:\n")
+;	(pretty-print (asserts))
+;	(display " ######################### Select Result ######################### \n")
 	(static-stack scs-new updates-new))
 
 ;do nothing; generate real content at reset
@@ -207,6 +209,20 @@ stack-empty)
 (define static-stack-empty
 	(static-stack null null))
 
+
+(define (print-stack st)
+	(display "|||| Stack Begin ||||\n")
+	(map (lambda (scope) 
+		(display "--------In--------\n")
+		(map (lambda (key) (pretty-print (cons key (list-ref (static-scope-array scope) (car key))))) 
+			(cons (cons (- scope-size 1) default-type) (static-scope-keys scope)))
+		(display "--------Out-------\n")
+		(map (lambda (key) (pretty-print (cons key (list-ref (static-scope-array-out scope) (car key))))) 
+			(cons (cons (- scope-size 1) default-type) (static-scope-keys scope)))
+		(display "------------------\n"))
+		(static-stack-scopes st))
+	(display " updates: \n")
+	(pretty-print (static-stack-updates st)))
 
 
 ;========================== Interface ===========================

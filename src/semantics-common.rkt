@@ -56,7 +56,7 @@
 
 (define pc-ret -1)
 (define pc-init 0)
-(define var-void-ret (string-id "__NONE__"))
+(define var-void-ret (string-id "__void_return"))
 (define var-ret-name (string-id "__return__"))
 (define var-this-name (string-id "@this"))
 (define func-name-main (string-id "main"))

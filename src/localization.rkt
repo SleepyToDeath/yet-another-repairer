@@ -92,8 +92,8 @@
 
 		sol)
 
-;	(define sol-bad (solve-localize spec-id-bad spec-bad 1))
-	(define sol-bad (solve (assert #t)))
+	(define sol-bad (solve-localize spec-id-bad spec-bad 1))
+;	(define sol-bad (solve (assert #t)))
 	(define bad-selectors valid-selectors)
 	(define sol-good (solve-localize spec-id-good spec-good 0))
 

@@ -236,7 +236,6 @@ public class FirewallRule /* implements Comparable<FirewallRule> */ {
      * @return boolean: true if a match is found
      **/
     public boolean isSameAs(FirewallRule r) {
-		/*
         if (this.action != r.action
                 || this.any_dl_type != r.any_dl_type
                 //|| (this.any_dl_type == false && !this.dl_type.equals(r.dl_type))
@@ -263,7 +262,6 @@ public class FirewallRule /* implements Comparable<FirewallRule> */ {
             return false;
         }
         return true;
-		*/
 //        if (
 //                (this.any_dl_src == false && !this.dl_src.equals(r.dl_src))
 //				|| this.action != r.action
@@ -281,7 +279,7 @@ public class FirewallRule /* implements Comparable<FirewallRule> */ {
 //		){
  //           return false;
   //      }
-        return true;
+//        return true;
 
     }
 

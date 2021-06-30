@@ -387,13 +387,13 @@
 		(pretty-print id)
 		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
 		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
-;		(pretty-print (asserts))
 
 		(if (not in-target?) (assert id) #f)
 
 		(define fml-feasible-path (implies mark (ormap car (get-mem-in-list func-fml pc))))
 		(if (not summary?) (assert fml-feasible-path) #f)
 
+		;[!] assume no unreachable code
 		(define mem-in (memory-select (get-mem-in-list func-fml pc) summary?))
 		(define mem-0 (memory-sym-reset (get-mem-out func-fml pc) mem-in summary?))
 
@@ -507,7 +507,7 @@
 				(foldl 
 					(lambda (var-def mem) (memory-sdecl mem (car var-def) (jtype->mtype (cdr var-def)))) 
 					mem-push
-					(append (function-args func) (function-locals func) (list (cons var-ret-name (function-ret (function-formula-func func-fml-callee))))))))
+					(append (function-args func) (function-locals func) (list (cons var-void-ret default-type) (cons var-ret-name (function-ret (function-formula-func func-fml-callee))))))))
 ;			(display "invoke setup #3\n")
 			(define mem-arg (memory-sym-commit
 				(foldl 
