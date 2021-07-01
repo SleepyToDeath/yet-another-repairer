@@ -153,7 +153,7 @@ stack-empty)
 ;	(display "Asserts:\n")
 ;	(pretty-print (asserts))
 ;	(display " ######################### Select Result ######################### \n")
-	(static-stack scs-new updates-new))
+	(do-n-ret identity (static-stack scs-new updates-new)))
 
 ;do nothing; generate real content at reset
 (define (stack-static-new)
@@ -161,18 +161,19 @@ stack-empty)
 
 (define (stack-static-summary st id)
 	(andmap+ (lambda (sc updates)
-		(pending-always-right!
-			(andmap+ (lambda (key)
-				(if (member (car key) updates) #t
-					(equal?
-						(list-ref (static-scope-array sc) (car key))
-						(list-ref (static-scope-array-out sc) (car key)))))
-				(static-scope-keys sc)))
-;			(defer-eval current-spec-id "stack preserve " 
-;				(list id key ret
-;					(list-ref (static-scope-array sc) (car key))
-;					(list-ref (static-scope-array-out sc) (car key))
-;				))
+			(map (lambda (key)
+				(do-n-ret 
+					(lambda (fml)
+						(defer-eval current-spec-id "stack preserve " 
+							(list id key fml
+								(list-ref (static-scope-array sc) (car key))
+								(list-ref (static-scope-array-out sc) (car key))))
+						(pending-always-right! fml))
+					(if (member (car key) updates) #t
+						(equal?
+							(list-ref (static-scope-array sc) (car key))
+							(list-ref (static-scope-array-out sc) (car key))))))
+				(static-scope-keys sc))
 		(andmap+ (lambda (key)
 			(equal?
 				(list-ref (static-scope-array sc) key)
@@ -181,7 +182,7 @@ stack-empty)
 		(static-stack-scopes st) (static-stack-updates st)))
 
 (define (stack-static-gen-binding)
-	(andmap+ identity always-right-fmls))
+	 always-right-fmls)
 
 (define always-right-fmls null)
 (define (clear-always-right!)

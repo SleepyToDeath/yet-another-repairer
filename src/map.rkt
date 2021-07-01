@@ -305,20 +305,21 @@
 					(define fml-true (andmap+ (smart-preserve ms) (id2keys mem-id)))
 					(define fml-deferred (imap-sym-fml-deferred ms))
 					(define ret (equal? fml-deferred fml-true))
-;					(defer-eval current-spec-id "update " (list mem-id (id2keys mem-id) ret))
+					(defer-eval current-spec-id "update " (list mem-id (id2keys mem-id) ret))
 					ret)
 				memory-id-list))
 
 			(display "-------------------------\n")
 
 			(define fml-always-right
-				(map (lambda (mem-id)
+				(apply append (map (lambda (mem-id)
 					(define ms (mem-get-typed mem-id type))
-					(andmap+ (lambda (key) 
-						(if (contain-key? mem-id key) #t
-							((smart-preserve ms) key)))
+					(map (lambda (key) 
+						(do-n-ret (lambda (fml) (defer-eval current-spec-id "update " (list mem-id key fml)))
+							(if (contain-key? mem-id key) #t
+								((smart-preserve ms) key))))
 					all-typed-keys))
-				memory-id-list))
+				memory-id-list)))
 
 			(display "++++++++++++++++++++++++\n")
 

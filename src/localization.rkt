@@ -45,6 +45,7 @@
 			(sfunc-id cls-cl func-name-clinit (map cdr (function-args f-cl))))
 			class-names-clinit
 			funcs-clinit)))
+;	(define funcs-init (list 62))
 
 	(display (~a "total locations: " (length soft) "\n"))
 
@@ -119,14 +120,15 @@
 
 		(pretty-print string-id-table)
 
+;		(display "\nbad deferred values:\n")
+;		(print-pending-eval spec-id-bad sol-bad)
+;		(display "good deferred values:\n")
+;		(print-pending-eval spec-id-good sol-good)
+
 		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 		(print-location bugl)
 		(add-visited-location bugl)
 
-		(display "\nbad deferred values:\n")
-		(print-pending-eval spec-id-bad sol-bad)
-		(display "good deferred values:\n")
-		(print-pending-eval spec-id-good sol-good)
 
 
 		(define maybe-l (match (location-inst bugl)

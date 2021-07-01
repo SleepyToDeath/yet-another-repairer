@@ -625,8 +625,8 @@
 		(define ret (if (equal? name var-this-name)
 			(memory-sforce-read (machine-mem m) name 1)
 			(memory-sforce-read (machine-mem m) name 0)))
-;		(display (~a "var read: " (cons (iexpr-var-name e) ret) " type: " jtype "\n"))
-;		(defer-eval "var read: " (cons (iexpr-var-name e) ret))
+		(display (~a "var read: " (cons (iexpr-var-name e) ret) " type: " jtype "\n"))
+;		(defer-eval current-spec-id "var read: " (list (iexpr-var-name e) jtype ret))
 		(cons ret jtype))])
 
 (struct iexpr-binary (op expr1 expr2) #:transparent

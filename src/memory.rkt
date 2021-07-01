@@ -217,6 +217,6 @@
 (define (memory-gen-binding)
 	(define l1 (stack-gen-binding))
 	(define l2 (imap-gen-binding))
-	(cons l1 l2))
+	(append l1 l2))
 
 ;====================================================================

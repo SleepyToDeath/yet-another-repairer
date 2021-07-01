@@ -67,7 +67,7 @@ result
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy null (list (cons input2 output2))))
+(define bugl (localize-bug buggy (list (cons input1 output1) (cons input1.1 output1.1)) (list (cons input2 output2))))
 (pretty-print bugl)
 
 ;(match-define (cons soft hard) (ast->relation buggy))

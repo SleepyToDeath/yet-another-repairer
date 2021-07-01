@@ -144,6 +144,10 @@
 		;(pretty-print (list fml-cfi fml-code fml-code-bind fml-ass fml-out))
 ;		(and fml-cfi fml-code fml-code-bind))
 		(display (~a "Number of asserts: " (length (asserts)) "\n"))
+;		(assert (andmap+ identity 
+;			(append (list fml-cfi) fml-code (list fml-ass) (list fml-out))))
+;		fml-code-bind)
+;		(append (list fml-cfi) fml-code fml-code-bind))
 		(append (list fml-cfi) fml-code fml-code-bind (list fml-ass) (list fml-out)))
 
 	(list mac soft-cons hard-cons))
@@ -343,6 +347,7 @@
 	(invoke-tree-root itree))
 
 (define (root-invoke-ret-mem itree summary?)
+	(display "################# Func Return! ##################\n")
 	(memory-select (lstate-mem-in-list (ending-lstate (root-invoke itree))) summary?))
 	
 (define (insts->relation func-fml mac spec-id target-sids summary?)
@@ -380,8 +385,8 @@
 
 ;		(display (~a "Lines of code: " line-counter "\n"))
 		(defer-eval spec-id "instruction: " inst)
-		(defer-eval spec-id "path mark " mark)
-		(defer-eval spec-id "id " id)
+;		(defer-eval spec-id "path mark " mark)
+;		(defer-eval spec-id "id " id)
 		(println inst)
 		(pretty-print mark)
 		(pretty-print id)
@@ -498,30 +503,31 @@
 ;			(memory-print mem)
 ;			(pretty-print args)
 ;			(pretty-print mem)
-;			(display "invoke setup #1\n")
+			(display "invoke setup #1\n")
 			(define mem-0 (memory-sym-reset (memory-sym-new summary?) mem summary?))
 			(define func (function-formula-func func-fml-callee))
 			(define mem-push (memory-spush mem-0))
-;			(display "invoke setup #2\n")
+			(display "invoke setup #2\n")
 			(define mem-decl (memory-sym-commit
 				(foldl 
 					(lambda (var-def mem) (memory-sdecl mem (car var-def) (jtype->mtype (cdr var-def)))) 
 					mem-push
 					(append (function-args func) (function-locals func) (list (cons var-void-ret default-type) (cons var-ret-name (function-ret (function-formula-func func-fml-callee))))))))
-;			(display "invoke setup #3\n")
+			(display "invoke setup #3\n")
 			(define mem-arg (memory-sym-commit
 				(foldl 
 					(lambda (arg-src arg-dst mem) 
+						(defer-eval current-spec-id "arg ass " (list arg-src arg-dst (expr-eval arg-src mac-eval-ctxt)))
 						(memory-sforce-write mem (car arg-dst) (car (expr-eval arg-src mac-eval-ctxt)) 0 (jtype->mtype (cdr arg-dst))))
 					mem-decl
 					args 
 					(function-args func))))
 			(define fml-in (memory-sym-summary mem-arg summary?))
 ;			(pretty-print mem-arg)
-;			(display "invoke setup #4\n")
+			(display "invoke setup #4\n")
 			(define mem-input (memory-sym-reset (memory-sym-new summary?) mem-arg (not trigger-summary?)))
 			(define func-fml-in (prepend-starting-mem-in func-fml-callee (if (or summary? trigger-summary?) #t mark) mem-input))
-;			(display "invoke setup #5\n")
+			(display "invoke setup #5\n")
 			(cons func-fml-in fml-in))
 
 		; bool X memory X int(if with branch)/#f(if no branch) -> rbstate
@@ -671,33 +677,36 @@
 			[(inst-virtual-call ret obj-name cls-name func-name arg-types args)
 
 				(begin
-				(define obj-addr (memory-sforce-read mem-0 obj-name 0))
+				(define obj-addr0 (memory-sforce-read mem-0 obj-name 0))
 				(define args-v (map (lambda (arg) (car (expr-eval arg mac-eval-ctxt))) args))
 
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
 					(begin
 ;					(assert id)
-					(update-mem-only (mfunc mem-0 obj-addr ret args-v)))
+					(update-mem-only (mfunc mem-0 obj-addr0 ret args-v)))
 
 					(begin
-;					(display "virtaul call #1\n")
 					(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
+					(define obj-addr (memory-sforce-read mem--1 obj-name 0))
+					(set! mac-eval-ctxt (std:struct-copy machine mac-eval-ctxt [mem mem--1]))
 					(define vid (vfunc-id-alt mac cls-name func-name arg-types))
 					(define funcs-invoked (map alloc-lstate 
 						(filter (lambda (f) (and (not (is-interface-func? (function-formula-func f))) (equal? (function-formula-vid f) vid))) 
 							(all-vfunctions mac))))
-;					(display "virtaul call #2\n")
 					(define fid-class-name (vfield-id mac cls-name field-name-class))
 					(define classname-true (memory-fread mem--1 fid-class-name obj-addr name-type))
-;					(display "virtaul call #3\n")
 					(define true-func-invoked-sid (sfunc-id-pure classname-true func-name arg-types))
 
-;					(display "virtaul call #4\n")
+					(defer-eval current-spec-id "obj-name" obj-name)
+					(defer-eval current-spec-id "obj-addr" obj-addr)
+					(defer-eval current-spec-id "fid-class-name" fid-class-name)
+					(defer-eval current-spec-id "classname-true" classname-true)
+					(defer-eval current-spec-id "true sid" true-func-invoked-sid)
+
 					;push an extra scope to avoid overwriting "this" of the current scope
 					(define mem-this (memory-sym-commit (memory-sforce-write (memory-spush mem--1) var-this-name obj-addr 0 addr-type)))
 					(define fml-this (memory-sym-summary mem-this summary?))
-;					(display "virtaul call #5\n")
 
 					(define (invoke-candidate fcan)
 						(begin
@@ -743,17 +752,19 @@
 
 			[(inst-special-call ret obj-name cls-name func-name arg-types args)
 				(begin
-				(define obj-addr (memory-sforce-read mem-0 obj-name 0))
+				(define obj-addr0 (memory-sforce-read mem-0 obj-name 0))
 				(define args-v (map (lambda (arg) (car (expr-eval arg mac-eval-ctxt))) args))
 
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
 					(begin
 ;					(assert id)
-					(update-mem-only (mfunc mem-0 obj-addr ret args-v)))
+					(update-mem-only (mfunc mem-0 obj-addr0 ret args-v)))
 
 					(begin
 					(define mem--1 (memory-sym-reset (memory-sym-new summary?) mem-in summary?))
+					(set! mac-eval-ctxt (std:struct-copy machine mac-eval-ctxt [mem mem--1]))
+					(define obj-addr (memory-sforce-read mem--1 obj-name 0))
 					(define sid (sfunc-id cls-name func-name arg-types))
 					(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target-alt? mac sid target-sids)))))
 					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
@@ -764,7 +775,6 @@
 
 					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-this args))
 					(define funcs-ret (invoke->relation func-fml-in mac spec-id target-sids (or trigger-summary? summary?)))
-;					(pretty-print inst)
 
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 					(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
@@ -835,11 +845,11 @@
 					(define lmap (function-lmap func))
 					(define cnd (car (expr-eval condition mac-eval-ctxt)))
 ;					(defer-eval spec-id "condition: " cnd)
-					(defer-eval current-spec-id "cnd real & cnd expected: " (list cnd (not (next-mark))))
+;					(defer-eval current-spec-id "cnd real & cnd expected: " (list cnd (not (next-mark))))
 					(define fml-update #t)
 					(define fml-new (iassert-pc-branch (select-fml? fml-update) cnd (not cnd) label))
 					(pretty-print fml-new)
-					(defer-eval current-spec-id "jmp encoding: " fml-new)
+;					(defer-eval current-spec-id "jmp encoding: " fml-new)
 					(define pc-br (imap-get (function-lmap func) label default-type))
 					(if summary? #f (add-spec id spec-id mem-in mem-in inst inst-jmp? (not (next-mark))))
 					(if summary? 

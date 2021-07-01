@@ -4,9 +4,9 @@
 (require racket/pretty)
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
+(require rosette/solver/smt/z3)
 
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
-(require (prefix-in p: "jimple/jimple-utils.rkt"))
 (require "match-define.rkt")
 (require "localization.rkt")
 (require "string-id.rkt")
@@ -16,126 +16,125 @@
 (require "semantics-relational.rkt")
 (require "semantics-computational.rkt")
 (require "semantics-common.rkt")
+(require "memory-common.rkt")
 (require "formula.rkt")
+(require (prefix-in p: "jimple/jimple-parser.rkt"))
 
-(define class-Obj (p:build-ast-file (p:parse-to-stx
+
+(define class-obj (p:build-ast-file (p:parse-to-stx
 "
 public class java.lang.Object
 {
-
-}
-"
-)))
-
-(define class-HM (p:build-ast-file (p:parse-to-stx
-"
-public class java.util.HashMap extends java.lang.Object
-{
-	private int[] KVStore;
-}
-")))
-
-(define class-1 (p:build-ast-file (p:parse-to-stx
-"
-public class RealTest extends java.lang.Object
-{
-	public static int <init> ()
-	{
-		RealTest r0;
-		r0 := @this: RealTest;
-//        specialinvoke r0.<java.lang.Object: void <init>()>();
+	public int __CLASS__;
+	public static void <init>() {
+        java.lang.Object r0;
+        r0 := @this: java.lang.Object;
 		return r0;
 	}
-
-	public int test(int, int, int)
+    public boolean equals(java.lang.Object)
 	{
-		int[] $r1;
-		int s1, s2, v1, v2, i1, i2;
-		int r0, r1, r2, r3;
-		java.util.HashMap m0;
-
-		r0 := @this: RealTest;
-
-		r1 := @parameter0: int;
-		r2 := @parameter1: int;
-		r3 := @parameter2: int;
-
-		i1 = 2;
-		i2 = 3;
-
-        m0 = new java.util.HashMap;
-        specialinvoke m0.<java.util.HashMap: void <init>()>();
-        virtualinvoke m0.<java.util.HashMap: java.lang.Object put(java.lang.Object,java.lang.Object)>(i2, r2);
-        v2 = virtualinvoke m0.<java.util.HashMap: java.lang.Object get(java.lang.Object)>(i2);
-
-		s1 = r1 + v2;
-//		s1 = r1 + r2;
-
-		$r1 = newarray (int)[r1];
-		$r1[i1] = r3;
-		v1 = $r1[i1];
-
-        lookupswitch(i1)
-        {
-            case 1: goto label1;
-            case 2: goto label2;
-			default: goto label3;
-		};
-
-	label1:
-		s2 = s1 + v1;
-//		s2 = s1 + r3;
-		goto label4;
-
-	label2:
-		s2 = s1 - v1;
-//		s2 = s1 + r3;
-		goto label4;
-
-	label3:
-		s2 = s1;
-
-	label4:
-		return s2;
+        java.lang.Object r0, r1;
+        r0 := @this: java.lang.Object;
+        r1 := @parameter0: java.lang.Object;
+        if r0 != r1 goto label1;
+        return 1;
+     label1:
+        return 0;
+	}
+	public java.lang.Object clone()
+	{
+        java.lang.Object r0;
+        r0 := @this: java.lang.Object;
+		return r0;
 	}
 }
 ")))
 
-
-(define class-0 (p:build-ast-file (p:parse-to-stx
+(define class-B (p:build-ast-file (p:parse-to-stx
 "
-public class Test
-{
-	public static int main()
+public class B extends java.lang.Object {
+	public static void <init>()
 	{
-		RealTest $r0;
-		int $rr;
-		$r0 = new RealTest;
-        specialinvoke $r0.<RealTest: void <init>()>();
-		$rr = virtualinvoke $r0.<RealTest: int test(int, int, int)>(r1, r2, r3);
-		return $rr;
+		B r0;
+		r0 := @this: B;
+        specialinvoke r0.<java.lang.Object: void <init>()>();
+		return;
+	}
+
+	public static boolean funcB2(B)
+	{
+		return 1;
+	}
+
+	public boolean funcB()
+	{
+		return 1;
 	}
 }
 ")))
 
-(define buggy  (program
-	(class-list (list class-0 class-1 class-HM class-Obj))))
+(define class-A (p:build-ast-file (p:parse-to-stx
+"
+public class A extends java.lang.Object {
+	public static void <init>()
+	{
+		A r0;
+		B r1;
+		r0 := @this: A;
+        specialinvoke r0.<java.lang.Object: void <init>()>();
+		return;
+	}
 
-;(define buggy (program (class-list (list class-0))))
+	public boolean funcA2()
+	{
+		return 1;
+	}
 
-(pretty-print buggy)
+	public boolean funcA(B)
+	{
+        B r1;
+        boolean $z1;
 
-(define input0 null)
-(define output0 (list (cons var-ret-name 0)))
+		r1 := @parameter0: B;
 
-(define input1 (list (cons "r1" 4) (cons "r2" 5) (cons "r3" 6)))
-(define output1 (list (cons var-ret-name 15)))
+		$z1 = virtualinvoke r1.<B: boolean funcB()>();
+
+        return 1;
+	}
+
+
+}
+")))
+
+(define class-Main (p:build-ast-file (p:parse-to-stx
+"
+public class Test extends java.lang.Object
+{
+	public static int main(long)
+	{
+		A a;
+		B b;
+		a = new A;
+        specialinvoke a.<A: void <init>()>();
+		b = new B;
+		specialinvoke b.<B: void <init>()>();
+		virtualinvoke a.<A: boolean funcA(B)>(b);
+		return 1;
+	}
+}
+")))
+
+(define buggy (program
+	(class-list (list class-obj class-A class-B class-Main))))
+
+(define input1 (list (cons (bv 200 bv-type) "long")))
+(define output1 (list (cons var-ret-name 1)))
+
+;(define input1 (list (cons 1 "int") (cons 2 "int")))
+;(define output1 (list (cons var-ret-name 2)))
 
 (define mac (ast->machine buggy))
 (define mac-in (assign-input mac input1))
-
-(pretty-print string-id-table)
-
 (define mac-fin (compute mac-in))
 (define result (compare-output mac-fin output1))
 result
@@ -147,76 +146,16 @@ result
 (display "================================================ Encoding ... =================================================\n")
 (display "===============================================================================================================\n")
 
+(current-solver (z3 #:options
+   (std:hash ':produce-unsat-cores 'true
+         ':auto-config 'true
+         ':smt.relevancy 2
+         ':smt.mbqi.max_iterations 10000000)))
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1))))
+(pretty-print (solver-features (current-solver)))
+(pretty-print (solver-options (current-solver)))
+(define bugl (localize-bug buggy null (list (cons input1 output1))))
 (pretty-print bugl)
 
 
-#|
-(output-smt #t)
-
-(clear-pending-eval)
-
-(match-define (cons soft hard) (ast->relation buggy))
-
-(println string-id-map)
-
-;(define tf1 (hard input1 output1))
-;(define tf2 (hard input2 output2))
-(define tf3 (hard input2 output2))
-
-;(define tf3++ (forall (append (list $r1 $r2 $r3 $ret) all-symbols)
-;	(implies 
-;		(and 
-;			(> $ret 0)
-;			(> $r1 0)
-;			(> $r2 0)
-;			(> $r3 0))
-;		(implies 
-;			tf3
-;			(equal? $ret (+ $r1 $r2 $r3))))))
-
-(display "\n")
-
-(display "Top Formula:\n")
-(pretty-print tf3)
-
-(display "\nAsserts\n")
-;(pretty-print (asserts))
-(pretty-print (length (asserts)))
-
-;(define debug-tf (equal? 0 (list-ref soft 11)))
-;(define debug-tf (andmap identity cons-pending))
-;(define debug-tf (equal? 1 (first soft)))
-(define debug-tf #t)
-
-(display "\nDebug-tf\n")
-debug-tf
-
-all-symbols
-
-(define fml-no-bug (equal? (apply + soft) (length soft)))
-(define fml-one-bug (equal? (apply + soft) (- (length soft) 1)))
-
-(display "\nSolution:\n")
-;(define debug-sol (optimize #:maximize (list (apply + soft))
-;          #:guarantee (assert (and tf3 debug-tf))))
-;(define nobug-sol (solve (assert tf3)))
-
-(define debug-sol (solve (assert (and tf3 fml-one-bug))))
-
-;nobug-sol
-
-;(pretty-print (fml-to-print tf3))
-(display "\n")
-(pretty-print string-id-table)
-
-debug-sol
-(unsat? debug-sol)
-;(core debug-sol)
-
-;soft
-
-
-|#
