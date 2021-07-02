@@ -132,15 +132,15 @@
 (define (and+ a b)
 	(and a b))
 
-;(define (count-truth lst)
-;	(define weight 1)
-;	(apply + (map (lambda (fml) 
-;		(set! weight (+ weight 1)) 
-;		(if fml (+ 1000 weight) 0)) 
-;	lst)))
-
 (define (count-truth lst)
-	(apply + (map (lambda (fml) (if fml 1 0)) lst)))
+	(define weight 1)
+	(apply + (map (lambda (fml) 
+		(set! weight (+ weight 1)) 
+		(if fml (+ 1000 weight) 0)) 
+	lst)))
+
+;(define (count-truth lst)
+;	(apply + (map (lambda (fml) (if fml 1 0)) lst)))
 
 (define spec-id-good 1)
 (define spec-id-bad 0)
@@ -160,6 +160,7 @@
 		(foldl 
 			(lambda (cnd.v ret)
 				(if (and 
+						(is-invalid-state? ret)
 						(car cnd.v) 
 						(cdr cnd.v)
 						(not (is-invalid-state? (cdr cnd.v))))

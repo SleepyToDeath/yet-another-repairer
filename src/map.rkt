@@ -221,11 +221,13 @@
 			(force-error #t "imap-get-id shouldn't be called on imap-sym-wrapper"))
 
 		(define (imap-reset m m-base)
+			(display "===================== Heap Reset Result ========================\n")
+			(do-n-ret pretty-print
 			(imap-sym-wrapper 
 				(map (lambda (type)
 					(if (imap-conc? m-base)
 						(imap-reset+ (imap-get-type m type) m-base)
-						(imap-reset+ (imap-get-type m type) (imap-get-type m-base type)))) all-types-ordered)))
+						(imap-reset+ (imap-get-type m type) (imap-get-type m-base type)))) all-types-ordered))))
 
 		(define (imap-commit m)
 			(imap-sym-wrapper 
@@ -253,6 +255,12 @@
 
 	(define (imap-select candidates summary?)
 ;		(println candidates)
+		(display "===================== Heap Select Candidates ========================\n")
+		(pretty-print candidates)
+		(display "Asserts:\n")
+		(pretty-print (asserts))
+		(display "===================== Heap Select Result ========================\n")
+		(do-n-ret pretty-print
 		(imap-sym-wrapper
 			(map
 				(lambda (type)
@@ -266,7 +274,7 @@
 							 (caar candidates)) ;only one input and the condition is constant #t
 						(cdr (unwrap (car candidates)))
 						(f-select candidates-unwrapped summary?)))
-				all-types-ordered)))
+				all-types-ordered))))
 
 	(define (imap-new id)
 		(define (sym-gen type)
@@ -305,7 +313,7 @@
 					(define fml-true (andmap+ (smart-preserve ms) (id2keys mem-id)))
 					(define fml-deferred (imap-sym-fml-deferred ms))
 					(define ret (equal? fml-deferred fml-true))
-					(defer-eval current-spec-id "update " (list mem-id (id2keys mem-id) ret))
+					(defer-eval current-spec-id "heap update " (list mem-id (id2keys mem-id) ret))
 					ret)
 				memory-id-list))
 
@@ -315,7 +323,7 @@
 				(apply append (map (lambda (mem-id)
 					(define ms (mem-get-typed mem-id type))
 					(map (lambda (key) 
-						(do-n-ret (lambda (fml) (defer-eval current-spec-id "update " (list mem-id key fml)))
+						(do-n-ret (lambda (fml) (defer-eval current-spec-id "heap preserve " (list mem-id key fml)))
 							(if (contain-key? mem-id key) #t
 								((smart-preserve ms) key))))
 					all-typed-keys))

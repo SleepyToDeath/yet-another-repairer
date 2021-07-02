@@ -45,7 +45,7 @@
 			(sfunc-id cls-cl func-name-clinit (map cdr (function-args f-cl))))
 			class-names-clinit
 			funcs-clinit)))
-;	(define funcs-init (list 62))
+;	(define funcs-init (list 57))
 
 	(display (~a "total locations: " (length soft) "\n"))
 
@@ -93,13 +93,15 @@
 
 		sol)
 
-	(define sol-bad (solve-localize spec-id-bad spec-bad 1))
+;	(define sol-good (solve (assert #t)))
 ;	(define sol-bad (solve (assert #t)))
+
+	(define sol-bad (solve-localize spec-id-bad spec-bad 1))
 	(define bad-selectors valid-selectors)
 	(define sol-good (solve-localize spec-id-good spec-good 0))
 
-	(display "\n Model: \n")
-;	(pretty-print sol-bad)
+;	(display "\n Model: \n")
+;	(pretty-print sol-good)
 
 	(if (or (unsat? sol-bad) (unsat? sol-good))
 		(begin
@@ -122,8 +124,8 @@
 
 ;		(display "\nbad deferred values:\n")
 ;		(print-pending-eval spec-id-bad sol-bad)
-;		(display "good deferred values:\n")
-;		(print-pending-eval spec-id-good sol-good)
+		(display "good deferred values:\n")
+		(print-pending-eval spec-id-good sol-good)
 
 		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 		(print-location bugl)

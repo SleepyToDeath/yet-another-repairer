@@ -161,20 +161,25 @@ stack-empty)
 
 (define (stack-static-summary st id)
 	(andmap+ (lambda (sc updates)
-			(map (lambda (key)
-				(do-n-ret 
-					(lambda (fml)
-						(defer-eval current-spec-id "stack preserve " 
-							(list id key fml
-								(list-ref (static-scope-array sc) (car key))
-								(list-ref (static-scope-array-out sc) (car key))))
-						(pending-always-right! fml))
-					(if (member (car key) updates) #t
-						(equal?
+		(defer-eval current-spec-id "============== Stack Layer ===============" "")
+		(map (lambda (key)
+			(do-n-ret 
+				(lambda (fml)
+					(defer-eval current-spec-id "stack preserve " 
+						(list id key fml
 							(list-ref (static-scope-array sc) (car key))
-							(list-ref (static-scope-array-out sc) (car key))))))
-				(static-scope-keys sc))
+							(list-ref (static-scope-array-out sc) (car key))))
+					(pending-always-right! fml))
+				(if (member (car key) updates) #t
+					(equal?
+						(list-ref (static-scope-array sc) (car key))
+						(list-ref (static-scope-array-out sc) (car key))))))
+			(static-scope-keys sc))
 		(andmap+ (lambda (key)
+			(defer-eval current-spec-id "stack update " 
+				(list id key
+					(list-ref (static-scope-array sc) key)
+					(list-ref (static-scope-array-out sc) key)))
 			(equal?
 				(list-ref (static-scope-array sc) key)
 				(list-ref (static-scope-array-out sc) key)))

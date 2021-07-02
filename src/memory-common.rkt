@@ -92,7 +92,9 @@
 (define all-types-ordered (list int-type bv-type mbool-type))
 
 (define (type->ordinal type)
-	(if (equal? type int-type) 0 1))
+	(if (equal? type int-type) 0 
+		(if (equal? type bv-type) 1
+			2)))
 
 (define (type-of v)
 	(ormap (lambda (pred) (if (pred v) pred #f)) all-types-ordered))
@@ -100,10 +102,11 @@
 
 
 ;====================== Constant Values ========================
+;[!] TODO define the states for boolean type
 (define (nullptr type)
 	(list-ref nullptr-list (type->ordinal type)))
 
-(define nullptr-list (list -1 (bv -1 bv-type)))
+(define nullptr-list (list -1 (bv -1 bv-type) -1))
 
 (define nullptr0 (nullptr int-type))
 
@@ -115,7 +118,7 @@
 (define (not-found type)
 	(list-ref not-found-list (type->ordinal type)))
 
-(define not-found-list (list -6666666 (bv -6666666 bv-type)))
+(define not-found-list (list -6666666 (bv -6666666 bv-type) -6666666))
 
 (define (is-not-found? v)
 	(equal? v (not-found (type-of v))))
@@ -125,7 +128,7 @@
 (define (invalid-state type)
 	(list-ref invalid-state-list (type->ordinal type)))
 
-(define invalid-state-list (list -314159265 (bv -314159265 bv-type)))
+(define invalid-state-list (list -314159265 (bv -314159265 bv-type) -314159265))
 
 (define (is-invalid? v)
 	(equal? v (invalid-state (type-of v))))

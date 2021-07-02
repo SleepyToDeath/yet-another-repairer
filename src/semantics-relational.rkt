@@ -147,7 +147,7 @@
 ;		(assert (andmap+ identity 
 ;			(append (list fml-cfi) fml-code (list fml-ass) (list fml-out))))
 ;		fml-code-bind)
-;		(append (list fml-cfi) fml-code fml-code-bind))
+;		(append (list fml-cfi) fml-code fml-code-bind (list fml-ass)))
 		(append (list fml-cfi) fml-code fml-code-bind (list fml-ass) (list fml-out)))
 
 	(list mac soft-cons hard-cons))
@@ -453,7 +453,7 @@
 		(define (iassert-pc-branch fml-op cnd-t cnd-f label)
 ;			(set! fml-op #t)
 			(if summary? #t
-				(letrec ([fml-t (select-fml? (equal? cnd-t (label-mark label)))]
+				(letrec ([fml-t (select-fml? (implies cnd-t (label-mark label)))]
 						 [fml-f (select-fml? (equal? cnd-f (next-mark)))]
 						 [fml-cnd (if (equal? (+ 1 pc) (label-pc label)) #t (and fml-t fml-f))]
 						 [fml-br (or (label-mark label) (next-mark))]
@@ -818,6 +818,7 @@
 			;[!]there might be bug if reading from heap
 			[(inst-switch cnd cases default-l)
 				(begin
+				(set! mac-eval-ctxt (std:struct-copy machine mac-eval-ctxt [mem mem-in]))
 				(define lmap (function-lmap func))
 				(define cnd-v (car (expr-eval cnd mac-eval-ctxt)))
 				(define default-pc (if default-l (imap-get lmap default-l default-type) (+ 1 pc)))
@@ -837,14 +838,15 @@
 				(define fml-new (iassert-pc-switch #t cases-cnd+))
 				(update-rbstate-switch fml-new mem-in (if summary? cases-cnd+ cases-mark+)))]
 
-			;[!]there might be bug if reading from heap
 			[(inst-jmp condition label)
+				(define mem-0+ (memory-sym-commit mem-0))
+				(assert (memory-sym-summary mem-0+ summary?))
 				(if (equal? (imap-get (function-lmap func) label default-type) (+ pc 1))
-					(update-rbstate (iassert-pc-next #t #t) mem-in #f)
+					(update-rbstate (iassert-pc-next #t #t) mem-0+ #f)
 					(begin
 					(define lmap (function-lmap func))
 					(define cnd (car (expr-eval condition mac-eval-ctxt)))
-;					(defer-eval spec-id "condition: " cnd)
+					(defer-eval spec-id "condition: " cnd)
 ;					(defer-eval current-spec-id "cnd real & cnd expected: " (list cnd (not (next-mark))))
 					(define fml-update #t)
 					(define fml-new (iassert-pc-branch (select-fml? fml-update) cnd (not cnd) label))
@@ -853,8 +855,8 @@
 					(define pc-br (imap-get (function-lmap func) label default-type))
 					(if summary? #f (add-spec id spec-id mem-in mem-in inst inst-jmp? (not (next-mark))))
 					(if summary? 
-						(update-rbstate-verbose fml-new mem-in pc-br (not cnd) cnd)
-						(update-rbstate fml-new mem-in pc-br))))]))]))
+						(update-rbstate-verbose fml-new mem-0+ pc-br (not cnd) cnd)
+						(update-rbstate fml-new mem-0+ pc-br))))]))]))
 
 
 
