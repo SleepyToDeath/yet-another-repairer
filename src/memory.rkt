@@ -82,9 +82,10 @@
 				(begin
 				(define n2t+ (imap-set n2t name vtop #f))
 				(define vtop+ (+ vtop vt-size))
+				(define vtop++ (+ vtop+ vt-size))
 				(std:struct-copy memory mem
 					[v-meta (vtab-meta n2t+ vtop+)]
-					[h-meta (heap-meta vtop+ vtop+)]))])
+					[h-meta (heap-meta vtop+ vtop++)]))])
 		mem))
 
 ;read a field value of an object

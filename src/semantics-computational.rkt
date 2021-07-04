@@ -74,7 +74,7 @@
 ;			(display "\n")
 ;			(println string-id-map)
 ;			(display "\n")
-;			(pretty-print inst-cur)
+			(pretty-print inst-cur)
 			(set! line-counter-c (+ line-counter-c 1))
 ;			(display (~a "mem size 2.2: " (memory-heap-size (machine-mem mac)) " \n"))
 ;			(display (~a "Lines of code: " line-counter-c))
@@ -101,7 +101,7 @@
 (define (compare-output mac output)
 	(define mem0 (machine-mem mac))
 	(foldl (lambda (kv fml-cur) (and fml-cur (equal? (cdr kv) 
-		(do-n-ret pretty-print (memory-sforce-read mem0 (string-id (car kv)) 0)))))
+		(do-n-ret pretty-print2 (memory-sforce-read mem0 (string-id (car kv)) 0)))))
 		#t output))
 
 ;machine X list of string(output var names)

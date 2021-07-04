@@ -287,4 +287,9 @@
 
 (define (display2 sth)
 	(display sth)
-	(eprintf sth))
+	(eprintf (~a sth)))
+
+(define (pretty-print2 sth)
+	(pretty-print sth)
+	(eprintf (pretty-format sth))
+	(eprintf "\n"))

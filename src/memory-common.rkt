@@ -40,7 +40,7 @@
 
 ;[-]
 ;vt-size = max number of objects
-(define vt-size 1000)
+(define vt-size 10000)
 
 ;[+]
 ;scope-size = max number of different variable names

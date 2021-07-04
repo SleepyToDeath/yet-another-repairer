@@ -701,10 +701,14 @@ public class LoadBalancer implements ILoadBalancerService {
             pool = pools.get(poolId);
             if (pool == null)	// fix dereference violations
             	return -1;
+			// These two lines are not affecting the behavior of the program. 
+			// Only to generate a fixable jimple format.
+//			boolean flag = pool != null;
+			HashMap<String, LBVip> vipsLocal = vips;
             // expected:
             // if (pool.vipId != null && vips.containsKey(pool.vipId)) {
-            if (pool.vipId != null) {
-                LBVip vip = vips.get(pool.vipId);
+            if (pool != null && pool.vipId != null) {
+                LBVip vip = vipsLocal.get(pool.vipId);
                 // added
                 if (vip == null) return -1;
                 vip.pools.remove(poolId);
