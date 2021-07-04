@@ -8,6 +8,7 @@
          rosette/lib/match   ; provides `match`
 		 rosette/query/core)
 
+(require "domain-config.rkt")
 (require "match-define.rkt")
 (require "string-id.rkt")
 (require "syntax.rkt")
@@ -72,24 +73,21 @@
 		(set-spec-id! spec-id)
 		(define hard (apply append (map (lambda (io) (encoder (car io) (cdr io) spec-id funcs)) spec)))
 		(define t1 (timer-check))
-		(display (~a "\n Encoded. Took " t1 " ms \n"))
-		(eprintf (~a "\n Encoded. Took " t1 " ms \n"))
+		(display2 (~a "\n Encoded. Took " t1 " ms \n"))
 
 		(finalize-selectors!)
 
 		(define sum (apply + (map (lambda (id) (if id 1 0)) valid-selectors)))
 		(define bug-sum (equal? sum (- (length valid-selectors) bug-num)))
 
-		(display "\n Solving: \n")
-		(eprintf "\n Solving: \n")
+		(display2 "\n Solving: \n")
 		(timer-on)
 ;		(match (core (∃-debug (append hard (list bug-sum) (asserts)) #:muc #t)) [l (map print-fml l)])
 		(define sol (solve (assert (and (andmap+ identity hard) bug-sum))))
 ;		(define sol (optimize 	#:maximize (list (count-truth hard))
 ;								#:guarantee (assert bug-sum)))
 		(define t2 (timer-check))
-		(display (~a "\n Solved. Took " t2 " ms \n"))
-		(eprintf (~a "\n Solved. Took " t2 " ms \n"))
+		(display2 (~a "\n Solved. Took " t2 " ms \n"))
 
 		sol)
 
@@ -98,7 +96,12 @@
 
 	(define sol-bad (solve-localize spec-id-bad spec-bad 1))
 	(define bad-selectors valid-selectors)
-	(define sol-good (solve-localize spec-id-good spec-good 0))
+	(define sol-good
+		(if (unsat? sol-bad)
+			(begin ;skip if bad is already unsat
+				(do-all-resets! #f)
+				(solve (assert #t)))
+			(solve-localize spec-id-good spec-good 0)))
 
 ;	(display "\n Model: \n")
 ;	(pretty-print sol-good)
@@ -106,8 +109,8 @@
 	(if (or (unsat? sol-bad) (unsat? sol-good))
 		(begin
 ;		(match (core (∃-debug (append hard (list one-bug) (asserts)) #:muc #t)) [l (map print-fml l)])
-		(if (unsat? sol-bad) (display "bad unsat!\n") #f)
-		(if (unsat? sol-good) (display "good unsat!\n") #f)
+		(if (unsat? sol-bad) (display2 "bad unsat!\n") #f)
+		(if (unsat? sol-good) (display2 "good unsat!\n") #f)
 		#f)
 
 		(begin
@@ -121,14 +124,16 @@
 			locations))
 
 		(pretty-print string-id-table)
+		(eprintf (pretty-format string-id-table))
 
-;		(display "\nbad deferred values:\n")
-;		(print-pending-eval spec-id-bad sol-bad)
-		(display "good deferred values:\n")
-		(print-pending-eval spec-id-good sol-good)
+		(display "\nbad deferred values:\n")
+		(print-pending-eval spec-id-bad sol-bad)
+;		(display "good deferred values:\n")
+;		(print-pending-eval spec-id-good sol-good)
 
-		(display "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
+		(display2 "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 		(print-location bugl)
+		(eprint-location bugl)
 		(add-visited-location bugl)
 
 
@@ -176,14 +181,8 @@
 	(if (not (inst-type-check? mac (location-class bugl) (location-func bugl) inst)) #f
 		(set! first-line-candidates (cons candi first-line-candidates))))
 
-(define usable-classes (list
-	(string-id "org.projectfloodlight.openflow.types.IPv4Address")
-	(string-id "org.projectfloodlight.openflow.types.MacAddress")
-	(string-id "org.projectfloodlight.openflow.types.OFPort")
-))
-
 (define (add-candidate2.2 mac bugl candi)
-	(if (not (member (class-name (ast->cls candi mac)) usable-classes)) #f
+	(if (not (member (class-name (ast->cls candi mac)) synthesis-usable-classes)) #f
 		(if (not-a-function-error? (ast->func candi mac)) #f
 			(begin
 			(define inst (car (ast->instruction candi (imap-empty default-type) 0)))
@@ -260,9 +259,15 @@
 					(display (~a "Checked " second-counter " patches\n"))
 					(eprintf (~a "Checked " second-counter " patches\n"))
 					(timer-on)
-					(define ret (monitor-reason "spec" 
+					(define ret.maybe (monitor-reason "spec" 
 						(sat-spec? (location-selector bugl) mac (car (ast->instruction l #f #f)) sol-bad sol-good)))
-					(display (~a "spec check took " (timer-check) " milliseconds\n"))
+					(display (~a "spec check took " (timer-reset) " milliseconds\n"))
+					(define ret (if (not ret.maybe) #f
+						(begin
+						(define prog-sketch (replace-stat ast l bugl))
+						(define ret.final (program-sketch->constraint prog-sketch (append spec-bad spec-good)))
+						(display (~a "final confirm took " (timer-reset) " milliseconds\n"))
+						ret.final)))
 					ret)
 				one-line-candidates)
 
@@ -305,9 +310,20 @@
 							(set! spec-step1 (if spec-step1 spec-step1 
 								(step-spec-0 (location-selector bugl) mac (car (ast->instruction l2 #f #f)) sol-bad sol-good)))
 							(display "~~ first step ~~\n")
-							(define ret (monitor-reason "spec" (sat-spec-continue? spec-step1 mac (car (ast->instruction l1 #f #f)) sol-bad sol-good)))
+							(define ret.maybe (monitor-reason "spec" (sat-spec-continue? spec-step1 mac (car (ast->instruction l1 #f #f)) sol-bad sol-good)))
 							;timer
-							(display (~a "spec check took " (timer-check) " milliseconds\n"))
+							(display (~a "spec check took " (timer-reset) " milliseconds\n"))
+							;final confirm
+							(define ret (if (not ret.maybe) #f
+								(begin
+								(define prog-sketch (replace-stat ast l1 bugl))
+								(define prog-sketch2 (define-bridge-var 
+									(insert-stat prog-sketch l2 bugl) 
+									l2
+									(get-invoke-ret-type l2 mac) bugl))
+								(define ret.final (program-sketch->constraint prog-sketch2 (append spec-bad spec-good)))
+								(display (~a "final confirm took " (timer-reset) " milliseconds\n"))
+								ret.final)))
 							;return
 							ret))))
 						first-line-candidates)))
@@ -315,51 +331,22 @@
 
 )))
 
-(define spec-counter 0)
 
-#|
 
-(define (pre-check prog-sketch)
+(define (program-sketch->constraint prog-sketch spec)
 	(std:with-handlers ([std:exn:fail? (lambda (x) 
 			(display "Execption!\n") 
 			(clear-asserts!) 
 			#f)])
 		(begin
 		(define mac-sketch (ast->machine prog-sketch))
-		(machine-all-check? (build-virtual-table mac-sketch)))))
-
-(define (program-sketch->constraint prog-sketch spec patch)
-	(define t0 (std:current-inexact-milliseconds))
-	(std:with-handlers ([std:exn:fail? (lambda (x) 
-			(display "Execption!\n") 
-			(clear-asserts!) 
-			(define t1 (std:current-inexact-milliseconds))
-			(display (~a "took " (- t1 t0) " milliseconds\n"))
-			(display (~a "max map size: " max-map-size " \n"))
-			#f)])
-		(begin
-		(define mac-sketch (ast->machine prog-sketch))
-		(if (not (machine-all-check? (build-virtual-table mac-sketch))) #f
-			(begin
-			(define (spec->fml io)
-				(match-define (cons input output) io)
-				(define mac-in (assign-input mac-sketch input))
-				(define mac-fin (compute mac-in))
-				(compare-output mac-fin output))
-			(display "---checking spec!---\n")
-			(++ spec-counter)
-			(display (~a "checked spec " spec-counter " times\n"))
-			(pretty-print patch)
-			(define constraint (andmap+ spec->fml spec))
-			(define t1 (std:current-inexact-milliseconds))
-			(display (~a "took " (- t1 t0) " milliseconds\n"))
-			(display (~a "max map size: " max-map-size " \n"))
-			(if constraint
-				(begin
-				(display "+++++++++++++ Fixed program: +++++++++++++++++\n") 
-				(pretty-print prog-sketch)) #f)
-			constraint)))))
-|#
+		(define (spec->fml io)
+			(match-define (cons input output) io)
+			(define mac-in (assign-input mac-sketch input))
+			(define mac-fin (compute mac-in))
+			(compare-output mac-fin output))
+		(define constraint (andmap+ spec->fml spec))
+		constraint)))
 
 
 (define sketch-line-1 (stat #f))
@@ -380,4 +367,18 @@
 	(func-name (string-id "equals"))
 	(types (type-list (list (type-name (string-id "java.lang.Object")))))
 	(arguments-caller (argument-caller-list (list (dexpr (expr-var (variable (string-id "$r1" ))))))))))
+
+
+
+;(define spec-counter 0)
+
+;(define (pre-check prog-sketch)
+;	(std:with-handlers ([std:exn:fail? (lambda (x) 
+;			(display "Execption!\n") 
+;			(clear-asserts!) 
+;			#f)])
+;		(begin
+;		(define mac-sketch (ast->machine prog-sketch))
+;		(machine-all-check? (build-virtual-table mac-sketch)))))
+
 

@@ -284,3 +284,7 @@
 (define (println sth)
 	(print sth)
 	(display "\n"))
+
+(define (display2 sth)
+	(display sth)
+	(eprintf sth))

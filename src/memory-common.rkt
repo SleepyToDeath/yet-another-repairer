@@ -13,7 +13,7 @@
 
 ;Tips:
 ;	1.No memory is reused to avoid GC
-;	2.All tops take the maximum input at branches to avoid uncertainty
+;	2.All tops take the maximum input at phi nodes to avoid uncertainty
 
 ;====================== Struct Definition ========================
 ;v-meta: vtab-meta
