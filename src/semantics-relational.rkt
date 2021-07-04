@@ -608,7 +608,10 @@
 				(define func-fml-new (append-fml func-fml-ret fml-path))
 				(defer-eval spec-id "return value" ret-value)
 ;				(assert id)
-				(if summary? #f (add-spec id spec-id mem-in (memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-ret) summary?) inst inst-ret? #f))
+				(if summary? #f (add-spec id spec-id 
+					(memory-sym-reset (memory-sym-new summary?) mem-in summary?)
+					(memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-ret) summary?) 
+					inst inst-ret? #f mark))
 				(std:struct-copy rbstate st [pc (+ 1 pc)] [func-fml func-fml-new]))]
 
 			[(inst-long-jump cls-name func-name)
@@ -813,7 +816,10 @@
 									(memory-sforce-read mem-0 (string-id (variable-name obj)) 0))])
 								(memory-fwrite mem-0 (vfield-id mac (string-id (type-name-name cls)) (string-id (field-name fname))) addr value (jtype->mtype jtype)))]))
 				(defer-eval spec-id "new-v" value)
-				(if summary? #f (add-spec id spec-id mem-in (memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-new) summary?) inst inst-ass? #f))
+				(if summary? #f (add-spec id spec-id 
+					(memory-sym-reset (memory-sym-new summary?) mem-in summary?)
+					(memory-sym-reset (memory-sym-new summary?) (memory-sym-commit mem-new) summary?) 
+					inst inst-ass? #f mark))
 				(update-mem-only mem-new))]
 
 			;[!]there might be bug if reading from heap
@@ -855,7 +861,10 @@
 ;					(pretty-print fml-new)
 ;					(defer-eval current-spec-id "jmp encoding: " fml-new)
 					(define pc-br (imap-get (function-lmap func) label default-type))
-					(if summary? #f (add-spec id spec-id mem-in mem-in inst inst-jmp? (not (next-mark))))
+					(if summary? #f (add-spec id spec-id 
+						(memory-sym-reset (memory-sym-new summary?) mem-in summary?)
+						(memory-sym-reset (memory-sym-new summary?) mem-in summary?)
+						inst inst-jmp? (not (next-mark)) mark))
 					(if summary? 
 						(update-rbstate-verbose fml-new mem-0+ pc-br (not cnd) cnd)
 ;						(update-rbstate-verbose fml-new mem-0+ pc-br (and mark (select-fml? (not cnd))) (and mark (select-fml? cnd)))))))]))]))
@@ -867,7 +876,7 @@
 
 ;========================== Local Spec ==========================
 
-(struct local-spec (spec-id mem-in mem-out inst-ori inst-type take-branch?) #:transparent)
+(struct local-spec (spec-id mem-in mem-out inst-ori inst-type take-branch? executed?) #:transparent)
 
 ;selector -> list of 
 (define spec-map (imap-empty default-type))
@@ -876,11 +885,11 @@
 	(set! spec-map (imap-empty default-type)))
 (register-reset! clear-specs! #t)
 
-(define (add-spec id0 spec-id mem-in mem-out inst-ori inst-type take-branch?)
+(define (add-spec id0 spec-id mem-in mem-out inst-ori inst-type take-branch? executed?)
 	(define id (~a id0))
 	(define cur (imap-get spec-map id default-type))
 	(define cur+ (if (is-not-found? cur) null cur))
-	(set! spec-map (imap-set spec-map id (cons (local-spec spec-id mem-in mem-out inst-ori inst-type take-branch?) cur+) default-type)))
+	(set! spec-map (imap-set spec-map id (cons (local-spec spec-id mem-in mem-out inst-ori inst-type take-branch? executed?) cur+) default-type)))
 
 ;ast: ast of entire program
 ;return: spec after this line
@@ -893,15 +902,16 @@
 ;return: spec after this line
 (define (step-spec specs mac inst sol-bad sol-good)
 	(map (lambda (spec)
-		(define mac-spec (std:struct-copy machine mac [mem 
-			(if (equal? (local-spec-spec-id spec) spec-id-good)
-				(evaluate (local-spec-mem-in spec) sol-good)
-				(evaluate (local-spec-mem-in spec) sol-bad))]))
-		(set-context! mac-spec)
-;		(define-symbolic* x integer?)
-;		(pretty-print (memory-hread (machine-mem mac-spec) x integer?))
-		(define mac-post (inst-exec inst mac-spec #f))
-		(std:struct-copy local-spec spec [mem-in (machine-mem mac-post)]))
+		(define sol 
+			(match (local-spec-spec-id spec) 
+				[spec-id-good sol-good] 
+				[spec-id-bad sol-bad]))
+		(if (not (evaluate (local-spec-executed? spec) sol)) spec
+			(begin
+			(define mac-spec (std:struct-copy machine mac [mem (evaluate (local-spec-mem-in spec) sol)]))
+			(set-context! mac-spec)
+			(define mac-post (inst-exec inst mac-spec #f))
+			(std:struct-copy local-spec spec [mem-in (machine-mem mac-post)]))))
 	specs))
 
 ;ast: ast of entire program
@@ -913,10 +923,15 @@
 
 (define (sat-spec-continue? specs mac inst sol-bad sol-good)
 	(andmap (lambda (spec-sym)
+		(define sol 
+			(match (local-spec-spec-id spec-sym) 
+				[spec-id-good sol-good] 
+				[spec-id-bad sol-bad]))
 		(if (not ((local-spec-inst-type spec-sym) inst)) #f
+		(if (not (evaluate (local-spec-executed? spec-sym) sol)) #t
 			(begin
-			(define spec (if (equal? (local-spec-spec-id spec-sym) spec-id-good) (evaluate spec-sym sol-good) (evaluate spec-sym sol-bad)))
-			(match spec [(local-spec spec-id mem-in mem-out inst-ori inst-type take-branch?)
+			(define spec (evaluate spec-sym sol))
+			(match spec [(local-spec spec-id mem-in mem-out inst-ori inst-type take-branch? executed?)
 				(begin
 				(define mac-spec (std:struct-copy machine mac [mem mem-in]))
 				(pretty-print (list inst-ori inst-type take-branch?))
@@ -941,7 +956,7 @@
 					[(inst-ret v-expr)  
 						(begin
 						(match-define (cons ret-value ret-jtype) (expr-eval v-expr mac-spec))
-						(equal? ret-value (memory-sforce-read mem-out var-ret-name 0)))]))]))))
+						(equal? ret-value (memory-sforce-read mem-out var-ret-name 0)))]))])))))
 		specs))
 
 (define (same-vl? inst1 inst2)

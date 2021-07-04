@@ -53,11 +53,11 @@
 (define mac (ast->machine buggy))
 (pretty-print string-id-table)
 
-(define mac-in (assign-input mac input1.1))
+(define mac-in (assign-input mac input2))
 
 (define mac-fin (compute mac-in))
 
-(define result (compare-output mac-fin output1.1))
+(define result (compare-output mac-fin output2))
 
 result
 

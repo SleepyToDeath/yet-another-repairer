@@ -57,7 +57,7 @@
 ;selectors: list of 
 ;funcs: list of sid
 (define (localize-bug-in-funcs ast mac locations encoder spec-bad spec-good funcs)
-	(display "\n Encoding: \n")
+	(display2 "\n Encoding: \n")
 	(display (~a "target funcs: " funcs "\n"))
 	(display "visited: \n") 
 	(map print-location visited-locations)
@@ -128,8 +128,8 @@
 
 		(display "\nbad deferred values:\n")
 		(print-pending-eval spec-id-bad sol-bad)
-;		(display "good deferred values:\n")
-;		(print-pending-eval spec-id-good sol-good)
+		(display "good deferred values:\n")
+		(print-pending-eval spec-id-good sol-good)
 
 		(display2 "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 		(print-location bugl)
@@ -224,7 +224,8 @@
 				(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 			(define pruner
 				(lambda (ast) (monitor-reason "pruner" (real-pruner ast mac))))
-			(ast-dfs sketch-line-1 ctxt dummy-verifier pruner updater search-depth))
+			(ast-dfs patch-line-6.1 ctxt dummy-verifier pruner updater search-depth))
+;			(ast-dfs sketch-line-1 ctxt dummy-verifier pruner updater search-depth))
 
 		(define (search-second)
 			(define dummy-verifier
@@ -235,7 +236,8 @@
 				(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 			(define pruner
 				(monitor-reason "pruner" (lambda (ast) (real-pruner ast mac))))
-			(ast-dfs sketch-line-2 ctxt dummy-verifier pruner updater inf-depth))
+			(ast-dfs patch-line-6.2 ctxt dummy-verifier pruner updater inf-depth))
+;			(ast-dfs sketch-line-2 ctxt dummy-verifier pruner updater inf-depth))
 
 		(search-first)
 		(search-second)
@@ -308,8 +310,10 @@
 							(display (~a "pre check took " (timer-reset) " milliseconds\n"))
 							;spec check
 							(set! spec-step1 (if spec-step1 spec-step1 
-								(step-spec-0 (location-selector bugl) mac (car (ast->instruction l2 #f #f)) sol-bad sol-good)))
-							(display "~~ first step ~~\n")
+								(begin
+								(display "~~ first step ~~\n")
+								(step-spec-0 (location-selector bugl) mac (car (ast->instruction l2 #f #f)) sol-bad sol-good))))
+							(display "~~ second step ~~\n")
 							(define ret.maybe (monitor-reason "spec" (sat-spec-continue? spec-step1 mac (car (ast->instruction l1 #f #f)) sol-bad sol-good)))
 							;timer
 							(display (~a "spec check took " (timer-reset) " milliseconds\n"))
@@ -344,8 +348,9 @@
 			(match-define (cons input output) io)
 			(define mac-in (assign-input mac-sketch input))
 			(define mac-fin (compute mac-in))
-			(compare-output mac-fin output))
+			(do-n-ret pretty-print (compare-output mac-fin output)))
 		(define constraint (andmap+ spec->fml spec))
+		(pretty-print constraint)
 		constraint)))
 
 
@@ -368,6 +373,25 @@
 	(types (type-list (list (type-name (string-id "java.lang.Object")))))
 	(arguments-caller (argument-caller-list (list (dexpr (expr-var (variable (string-id "$r1" ))))))))))
 
+(define patch-line-6.2 
+(stat-calls
+ (stat-virtual-call
+  (variable 15)
+  (variable 94)
+  (type-name 2)
+  (func-name 78)
+  (types (type-list null))
+  (arguments-caller (argument-caller-list null)))))
+
+(define patch-line-6.1
+(stat
+ (stat-ass
+  (lexpr (expr-var (variable 65)))
+  (expr
+   (expr-binary
+    (expr (expr-var (variable 63)))
+    (op op-sub)
+    (expr (expr-var (variable 15))))))))
 
 
 ;(define spec-counter 0)
