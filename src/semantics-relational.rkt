@@ -902,10 +902,10 @@
 ;return: spec after this line
 (define (step-spec specs mac inst sol-bad sol-good)
 	(map (lambda (spec)
-		(define sol 
-			(match (local-spec-spec-id spec) 
-				[spec-id-good sol-good] 
-				[spec-id-bad sol-bad]))
+		(define sol (if (equal? (local-spec-spec-id spec) spec-id-good) sol-good sol-bad))
+;			(match (local-spec-spec-id spec) 
+;				[spec-id-good sol-good] 
+;				[spec-id-bad sol-bad]))
 		(if (not (evaluate (local-spec-executed? spec) sol)) spec
 			(begin
 			(define mac-spec (std:struct-copy machine mac [mem (evaluate (local-spec-mem-in spec) sol)]))
@@ -923,10 +923,10 @@
 
 (define (sat-spec-continue? specs mac inst sol-bad sol-good)
 	(andmap (lambda (spec-sym)
-		(define sol 
-			(match (local-spec-spec-id spec-sym) 
-				[spec-id-good sol-good] 
-				[spec-id-bad sol-bad]))
+		(define sol (if (equal? (local-spec-spec-id spec-sym) spec-id-good) sol-good sol-bad))
+;			(match (local-spec-spec-id spec-sym) 
+;				[spec-id-good sol-good] 
+;				[spec-id-bad sol-bad]))
 		(if (not ((local-spec-inst-type spec-sym) inst)) #f
 		(if (not (evaluate (local-spec-executed? spec-sym) sol)) #t
 			(begin

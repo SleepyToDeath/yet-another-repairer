@@ -224,8 +224,7 @@
 				(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 			(define pruner
 				(lambda (ast) (monitor-reason "pruner" (real-pruner ast mac))))
-			(ast-dfs patch-line-6.1 ctxt dummy-verifier pruner updater search-depth))
-;			(ast-dfs sketch-line-1 ctxt dummy-verifier pruner updater search-depth))
+			(ast-dfs sketch-line-1 ctxt dummy-verifier pruner updater search-depth))
 
 		(define (search-second)
 			(define dummy-verifier
@@ -236,8 +235,7 @@
 				(lambda (ctxt ast) (real-context-updater ctxt ast mac)))
 			(define pruner
 				(monitor-reason "pruner" (lambda (ast) (real-pruner ast mac))))
-			(ast-dfs patch-line-6.2 ctxt dummy-verifier pruner updater inf-depth))
-;			(ast-dfs sketch-line-2 ctxt dummy-verifier pruner updater inf-depth))
+			(ast-dfs sketch-line-2 ctxt dummy-verifier pruner updater inf-depth))
 
 		(search-first)
 		(search-second)
@@ -275,6 +273,7 @@
 
 			(ormap (lambda (l2)
 				(define spec-step1 #f)
+				(define spec-step1-attempted #f)
 				(define bridge-var-type (get-invoke-ret-type l2 mac))
 				(if (contains-target-quick? (ast->sid l2) (location->sid bugl)) #f
 					(ormap (lambda (l1)
@@ -282,8 +281,7 @@
 						(display "\nChecking candidate: \n")
 						(pretty-print l2)
 						(pretty-print l1)
-						(display (~a "Checked " second-counter " patches\n"))
-						(eprintf (~a "Checked " second-counter " patches\n"))
+						(display2 (~a "Checked " second-counter " patches\n"))
 						(timer-on)
 
 	;					(define prog-sketch (replace-stat ast l1 bugl))
@@ -295,7 +293,8 @@
 							(inject-type! (list (cons bridge-var-name bridge-var-type)))
 							(inst-type-check? mac (location-class bugl) (location-func bugl) (car (ast->instruction l1 #f #f))))
 
-						(if (not (monitor-reason "pre check" (pre-check))) #f
+						(if (or (and spec-step1-attempted (not spec-step1))
+								(not (monitor-reason "pre check" (pre-check)))) #f
 							(std:with-handlers ([std:exn:fail? (lambda (x) 
 									(pretty-print x)
 									(display "Execption!\n") 
@@ -312,6 +311,7 @@
 							(set! spec-step1 (if spec-step1 spec-step1 
 								(begin
 								(display "~~ first step ~~\n")
+								(set! spec-step1-attempted #t)
 								(step-spec-0 (location-selector bugl) mac (car (ast->instruction l2 #f #f)) sol-bad sol-good))))
 							(display "~~ second step ~~\n")
 							(define ret.maybe (monitor-reason "spec" (sat-spec-continue? spec-step1 mac (car (ast->instruction l1 #f #f)) sol-bad sol-good)))
