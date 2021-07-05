@@ -8,6 +8,7 @@ import java.util.Iterator;
 //import net.floodlightcontroller.core.FloodlightContext;
 //import net.floodlightcontroller.core.IOFMessageListener;
 //import net.floodlightcontroller.core.IOFSwitch;
+import net.floodlightcontroller.core.IOFSwitch;
 import net.floodlightcontroller.core.IOFSwitchListener;
 //import net.floodlightcontroller.core.PortChangeType;
 //import net.floodlightcontroller.core.internal.FloodlightProvider;
@@ -44,12 +45,12 @@ public class FT implements
 
 //    private ISyncService syncService;
 //    private IStoreClient<String, String> storeFT;
-    public IStoreClient<String, String> storeFT;
-
+    public IStoreClient<String, String> storeFT = new MockStoreClient<>();
 
 //    protected static Logger logger = LoggerFactory.getLogger(FT.class);
 
-    protected static IOFSwitchService switchService;
+    protected static DatapathId defaultId = DatapathId.of(100);
+    protected static IOFSwitchService switchService = new MockSwitchService(defaultId);
 //    private static UtilDurable utilDurable;
 
     private String controllerId;
@@ -172,7 +173,7 @@ public class FT implements
     public void switchRemoved(DatapathId switchId) {
         // TODO Auto-generated method stub
         try {
-            this.storeFT.put(controllerId, getActiveSwitches());
+            this.storeFT.put(controllerId, getActiveSwitches(switchId));
 //        } catch (SyncException e) {
         } catch (Exception e) {
             // TODO Auto-generated catch block
@@ -183,16 +184,18 @@ public class FT implements
     @Override
     public void switchActivated(DatapathId switchId) {
         // TODO Auto-generated method stub
-        String switches = getActiveSwitches();
+        String switches = getActiveSwitches(switchId);
         // expected addition:
         // if (switches == null) return;
-        try {
+        // added redundant code
+        if (false) return;
+//        try {
             this.storeFT.put(controllerId, switches);
 //        } catch (SyncException e) {
-         } catch (Exception e) {
+//         } catch (Exception e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+//            e.printStackTrace();
+//        }
     }
 
     /*
@@ -207,7 +210,7 @@ public class FT implements
     @Override
     public void switchChanged(DatapathId switchId) {
         // TODO Auto-generated method stub
-        String switches = getActiveSwitches();
+        String switches = getActiveSwitches(switchId);
         if(switches==null)return;
         try {
             this.storeFT.put(controllerId, switches);
@@ -218,8 +221,12 @@ public class FT implements
     }
 
 
-    public String getActiveSwitches(){
+    public String getActiveSwitches(DatapathId dpid){
         if(switchService == null)return null;
+        IOFSwitch sw = switchService.getActiveSwitch(dpid);
+        if (sw == null) return null;
+        return sw.toString();
+        /*
         String activeSwitches = "";
         Iterator<DatapathId> itDpid = switchService.getAllSwitchDpids().iterator();
         while (itDpid.hasNext()) {
@@ -236,6 +243,7 @@ public class FT implements
             }
         }
         return activeSwitches;
+        */
     }
 
     /*

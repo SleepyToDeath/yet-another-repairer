@@ -129,7 +129,7 @@ public interface IStoreClient<K, V> {
      * @throws ObsoleteVersionException
      * @throws SyncException
      */
-    public IVersion put(K key, V value) throws Exception;
+    public IVersion put(K key, V value); //throws Exception;
 
     /**
      * Put the given Versioned value into the store for the given key if the
@@ -190,4 +190,6 @@ public interface IStoreClient<K, V> {
      *
     public void addStoreListener(IStoreListener<K> listener);
      */
+
+    public boolean getErrorStatus();
 }

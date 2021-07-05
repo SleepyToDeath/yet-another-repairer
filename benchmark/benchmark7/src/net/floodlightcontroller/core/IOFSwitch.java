@@ -32,7 +32,7 @@ package net.floodlightcontroller.core;
 //import org.projectfloodlight.openflow.protocol.OFRequest;
 //import org.projectfloodlight.openflow.protocol.OFStatsReply;
 //import org.projectfloodlight.openflow.protocol.OFStatsRequest;
-//import org.projectfloodlight.openflow.types.DatapathId;
+import org.projectfloodlight.openflow.types.DatapathId;
 //import org.projectfloodlight.openflow.types.OFPort;
 //import org.projectfloodlight.openflow.types.TableId;
 //import org.projectfloodlight.openflow.types.U64;
@@ -45,6 +45,7 @@ package net.floodlightcontroller.core;
 //import net.floodlightcontroller.core.web.serializers.IOFSwitchSerializer;
 
 //import com.fasterxml.jackson.databind.annotation.JsonSerialize;
+
 /**
  * An openflow switch connecting to the controller.  This interface offers
  * methods for interacting with switches using OpenFlow, and retrieving
@@ -226,11 +227,12 @@ public interface IOFSwitch /* extends IOFMessageWriter */ {
      * @return the date
      *
     Date getConnectedSince();
+    **/
 
     /**
      * Get the datapathId of the switch
      * @return
-     *
+     */
     DatapathId getId();
 
     /**
