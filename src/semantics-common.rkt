@@ -139,6 +139,8 @@
 
 (define (sfield-id cls field) (string-id (list cls delimiter-static field)))
 
+(define (sid->classname sid)
+	(first (id->string sid)))
 ;signature of a field is its name
 ;signature of a function is its name and arg types
 (define (function-same-sig? func-1 func-2) 

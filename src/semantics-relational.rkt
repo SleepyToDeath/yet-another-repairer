@@ -353,6 +353,7 @@
 
 (define (root-invoke-ret-mem itree summary?)
 	(display "################# Func Return! ##################\n")
+	(pretty-print (map car (lstate-mem-in-list (ending-lstate (root-invoke itree)))))
 	(memory-select (lstate-mem-in-list (ending-lstate (root-invoke itree))) summary?))
 	
 (define (insts->relation func-fml mac spec-id target-sids summary?)
@@ -389,9 +390,13 @@
 		(add-valid-selector! id)
 
 ;		(display (~a "Lines of code: " line-counter "\n"))
+		(defer-eval spec-id "class: " (id->string (function-formula-class func-fml)))
+		(defer-eval spec-id "func: " (id->string (function-name func)))
 		(defer-eval spec-id "instruction: " (inst-restore-strings inst))
 		(defer-eval spec-id "path mark " mark)
 		(defer-eval spec-id "id " id)
+		(pretty-print (id->string (function-formula-class func-fml)))
+		(pretty-print (id->string (function-name func)))
 		(pretty-print (inst-restore-strings inst))
 		(pretty-print mark)
 		(pretty-print id)
@@ -695,7 +700,12 @@
 					(set! mac-eval-ctxt (std:struct-copy machine mac-eval-ctxt [mem mem--1]))
 					(define vid (vfunc-id-alt mac cls-name func-name arg-types))
 					(define funcs-invoked (map alloc-lstate 
-						(filter (lambda (f) (and (not (is-interface-func? (function-formula-func f))) (equal? (function-formula-vid f) vid))) 
+						(filter (lambda (f) 
+							(and 
+								(not (is-interface-func? (function-formula-func f))) 
+								(equal? (function-formula-vid f) vid)
+								(or (is-a? cls-name (function-formula-class f) mac)
+									(is-a? (function-formula-class f) cls-name mac))))
 							(all-vfunctions mac))))
 					(define fid-class-name (vfield-id mac cls-name field-name-class))
 					(define classname-true (memory-fread mem--1 fid-class-name obj-addr name-type))
@@ -715,12 +725,10 @@
 						(begin
 						;[?] can different styles of callee be mixed in one calling instruction? I think yes, but note for potential bugs
 						(set! trigger-summary? (or in-target? (and (not summary?) (not (contains-target-alt? mac (function-formula-sid fcan) target-sids)))))
-;						(display "virtaul call #6\n")
 
 						(match-define (cons func-fml-in fml-in) (invoke-setup fcan mem-this args))
 						;an invoke tree without condition
 						(define funcs-ret (invoke->relation func-fml-in mac spec-id target-sids (or summary? trigger-summary?)))
-;						(pretty-print inst)
 
 						(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 						(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))

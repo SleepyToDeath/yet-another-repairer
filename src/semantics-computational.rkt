@@ -12,6 +12,7 @@
 (require "model.rkt")
 (require "semantics-common.rkt")
 (require "type-checker.rkt")
+(require "domain-config.rkt")
 (require racket/format)
 (require racket/string)
 (require (prefix-in std: racket/base))
@@ -142,8 +143,10 @@
 				([name (string-id (type-name-name name-ast))]
 				[extend (if (type-name-name extend-ast) (string-id (type-name-name extend-ast)) #f)]
 				[interfaces (map (lambda (ast) (string-id (type-name-name ast))) (syntax-unwrap 2 interfaces-ast))]
-				[sfuncs (map (lambda (ast) (ast->function name ast)) (syntax-unwrap 2 sfuncs-ast))]
-				[vfuncs	(map (lambda (ast) (ast->function name ast)) (syntax-unwrap 2 vfuncs-ast))]
+				[sfuncs (filter (lambda (func) (not (member (function-name func) ignored-functions)))
+					(map (lambda (ast) (ast->function name ast)) (syntax-unwrap 2 sfuncs-ast)))]
+				[vfuncs (filter (lambda (func) (not (member (function-name func) ignored-functions)))
+					(map (lambda (ast) (ast->function name ast)) (syntax-unwrap 2 vfuncs-ast)))]
 				[sfields (variable-definitions->list sfields-ast)]
 				[vfields (append sfields (variable-definitions->list vfields-ast))])
 				(class name extend interfaces sfuncs vfuncs sfields vfields))]))

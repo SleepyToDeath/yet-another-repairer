@@ -531,7 +531,6 @@
 (register-reset! reset-contains-target-cache! #f)
 ;if a function will (transitively) call any target function
 (define (contains-target? func-getter mac sid target-sids)
-;	(pretty-print sid)
 	(if (or (member sid contains-target-list) (member sid target-sids)) #t
 		(begin
 		(define func (func-getter (imap-get (machine-fmap mac) sid default-type)))
@@ -555,7 +554,12 @@
 						(define vid (vfunc-id func-getter mac cls-name func-name arg-types))
 						(define sids-invoked 
 							(map second
-								(filter (lambda (fsv) (and (not (is-interface-func? (func-getter (first fsv)))) (equal? (third fsv) vid)))
+								(filter (lambda (fsv) 
+									(and 
+										(not (is-interface-func? (func-getter (first fsv)))) 
+										(equal? (third fsv) vid)
+										(or (is-a? cls-name (sid->classname (second fsv)) mac)
+											(is-a? (sid->classname (second fsv)) cls-name mac))))
 									(all-vf-sid-vids func-getter mac))))
 						(ormap (lambda (sid) (contains-target? func-getter mac sid target-sids)) sids-invoked)))]
 				[(inst-special-call ret obj-name cls-name func-name arg-types args)
@@ -606,7 +610,12 @@
 						(define vid (vfunc-id func-getter mac cls-name func-name arg-types))
 						(define sids-invoked 
 							(map second
-								(filter (lambda (fsv) (and (not (is-interface-func? (func-getter (first fsv)))) (equal? (third fsv) vid)))
+								(filter (lambda (fsv) 
+									(and 
+										(not (is-interface-func? (func-getter (first fsv)))) 
+										(equal? (third fsv) vid)
+										(or (is-a? cls-name (sid->classname (second fsv)) mac)
+											(is-a? (sid->classname (second fsv)) cls-name mac))))
 									(all-vf-sid-vids func-getter mac))))
 						(ormap (lambda (sid) 
 							(if (member sid target-sids) #t

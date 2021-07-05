@@ -14,6 +14,7 @@
 (require "semantics-computational.rkt")
 (require "semantics-common.rkt")
 (require "formula.rkt")
+(require "enumerator.rkt")
 (require racket/format)
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 (require (prefix-in p: "jimple/jimple-utils.rkt"))
@@ -67,10 +68,14 @@
 	(define mac (ast->machine buggy))
 	(define mac-in (assign-input mac input))
 	(define mac-fin (compute mac-in))
+	(pretty-print string-id-table)
+	(machine-prepare-recursion mac-fin) 
 	(compare-output mac-fin output))
 
 (verify input1 output1)
+(display2 (~a "Executed " line-counter-c " lines of code\n"))
 (verify input2 output2)
+(display2 (~a "Executed " line-counter-c " lines of code\n"))
 
 (pretty-print string-id-table)
 

@@ -46,7 +46,7 @@
 			(sfunc-id cls-cl func-name-clinit (map cdr (function-args f-cl))))
 			class-names-clinit
 			funcs-clinit)))
-;	(define funcs-init (list 57))
+;	(set! funcs-init (list 271))
 
 	(display (~a "total locations: " (length soft) "\n"))
 
