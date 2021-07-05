@@ -24,10 +24,10 @@ def gen_cases(num: int) -> List[str]:
     return lines
 
 def gen_bench_file(src_path: str, out_path: str, branch_num: int) -> None:
-    fields_start_line = 101
-    fields_end_line = 148
-    cases_start_line = 169
-    cases_end_line = 264
+    fields_start_line = 103
+    fields_end_line = 108
+    cases_start_line = 173
+    cases_end_line = 184
     lines = read_file(src_path)
     assert fields_start_line < fields_end_line
     assert fields_end_line < cases_start_line
