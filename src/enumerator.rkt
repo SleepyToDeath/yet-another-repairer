@@ -580,7 +580,6 @@
 	(contains-target-pure? func-getter mac sid target-sids))
 
 (define (contains-target-pure? func-getter mac sid target-sids)
-;	(pretty-print sid)
 	(if (member sid visited-sids) #t
 		(begin
 		(set! visited-sids (cons sid visited-sids))

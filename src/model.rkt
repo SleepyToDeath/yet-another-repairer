@@ -62,9 +62,9 @@
 ;################ Java Library ##################
 
 ;============ Capacity Limits ============
-(define model-all-capacity 500)
+(define model-all-capacity 2000)
 (define (model-all-hash-func x mem) 
-;	(do-n-ret (lambda (y) (force-error (or (< y 0) (>= y model-all-capacity)) (~a "Hash our of bound!\n" x " -> " y "\n")))
+;	(do-n-ret (force-error (or (< y 0) (>= y model-all-capacity)) (~a "Hash our of bound!\n" x " -> " y "\n")))
 		(if (< x 0) 0
 			(+ 1 (if (> x (vtab-meta-top (memory-v-meta mem)))
 					(- x (vtab-meta-top (memory-v-meta mem)))

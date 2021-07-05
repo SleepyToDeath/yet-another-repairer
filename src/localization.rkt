@@ -23,7 +23,7 @@
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 (require "jimple/operators.rkt")
 (require "enumerator.rkt")
-(require "multitask.rkt")
+(require "format.rkt")
 
 (provide (all-defined-out))
 
@@ -255,7 +255,7 @@
 			(ormap (lambda (l) 
 					(++ second-counter)
 					(display "\nChecking candidate: \n")
-					(pretty-print l)
+					(pretty-print (ast-restore-strings l))
 					(display (~a "Checked " second-counter " patches\n"))
 					(eprintf (~a "Checked " second-counter " patches\n"))
 					(timer-on)
@@ -279,8 +279,8 @@
 					(ormap (lambda (l1)
 						(++ second-counter)
 						(display "\nChecking candidate: \n")
-						(pretty-print l2)
-						(pretty-print l1)
+						(pretty-print (ast-restore-strings l2))
+						(pretty-print (ast-restore-strings l1))
 						(display2 (~a "Checked " second-counter " patches\n"))
 						(timer-on)
 

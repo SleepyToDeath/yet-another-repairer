@@ -11,11 +11,13 @@
 
 ;=================== AST interface ================
 (define-generics ast
+	[ast-traverser ast updater]
 	[ast-expand-next ctxt ast depth]
 	[ast-check ast]
 	[ast-get ast]) ;get rhs
 
 (define-generics expanded
+	[expanded-traverser expanded updater]
 	[expanded-expand-next ctxt expanded depth]
 	[expanded-check expanded]
 	[expanded-get count expanded]) ;get first `count` sub-tree
@@ -49,6 +51,10 @@
 					(if ((id2acc name rname) __ast)
 						(map (lambda (rhs+) (name rhs+)) (expanded-expand-next __ctxt ((id2acc name rname) __ast) __depth))
 						(map (lambda (rhs+) (name (lookup-default-rhs rhs+))) (lookup-default-lhs name)))))
+
+			(define (ast-traverser __ast __updater)
+				(name (let ([__sub ((id2acc name rname) __ast)])
+						(__updater __ast __sub (expanded-traverser __sub __updater)))))
 		]
 	)
 )
@@ -89,6 +95,14 @@
 							__lst))
 					(list __ast+)
 					(std:range (length ((id2acc name lname) __ast+)))))
+
+			(define (expanded-traverser __ast __updater)
+				(name (map (lambda (__sub) 
+					(__updater 
+							__ast 
+							__sub
+							(ast-traverser __sub __updater))) 
+					((id2acc name lname) __ast))))
 		]
 	)
 )
@@ -132,6 +146,12 @@
 									(lambda (__lhs+) (std:struct-copy name __ast0 [lname __lhs+])) 
 									(ast-expand-next  __ctxt (lhs #f) (- __depth 1)))))
 						...)))
+
+			(define (expanded-traverser __ast __updater)
+				(name (__updater 
+								__ast 
+								((id2acc name lname) __ast)
+								(ast-traverser ((id2acc name lname) __ast) __updater)) ...))
 		])
 )
 
@@ -152,6 +172,9 @@
 				(if (< __depth 0) null
 					(if ((id2acc name val) __ast) (list __ast)
 						((id2enum name) __ctxt __depth))))
+
+			(define (ast-traverser __ast __updater)
+				(name (__updater __ast ((id2acc name val) __ast) ((id2acc name val) __ast) )))
 		]
 	)
 )

@@ -34,6 +34,9 @@
 (define (has-static-modifier? modifier-list)
   (ormap [lambda (m) (std:string=? m "static")] modifier-list))
 
+(define (has-volatile-modifier? modifier-list)
+  (ormap [lambda (m) (std:string=? m "volatile")] modifier-list))
+
 (define (parse-to-stx text)
   (parse (tokenize (std:open-input-string text))))
 
@@ -105,9 +108,11 @@
            (list null (list (second mod-name)) null null)))]
     [({p:~literal method} p:~rest m)
      (let ([mod-name (build-ast-method member-stx)])
-       (if (has-static-modifier? (first mod-name))
+	   (if (has-volatile-modifier? (first mod-name))
+	       (list null null null null)
+         (if (has-static-modifier? (first mod-name))
            (list null null (list (second mod-name)) null)
-           (list null null null (list (second mod-name)))))]))
+           (list null null null (list (second mod-name))))))]))
 
 
 (define (build-ast-field field-stx)

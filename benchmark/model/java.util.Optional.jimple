@@ -52,15 +52,15 @@ public final class java.util.Optional extends java.lang.Object
 
         $r1 = r0.<java.util.Optional: java.lang.Object value>;
 
-        if $r1 != null goto label1;
+//        if $r1 != null goto label1;
 
-        $r3 = new java.lang.RuntimeException;
+//        $r3 = new java.lang.RuntimeException;
 
-        specialinvoke $r3.<java.lang.RuntimeException: void <init>(java.lang.String)>("No value present");
+//        specialinvoke $r3.<java.lang.RuntimeException: void <init>(java.lang.String)>("No value present");
 
-        throw $r3;
+//        throw $r3;
 
-     label1:
+//     label1:
         $r2 = r0.<java.util.Optional: java.lang.Object value>;
 
         return $r2;

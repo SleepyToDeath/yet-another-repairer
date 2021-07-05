@@ -50,9 +50,9 @@ class OFActionSetTpSrcVer10 implements OFActionSetTpSrc {
 
     // package private constructor - used by readers, builders, and factory
     OFActionSetTpSrcVer10(TransportPort tpPort) {
-        if(tpPort == null) {
-            throw new NullPointerException("OFActionSetTpSrcVer10: property tpPort cannot be null");
-        }
+//        if(tpPort == null) {
+ //           throw new NullPointerException("OFActionSetTpSrcVer10: property tpPort cannot be null");
+  //      }
         this.tpPort = tpPort;
     }
 
@@ -158,8 +158,8 @@ class OFActionSetTpSrcVer10 implements OFActionSetTpSrc {
         @Override
         public OFActionSetTpSrc build() {
             TransportPort tpPort = this.tpPortSet ? this.tpPort : DEFAULT_TP_PORT;
-            if(tpPort == null)
-                throw new NullPointerException("Property tpPort must not be null");
+//            if(tpPort == null)
+ //               throw new NullPointerException("Property tpPort must not be null");
 
 
             return new OFActionSetTpSrcVer10(

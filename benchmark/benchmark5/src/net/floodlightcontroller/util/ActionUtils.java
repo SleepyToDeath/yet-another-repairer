@@ -1359,7 +1359,7 @@ public class ActionUtils {
      * @return
      */
     public static OFAction decode_set_dst_port(int actionToDecode, OFVersion version) {
-        try {
+//        try {
             // expected:
             // OFActionSetTpDst a = OFFactories.getFactory(version).actions().buildSetTpDst()
             OFActionSetTpSrc a = OFFactories.getFactory(version).actions().buildSetTpSrc()
@@ -1367,10 +1367,10 @@ public class ActionUtils {
                     .build();
 //            log.debug("action {}", a);
             return a;
-        }
-        catch (NumberFormatException e) {
+ //       }
+  //      catch (NumberFormatException e) {
 //            log.debug("Invalid dst-port in: {} (error ignored)", actionToDecode);
-            return null;
-        }
+   //         return null;
+    //    }
     }
 }

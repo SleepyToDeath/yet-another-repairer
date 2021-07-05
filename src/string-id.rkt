@@ -34,6 +34,10 @@
 (define (string-id-pure s)
 	(imap-get string-id-map s default-type))
 
+(define (id->string id)
+	(if (std:string? id) id
+		(car (findf (lambda (s.id) (equal? (cdr s.id) id)) string-id-table))))
+
 
 ;number -> string
 (define string-value-of-table (imap-empty default-type))
@@ -44,4 +48,8 @@
 		#f))
 
 (define (string-value-of v)
-	(imap-get string-value-of-table v default-type))
+	(define ret (imap-get string-value-of-table v default-type))
+	(if (is-not-found? ret)
+		(+ v string-id-int-offset)
+		ret))
+

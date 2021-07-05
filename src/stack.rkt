@@ -6,6 +6,7 @@
 (require racket/pretty)
 (require racket/list)
 (require "map.rkt")
+(require "string-id.rkt")
 (require "formula.rkt")
 (require "memory-common.rkt")
 
@@ -166,7 +167,7 @@ stack-empty)
 			(do-n-ret 
 				(lambda (fml)
 					(defer-eval current-spec-id "stack preserve " 
-						(list id key fml
+						(list id (id->string (car key)) fml
 							(list-ref (static-scope-array sc) (car key))
 							(list-ref (static-scope-array-out sc) (car key))))
 					(pending-always-right! fml))
@@ -177,7 +178,7 @@ stack-empty)
 			(static-scope-keys sc))
 		(andmap+ (lambda (key)
 			(defer-eval current-spec-id "stack update " 
-				(list id key
+				(list id (id->string key)
 					(list-ref (static-scope-array sc) key)
 					(list-ref (static-scope-array-out sc) key)))
 			(equal?
@@ -220,15 +221,15 @@ stack-empty)
 	(display "|||| Stack Begin ||||\n")
 	(map (lambda (scope) 
 		(display "--------In--------\n")
-		(map (lambda (key) (pretty-print (cons key (list-ref (static-scope-array scope) (car key))))) 
+		(map (lambda (key) (pretty-print (cons (id->string (car key)) (list-ref (static-scope-array scope) (car key))))) 
 			(cons (cons (- scope-size 1) default-type) (static-scope-keys scope)))
 		(display "--------Out-------\n")
-		(map (lambda (key) (pretty-print (cons key (list-ref (static-scope-array-out scope) (car key))))) 
+		(map (lambda (key) (pretty-print (cons (id->string (car key)) (list-ref (static-scope-array-out scope) (car key))))) 
 			(cons (cons (- scope-size 1) default-type) (static-scope-keys scope)))
 		(display "------------------\n"))
 		(static-stack-scopes st))
 	(display " updates: \n")
-	(pretty-print (static-stack-updates st)))
+	(pretty-print (map (lambda (lvl) (map id->string lvl)) (static-stack-updates st))))
 
 
 ;========================== Interface ===========================

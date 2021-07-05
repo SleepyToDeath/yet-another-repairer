@@ -21,6 +21,9 @@
 (provide (all-defined-out))
 
 (define line-counter-c 0)
+(define formatter identity)
+(define (set-formatter! f)
+	(set! formatter f))
 
 ;======================== Execution Interface ===========================
 ;machine(init) X list of names -> machine(fin)
@@ -74,7 +77,7 @@
 ;			(display "\n")
 ;			(println string-id-map)
 ;			(display "\n")
-			(pretty-print inst-cur)
+			(pretty-print (formatter inst-cur))
 			(set! line-counter-c (+ line-counter-c 1))
 ;			(display (~a "mem size 2.2: " (memory-heap-size (machine-mem mac)) " \n"))
 ;			(display (~a "Lines of code: " line-counter-c))
@@ -672,4 +675,5 @@
 ;		(defer-eval "field read: " (list obj-name cls-name fname ret))
 ;		(display (~a "field read: " (list obj-name cls-name fname ret) "\n"))
 		(cons ret jtype))])
+
 
