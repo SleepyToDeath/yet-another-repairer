@@ -6,19 +6,19 @@
          rosette/lib/match)   ; provides `match`
 (require rosette/solver/smt/z3)
 
-(require (prefix-in p: "jimple/jimple-parser.rkt"))
-(require "match-define.rkt")
-(require "localization.rkt")
-(require "string-id.rkt")
-(require "map.rkt")
-(require "syntax.rkt")
-(require "syntax-jimple.rkt")
-(require "semantics-relational.rkt")
-(require "semantics-computational.rkt")
-(require "semantics-common.rkt")
-(require "memory-common.rkt")
-(require "formula.rkt")
-(require (prefix-in p: "jimple/jimple-parser.rkt"))
+(require (prefix-in p: "../jimple/jimple-parser.rkt"))
+(require "../match-define.rkt")
+(require "../localization.rkt")
+(require "../string-id.rkt")
+(require "../map.rkt")
+(require "../syntax.rkt")
+(require "../syntax-jimple.rkt")
+(require "../semantics-relational.rkt")
+(require "../semantics-computational.rkt")
+(require "../semantics-common.rkt")
+(require "../memory-common.rkt")
+(require "../formula.rkt")
+(require (prefix-in p: "../jimple/jimple-parser.rkt"))
 
 
 (define class-obj (p:build-ast-file (p:parse-to-stx
@@ -90,15 +90,18 @@ public class A extends java.lang.Object {
 		return 1;
 	}
 
-	public static boolean funcA()
+	public boolean funcA(B)
 	{
-        boolean $z0;
-        $z0 = 1;
-        if $z0 == 0 goto label1;
-		$z0 = 0;
-     label1:
-	 	return null;
+        B r1;
+        boolean $z1;
+
+		r1 := @parameter0: B;
+
+		$z1 = virtualinvoke r1.<B: boolean funcB()>();
+
+        return 1;
 	}
+
 
 }
 ")))
@@ -109,12 +112,13 @@ public class Test extends java.lang.Object
 {
 	public static int main(long)
 	{
-//		staticinvoke <A: boolean funcA()>();
-        boolean $z0;
-        $z0 = 1;
-        if $z0 == 0 goto label1;
-		$z0 = 0;
-     label1:
+		A a;
+		B b;
+		a = new A;
+        specialinvoke a.<A: void <init>()>();
+		b = new B;
+		specialinvoke b.<B: void <init>()>();
+		virtualinvoke a.<A: boolean funcA(B)>(b);
 		return 1;
 	}
 }

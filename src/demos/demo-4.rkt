@@ -5,30 +5,35 @@
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
 
-(require "localization.rkt")
-(require "match-define.rkt")
-(require "string-id.rkt")
-(require "syntax.rkt")
-(require "syntax-jimple.rkt")
-(require "semantics-relational.rkt")
-(require "semantics-computational.rkt")
-(require "semantics-common.rkt")
-(require "memory-common.rkt")
-(require "formula.rkt")
+(require "../localization.rkt")
+(require "../match-define.rkt")
+(require "../string-id.rkt")
+(require "../syntax.rkt")
+(require "../syntax-jimple.rkt")
+(require "../semantics-relational.rkt")
+(require "../semantics-computational.rkt")
+(require "../semantics-common.rkt")
+(require "../memory-common.rkt")
+(require "../formula.rkt")
 (require racket/format)
-(require (prefix-in p: "jimple/jimple-parser.rkt"))
-(require (prefix-in p: "jimple/jimple-utils.rkt"))
+(require (prefix-in p: "../jimple/jimple-parser.rkt"))
+(require (prefix-in p: "../jimple/jimple-utils.rkt"))
 
-(define src-dir "../benchmark/benchmark3/sootOutput/")
+(define src-dir "../../benchmark/benchmark4/sootOutput/")
 
 (define src-classes (list
 "java.lang.Object.jimple"
-;"java.lang.Enum.jimple"
-;"net.floodlightcontroller.firewall.FirewallRule$FirewallAction.jimple"
-"net.floodlightcontroller.firewall.FirewallRule.jimple"
-"net.floodlightcontroller.firewall.FirewallRuleTest.jimple"
-"org.projectfloodlight.openflow.types.MacAddress.jimple"
-))
+"java.util.Collection.jimple"
+"java.util.HashMap.jimple"
+"java.util.ArrayList.jimple"
+"java.util.HashSet.jimple"
+"java.util.Optional.jimple"
+"net.floodlightcontroller.dhcpserver.DHCPBinding.jimple"
+"net.floodlightcontroller.dhcpserver.DHCPPool.jimple"
+"net.floodlightcontroller.dhcpserver.DHCPPoolTest.jimple"
+"net.floodlightcontroller.dhcpserver.IDHCPPool.jimple"
+"org.projectfloodlight.openflow.types.IPv4Address.jimple"
+"org.projectfloodlight.openflow.types.MacAddress.jimple"))
 
 (define class-src-list (map (lambda (src-class) (begin 
 	(display (~a "Parsing src file: " src-class "\n"))
@@ -45,19 +50,13 @@
 (define output1 (list (cons var-ret-name 1)))
 
 (define input2 (list (cons (bv 200 bv-type) "long")))
-(define output2 (list (cons var-ret-name 0)))
+(define output2 (list (cons var-ret-name 1)))
 
-(define mac1 (ast->machine buggy))
-(define mac-in1 (assign-input mac1 input1))
-(define mac-fin1 (compute mac-in1))
-(define result1 (compare-output mac-fin1 output1))
-result1
-
-(define mac2 (ast->machine buggy))
-(define mac-in2 (assign-input mac2 input2))
-(define mac-fin2 (compute mac-in2))
-(define result2 (compare-output mac-fin2 output2))
-result2
+(define mac (ast->machine buggy))
+(define mac-in (assign-input mac input1))
+(define mac-fin (compute mac-in))
+(define result (compare-output mac-fin output1))
+result
 
 (pretty-print string-id-table)
 (display "===============================================================================================================\n")
@@ -65,7 +64,7 @@ result2
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1)) (list (cons input2 output2))))
+(define bugl (localize-bug buggy (list (cons input1 output1) (cons input2 output2)) null))
 (pretty-print bugl)
 
 ;(match-define (cons soft hard) (ast->relation buggy))

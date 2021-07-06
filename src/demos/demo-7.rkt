@@ -5,21 +5,21 @@
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
 
-(require "localization.rkt")
-(require "match-define.rkt")
-(require "string-id.rkt")
-(require "syntax.rkt")
-(require "syntax-jimple.rkt")
-(require "semantics-relational.rkt")
-(require "semantics-computational.rkt")
-(require "semantics-common.rkt")
-(require "formula.rkt")
-(require "enumerator.rkt")
+(require "../localization.rkt")
+(require "../match-define.rkt")
+(require "../string-id.rkt")
+(require "../syntax.rkt")
+(require "../syntax-jimple.rkt")
+(require "../semantics-relational.rkt")
+(require "../semantics-computational.rkt")
+(require "../semantics-common.rkt")
+(require "../formula.rkt")
+(require "../enumerator.rkt")
 (require racket/format)
-(require (prefix-in p: "jimple/jimple-parser.rkt"))
-(require (prefix-in p: "jimple/jimple-utils.rkt"))
+(require (prefix-in p: "../jimple/jimple-parser.rkt"))
+(require (prefix-in p: "../jimple/jimple-utils.rkt"))
 
-(define src-dir "../benchmark/benchmark7/sootOutput/")
+(define src-dir "../../benchmark/benchmark7/sootOutput/")
 
 (define src-classes (list
 "java.lang.Object.jimple"
@@ -61,7 +61,9 @@
 	(compare-output mac-fin output))
 
 (verify input1 output1)
+(display2 (~a "Executed " line-counter-c " lines of code\n"))
 (verify input2 output2)
+(display2 (~a "Executed " line-counter-c " lines of code\n"))
 
 (pretty-print string-id-table)
 (display "===============================================================================================================\n")

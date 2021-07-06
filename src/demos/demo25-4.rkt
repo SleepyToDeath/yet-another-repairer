@@ -6,19 +6,19 @@
          rosette/lib/match)   ; provides `match`
 (require rosette/solver/smt/z3)
 
-(require (prefix-in p: "jimple/jimple-parser.rkt"))
-(require "match-define.rkt")
-(require "localization.rkt")
-(require "string-id.rkt")
-(require "map.rkt")
-(require "syntax.rkt")
-(require "syntax-jimple.rkt")
-(require "semantics-relational.rkt")
-(require "semantics-computational.rkt")
-(require "semantics-common.rkt")
-(require "memory-common.rkt")
-(require "formula.rkt")
-(require (prefix-in p: "jimple/jimple-parser.rkt"))
+(require (prefix-in p: "../jimple/jimple-parser.rkt"))
+(require "../match-define.rkt")
+(require "../localization.rkt")
+(require "../string-id.rkt")
+(require "../map.rkt")
+(require "../syntax.rkt")
+(require "../syntax-jimple.rkt")
+(require "../semantics-relational.rkt")
+(require "../semantics-computational.rkt")
+(require "../semantics-common.rkt")
+(require "../memory-common.rkt")
+(require "../formula.rkt")
+(require (prefix-in p: "../jimple/jimple-parser.rkt"))
 
 
 (define class-obj (p:build-ast-file (p:parse-to-stx

@@ -80,7 +80,7 @@
 ;			(display "\n")
 ;			(println string-id-map)
 ;			(display "\n")
-			(pretty-print (formatter inst-cur))
+;			(pretty-print (formatter inst-cur))
 			(set! line-counter-c (+ line-counter-c 1))
 ;			(display (~a "mem size 2.2: " (memory-heap-size (machine-mem mac)) " \n"))
 ;			(display (~a "Lines of code: " line-counter-c))

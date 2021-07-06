@@ -6,19 +6,19 @@
          rosette/lib/match)   ; provides `match`
 (require rosette/solver/smt/z3)
 
-(require (prefix-in p: "jimple/jimple-parser.rkt"))
-(require "match-define.rkt")
-(require "localization.rkt")
-(require "string-id.rkt")
-(require "map.rkt")
-(require "syntax.rkt")
-(require "syntax-jimple.rkt")
-(require "semantics-relational.rkt")
-(require "semantics-computational.rkt")
-(require "semantics-common.rkt")
-(require "memory-common.rkt")
-(require "formula.rkt")
-(require (prefix-in p: "jimple/jimple-parser.rkt"))
+(require (prefix-in p: "../jimple/jimple-parser.rkt"))
+(require "../match-define.rkt")
+(require "../localization.rkt")
+(require "../string-id.rkt")
+(require "../map.rkt")
+(require "../syntax.rkt")
+(require "../syntax-jimple.rkt")
+(require "../semantics-relational.rkt")
+(require "../semantics-computational.rkt")
+(require "../semantics-common.rkt")
+(require "../memory-common.rkt")
+(require "../formula.rkt")
+(require (prefix-in p: "../jimple/jimple-parser.rkt"))
 
 
 (define class-obj (p:build-ast-file (p:parse-to-stx
@@ -31,6 +31,7 @@ public class java.lang.Object
         r0 := @this: java.lang.Object;
 		return r0;
 	}
+
     public boolean equals(java.lang.Object)
 	{
         java.lang.Object r0, r1;
@@ -41,34 +42,12 @@ public class java.lang.Object
      label1:
         return 0;
 	}
+
 	public java.lang.Object clone()
 	{
         java.lang.Object r0;
         r0 := @this: java.lang.Object;
 		return r0;
-	}
-}
-")))
-
-(define class-B (p:build-ast-file (p:parse-to-stx
-"
-public class B extends java.lang.Object {
-	public static void <init>()
-	{
-		B r0;
-		r0 := @this: B;
-        specialinvoke r0.<java.lang.Object: void <init>()>();
-		return;
-	}
-
-	public static boolean funcB2(B)
-	{
-		return 1;
-	}
-
-	public boolean funcB()
-	{
-		return 1;
 	}
 }
 ")))
@@ -79,29 +58,27 @@ public class A extends java.lang.Object {
 	public static void <init>()
 	{
 		A r0;
-		B r1;
 		r0 := @this: A;
         specialinvoke r0.<java.lang.Object: void <init>()>();
 		return;
 	}
 
-	public boolean funcA2()
-	{
-		return 1;
+	public static void funcA() {
+		return 4;
 	}
 
-	public boolean funcA(B)
+	public static boolean funcA2(int)
 	{
-        B r1;
-        boolean $z1;
-
-		r1 := @parameter0: B;
-
-		$z1 = virtualinvoke r1.<B: boolean funcB()>();
-
-        return 1;
+        byte $b0;
+        int l1;
+        l1 := @parameter0: int;
+		$b0 = l1 - 99;
+        if $b0 != 0 goto label1;
+		return 2;
+	label1:
+		staticinvoke <A: void funcA()>();
+		return 3;
 	}
-
 
 }
 ")))
@@ -112,20 +89,15 @@ public class Test extends java.lang.Object
 {
 	public static int main(long)
 	{
-		A a;
-		B b;
-		a = new A;
-        specialinvoke a.<A: void <init>()>();
-		b = new B;
-		specialinvoke b.<B: void <init>()>();
-		virtualinvoke a.<A: boolean funcA(B)>(b);
+        l1 := @parameter0: long;
+		staticinvoke <A: boolean funcA2(int)>(100);
 		return 1;
 	}
 }
 ")))
 
 (define buggy (program
-	(class-list (list class-obj class-A class-B class-Main))))
+	(class-list (list class-obj class-A class-Main))))
 
 (define input1 (list (cons (bv 200 bv-type) "long")))
 (define output1 (list (cons var-ret-name 1)))

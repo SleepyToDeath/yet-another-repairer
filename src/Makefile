@@ -5,5 +5,5 @@ build:
 	ant clean soot
 
 test:
-	racket demo-$t.rkt
+	racket ./demos/demo-$t.rkt
 

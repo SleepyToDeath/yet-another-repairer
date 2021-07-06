@@ -1,5 +1,5 @@
 #lang rosette/safe
-(require "formula.rkt")
+(require "../formula.rkt")
 
 (require (prefix-in std: racket/base))
 (require (prefix-in std: racket/list))

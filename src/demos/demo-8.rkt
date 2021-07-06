@@ -5,35 +5,40 @@
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
 
-(require "localization.rkt")
-(require "match-define.rkt")
-(require "string-id.rkt")
-(require "syntax.rkt")
-(require "syntax-jimple.rkt")
-(require "semantics-relational.rkt")
-(require "semantics-computational.rkt")
-(require "semantics-common.rkt")
-(require "memory-common.rkt")
-(require "formula.rkt")
+(require "../localization.rkt")
+(require "../match-define.rkt")
+(require "../string-id.rkt")
+(require "../syntax.rkt")
+(require "../syntax-jimple.rkt")
+(require "../semantics-relational.rkt")
+(require "../semantics-computational.rkt")
+(require "../semantics-common.rkt")
+(require "../formula.rkt")
+(require "../enumerator.rkt")
 (require racket/format)
-(require (prefix-in p: "jimple/jimple-parser.rkt"))
-(require (prefix-in p: "jimple/jimple-utils.rkt"))
+(require (prefix-in p: "../jimple/jimple-parser.rkt"))
+(require (prefix-in p: "../jimple/jimple-utils.rkt"))
 
-(define src-dir "../benchmark/benchmark4/sootOutput/")
+(define src-dir "../../benchmark/benchmark8/sootOutput/")
 
 (define src-classes (list
 "java.lang.Object.jimple"
 "java.util.Collection.jimple"
 "java.util.HashMap.jimple"
+"java.util.Map.jimple"
 "java.util.ArrayList.jimple"
 "java.util.HashSet.jimple"
-"java.util.Optional.jimple"
-"net.floodlightcontroller.dhcpserver.DHCPBinding.jimple"
-"net.floodlightcontroller.dhcpserver.DHCPPool.jimple"
-"net.floodlightcontroller.dhcpserver.DHCPPoolTest.jimple"
-"net.floodlightcontroller.dhcpserver.IDHCPPool.jimple"
-"org.projectfloodlight.openflow.types.IPv4Address.jimple"
-"org.projectfloodlight.openflow.types.MacAddress.jimple"))
+"net.floodlightcontroller.core.internal.OFSwitch.jimple"
+"net.floodlightcontroller.core.IOFSwitch.jimple"
+"net.floodlightcontroller.core.types.MacVlanPair.jimple"
+"net.floodlightcontroller.learningswitch.LearningSwitch.jimple"
+"net.floodlightcontroller.learningswitch.LearningSwitchTest.jimple"
+"org.projectfloodlight.openflow.types.MacAddress.jimple"
+"org.projectfloodlight.openflow.types.OFPort$1.jimple"
+"org.projectfloodlight.openflow.types.OFPort$NamedPort.jimple"
+"org.projectfloodlight.openflow.types.OFPort$PrecachedPort.jimple"
+"org.projectfloodlight.openflow.types.OFPort.jimple"
+"org.projectfloodlight.openflow.types.VlanVid.jimple"))
 
 (define class-src-list (map (lambda (src-class) (begin 
 	(display (~a "Parsing src file: " src-class "\n"))
@@ -46,17 +51,21 @@
 
 ;(pretty-print buggy)
 
-(define input1 (list (cons (bv 100 bv-type) "long")))
+(define input1 (list (cons #xFFFF "int")))
 (define output1 (list (cons var-ret-name 1)))
-
-(define input2 (list (cons (bv 200 bv-type) "long")))
+(define input2 (list (cons 100 "int")))
 (define output2 (list (cons var-ret-name 1)))
 
-(define mac (ast->machine buggy))
-(define mac-in (assign-input mac input1))
-(define mac-fin (compute mac-in))
-(define result (compare-output mac-fin output1))
-result
+(define (verify input output)
+	(define mac (ast->machine buggy))
+	(define mac-in (assign-input mac input))
+	(define mac-fin (compute mac-in))
+	(compare-output mac-fin output))
+
+(verify input1 output1)
+(display2 (~a "Executed " line-counter-c " lines of code\n"))
+(verify input2 output2)
+(display2 (~a "Executed " line-counter-c " lines of code\n"))
 
 (pretty-print string-id-table)
 (display "===============================================================================================================\n")
@@ -64,7 +73,7 @@ result
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1) (cons input2 output2)) null))
+(define bugl (localize-bug buggy (list (cons input1 output1)) (list (cons input2 output2))))
 (pretty-print bugl)
 
 ;(match-define (cons soft hard) (ast->relation buggy))

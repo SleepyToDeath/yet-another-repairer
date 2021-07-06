@@ -5,30 +5,30 @@
 (require rosette/lib/angelic  ; provides `choose*`
          rosette/lib/match)   ; provides `match`
 
-(require "localization.rkt")
-(require "match-define.rkt")
-(require "string-id.rkt")
-(require "syntax.rkt")
-(require "syntax-jimple.rkt")
-(require "semantics-relational.rkt")
-(require "semantics-computational.rkt")
-(require "semantics-common.rkt")
-(require "formula.rkt")
+(require "../localization.rkt")
+(require "../match-define.rkt")
+(require "../string-id.rkt")
+(require "../syntax.rkt")
+(require "../syntax-jimple.rkt")
+(require "../semantics-relational.rkt")
+(require "../semantics-computational.rkt")
+(require "../semantics-common.rkt")
+(require "../memory-common.rkt")
+(require "../formula.rkt")
 (require racket/format)
-(require (prefix-in p: "jimple/jimple-parser.rkt"))
-(require (prefix-in p: "jimple/jimple-utils.rkt"))
+(require (prefix-in p: "../jimple/jimple-parser.rkt"))
+(require (prefix-in p: "../jimple/jimple-utils.rkt"))
 
-(define src-dir "../benchmark/benchmark6/sootOutput/")
+(define src-dir "../../benchmark/benchmark3/sootOutput/")
 
 (define src-classes (list
 "java.lang.Object.jimple"
-"net.floodlightcontroller.routing.Link.jimple"
-"net.floodlightcontroller.routing.LinkTest.jimple"
-"org.projectfloodlight.openflow.types.DatapathId.jimple"
-"org.projectfloodlight.openflow.types.OFPort$1.jimple"
-"org.projectfloodlight.openflow.types.OFPort$NamedPort.jimple"
-"org.projectfloodlight.openflow.types.OFPort$PrecachedPort.jimple"
-"org.projectfloodlight.openflow.types.OFPort.jimple"))
+;"java.lang.Enum.jimple"
+;"net.floodlightcontroller.firewall.FirewallRule$FirewallAction.jimple"
+"net.floodlightcontroller.firewall.FirewallRule.jimple"
+"net.floodlightcontroller.firewall.FirewallRuleTest.jimple"
+"org.projectfloodlight.openflow.types.MacAddress.jimple"
+))
 
 (define class-src-list (map (lambda (src-class) (begin 
 	(display (~a "Parsing src file: " src-class "\n"))
@@ -41,25 +41,23 @@
 
 ;(pretty-print buggy)
 
-(define input1 (list (cons 5 "int")))
-(define output1 (list (cons var-ret-name 3)))
+(define input1 (list (cons (bv 100 bv-type) "long")))
+(define output1 (list (cons var-ret-name 1)))
 
-(define input1.1 (list (cons 6 "int")))
-(define output1.1 (list (cons var-ret-name 4)))
-
-(define input2 (list (cons 2 "int")))
+(define input2 (list (cons (bv 200 bv-type) "long")))
 (define output2 (list (cons var-ret-name 0)))
 
-(define mac (ast->machine buggy))
-(pretty-print string-id-table)
+(define mac1 (ast->machine buggy))
+(define mac-in1 (assign-input mac1 input1))
+(define mac-fin1 (compute mac-in1))
+(define result1 (compare-output mac-fin1 output1))
+result1
 
-(define mac-in (assign-input mac input2))
-
-(define mac-fin (compute mac-in))
-
-(define result (compare-output mac-fin output2))
-
-result
+(define mac2 (ast->machine buggy))
+(define mac-in2 (assign-input mac2 input2))
+(define mac-fin2 (compute mac-in2))
+(define result2 (compare-output mac-fin2 output2))
+result2
 
 (pretty-print string-id-table)
 (display "===============================================================================================================\n")
@@ -67,7 +65,7 @@ result
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1) (cons input1.1 output1.1)) (list (cons input2 output2))))
+(define bugl (localize-bug buggy (list (cons input1 output1)) (list (cons input2 output2))))
 (pretty-print bugl)
 
 ;(match-define (cons soft hard) (ast->relation buggy))

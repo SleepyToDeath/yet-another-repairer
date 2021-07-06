@@ -1,6 +1,6 @@
 #lang rosette
 
-(require "match-define.rkt")
+(require "../match-define.rkt")
 
 (define (fc i)
 	(+ i 1))
