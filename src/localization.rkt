@@ -33,6 +33,9 @@
 (define (assert-visited-locations)
 	(map (lambda (l) (assert (location-selector l))) visited-locations))
 	
+(define total-loc-time 0)
+(define (more-loc-time! t)
+	(set! total-loc-time (+ t total-loc-time)))
 
 ;spec: list of (input . output)
 ;ast X spec -> location
@@ -52,6 +55,7 @@
 
 	(define ret (localize-bug-in-funcs ast mac soft hard spec-bad spec-good funcs-init))
 	(pretty-print string-id-table)
+	(display (~a "Total localization time: " total-loc-time "\n"))
 	ret)
 
 ;selectors: list of 
@@ -74,6 +78,7 @@
 		(define hard (apply append (map (lambda (io) (encoder (car io) (cdr io) spec-id funcs)) spec)))
 		(define t1 (timer-check))
 		(display2 (~a "\n Encoded. Took " t1 " ms \n"))
+		(more-loc-time! t1)
 
 		(finalize-selectors!)
 
@@ -88,6 +93,7 @@
 ;								#:guarantee (assert bug-sum)))
 		(define t2 (timer-check))
 		(display2 (~a "\n Solved. Took " t2 " ms \n"))
+		(more-loc-time! t2)
 
 		sol)
 

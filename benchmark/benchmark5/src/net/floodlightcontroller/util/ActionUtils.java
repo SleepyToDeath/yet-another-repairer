@@ -1362,15 +1362,22 @@ public class ActionUtils {
 //        try {
             // expected:
             // OFActionSetTpDst a = OFFactories.getFactory(version).actions().buildSetTpDst()
-            OFActionSetTpSrc a = OFFactories.getFactory(version).actions().buildSetTpSrc()
+//            OFActionSetTpSrc a = OFFactories.getFactory(version).actions().buildSetTpSrc()
+ //                   .setTpPort(TransportPort.of(actionToDecode))
+  //                  .build();
+			OFAction.Builder c = null;
+  			OFAction.Builder b = OFFactories.getFactory(version).actions().buildSetTpSrc();
+//			OFActionSetTpSrc.Builder c = (OFActionSetTpSrc.Builder) b;
+			if (c == null) 
+				c = b;
+            OFAction a = c
                     .setTpPort(TransportPort.of(actionToDecode))
                     .build();
-//            log.debug("action {}", a);
             return a;
  //       }
   //      catch (NumberFormatException e) {
 //            log.debug("Invalid dst-port in: {} (error ignored)", actionToDecode);
-   //         return null;
-    //    }
+//            return null;
+ //       }
     }
 }

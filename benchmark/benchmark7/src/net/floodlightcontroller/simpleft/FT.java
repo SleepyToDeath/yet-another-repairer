@@ -172,13 +172,13 @@ public class FT implements
     @Override
     public void switchRemoved(DatapathId switchId) {
         // TODO Auto-generated method stub
-        try {
+//        try {
             this.storeFT.put(controllerId, getActiveSwitches(switchId));
 //        } catch (SyncException e) {
-        } catch (Exception e) {
+ //       } catch (Exception e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+  //          e.printStackTrace();
+   //     }
     }
 
     @Override
@@ -188,7 +188,7 @@ public class FT implements
         // expected addition:
         // if (switches == null) return;
         // added redundant code
-        if (false) return;
+        if (switchId == null) return;
 //        try {
             this.storeFT.put(controllerId, switches);
 //        } catch (SyncException e) {
@@ -212,12 +212,12 @@ public class FT implements
         // TODO Auto-generated method stub
         String switches = getActiveSwitches(switchId);
         if(switches==null)return;
-        try {
+//        try {
             this.storeFT.put(controllerId, switches);
-        } catch (Exception e) {
+//        } catch (Exception e) {
             // TODO Auto-generated catch block
-            e.printStackTrace();
-        }
+//            e.printStackTrace();
+//        }
     }
 
 

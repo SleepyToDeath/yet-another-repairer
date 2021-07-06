@@ -22,7 +22,7 @@ import org.projectfloodlight.openflow.protocol.*;
 //import org.projectfloodlight.openflow.protocol.oxm.*;
 //import org.projectfloodlight.openflow.protocol.oxs.*;
 //import org.projectfloodlight.openflow.protocol.queueprop.*;
-//import org.projectfloodlight.openflow.types.*;
+import org.projectfloodlight.openflow.types.*;
 //import org.projectfloodlight.openflow.util.*;
 //import org.projectfloodlight.openflow.exceptions.*;
 //import io.netty.buffer.ByteBuf;
@@ -37,6 +37,7 @@ public interface OFAction /* extends OFObject */ {
     public interface Builder  {
         OFAction build();
 //        OFActionType getType();
+        Builder setTpPort(TransportPort tpPort);
         OFVersion getVersion();
     }
 }

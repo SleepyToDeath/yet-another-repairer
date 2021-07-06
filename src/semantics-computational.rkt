@@ -30,6 +30,8 @@
 ;machine(init) X list of names -> machine(fin)
 (define (compute mac)
 	(define mac-init (build-virtual-table mac))
+;	(display (~a "Total number of classes: " (length (machine-classes mac-init)) "\n"))
+;	(display (~a "Total number of functions: " (length (all-functions mac-init)) "\n"))
 ;	(display (~a "mem size 2.1: " (memory-heap-size (machine-mem mac-init)) " \n"))
 ;	(pretty-print string-id-table)
 	(function-call-simple mac-init (machine-boot mac-init)))

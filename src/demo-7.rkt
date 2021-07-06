@@ -14,6 +14,7 @@
 (require "semantics-computational.rkt")
 (require "semantics-common.rkt")
 (require "formula.rkt")
+(require "enumerator.rkt")
 (require racket/format)
 (require (prefix-in p: "jimple/jimple-parser.rkt"))
 (require (prefix-in p: "jimple/jimple-utils.rkt"))
@@ -22,10 +23,15 @@
 
 (define src-classes (list
 "java.lang.Object.jimple"
+"java.lang.Enum.jimple"
 "net.floodlightcontroller.core.internal.IOFSwitchService.jimple"
 "net.floodlightcontroller.core.IOFSwitch.jimple"
 "net.floodlightcontroller.core.IOFSwitchListener.jimple"
 "net.floodlightcontroller.simpleft.FT.jimple"
+"net.floodlightcontroller.simpleft.FTTest.jimple"
+"net.floodlightcontroller.simpleft.MockStoreClient.jimple"
+"net.floodlightcontroller.simpleft.MockSwitch.jimple"
+"net.floodlightcontroller.simpleft.MockSwitchService.jimple"
 "org.projectfloodlight.openflow.types.DatapathId.jimple"
 "org.sdnplatform.sync.IStoreClient.jimple"
 "org.sdnplatform.sync.IVersion$Occurred.jimple"
@@ -40,21 +46,22 @@
 (define buggy (p:transform-all (program
 	(class-list cls-list))))
 
-(pretty-print buggy)
+;(pretty-print buggy)
 
-(define input1 null)
-(define output1 (list (cons var-ret-name 1)))
+(define input1 (list (cons 10 "int")))
+(define output1 (list (cons var-ret-name 10)))
+(define input2 (list (cons 100 "int")))
+(define output2 (list (cons var-ret-name 100)))
 
-(define mac (ast->machine buggy))
-(pretty-print string-id-table)
+(define (verify input output)
+	(define mac (ast->machine buggy))
+	(define mac-in (assign-input mac input))
+	(define mac-fin (compute mac-in))
+	(machine-prepare-recursion mac-fin)
+	(compare-output mac-fin output))
 
-(define mac-in (assign-input mac input1))
-
-(define mac-fin (compute mac-in))
-
-(define result (compare-output mac-fin output1))
-
-result
+(verify input1 output1)
+(verify input2 output2)
 
 (pretty-print string-id-table)
 (display "===============================================================================================================\n")
@@ -62,7 +69,7 @@ result
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1))))
+(define bugl (localize-bug buggy (list (cons input1 output1)) (list (cons input2 output2))))
 (pretty-print bugl)
 
 ;(match-define (cons soft hard) (ast->relation buggy))

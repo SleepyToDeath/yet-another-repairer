@@ -35,5 +35,11 @@ public class java.lang.Object
 		return r0;
 	}
 
+
+    public java.lang.String toString()
+    {
+        return "java.lang.Object.toString";
+    }
+
 }
 

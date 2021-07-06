@@ -8,6 +8,6 @@ public class FTTest {
         // input: 10, expected: 0, actual: 1
         FT ft = new FT();
         ft.switchActivated(DatapathId.of(input));
-        return ft.storeFT.getErrorStatus() ? 1 : 0;
+        return input - (ft.storeFT.getErrorStatus() ? 1 : 0);
     }
 }

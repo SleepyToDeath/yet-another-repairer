@@ -71,7 +71,7 @@
 	(define fields (map (lambda (fname) (cons cname fname)) 
 		(map car (append (class-vfields cls) (class-sfields cls)))))
 	(define funcs (remove func-name-init (remove-duplicates (map function-name (all-functions mac)))))
-	(define consts (list 1))
+	(define consts (list -1 1))
 ;	(define ops (list bvand bvor bvxor op-mod op-cmp equal? op-neq op-gt op-ge op-lt op-le bvlshr op-add op-sub op-mul op-div))
 	(define ops (list equal? op-neq op-add op-sub))
 ;	(define ops (list op-add op-sub))
@@ -584,10 +584,12 @@
 	(contains-target-pure? func-getter mac sid target-sids))
 
 (define (contains-target-pure? func-getter mac sid target-sids)
+;	(display (~a ">>>>>>>>>>>>>>> " (id->string (sid->classname sid)) ))
 	(if (member sid visited-sids) #t
 		(begin
 		(set! visited-sids (cons sid visited-sids))
 		(define func (func-getter (imap-get (machine-fmap mac) sid default-type)))
+;		(display (~a " " (id->string (function-name func)) "\n"))
 		(define prog (function-prog func))
 		(define ret (ormap (lambda (inst)
 			(match inst
