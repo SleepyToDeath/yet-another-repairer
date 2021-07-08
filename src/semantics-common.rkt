@@ -96,7 +96,7 @@
 (define (lookup-virtual-function func-getter mac cls func arg-types) 
 	(if cls
 		(begin
-			(display (~a "class name: " (id->string cls) " func name: " (id->string func) "\n"))
+;			(display (~a "class name: " (id->string cls) " func name: " (id->string func) "\n"))
 			(define cls-0 (imap-get (machine-cmap mac) cls default-type))
 
 			(define base-name (ormap 
@@ -113,9 +113,8 @@
 (define (lookup-virtual-field mac cls field)
 	(if cls 
 		(begin
-;			(display (~a "class name: " (id->string cls) "\n"))
+;			(display (~a "class name: " (id->string cls) " field: " (id->string field) "\n"))
 			(define cls-0 (imap-get (machine-cmap mac) cls default-type))
-;			(display (~a "class vfields: " (class-vfields cls-0) " class name: " cls " field name: " field "\n"))
 
 			(define base-name (ormap 
 				(lambda (cls-cur) (lookup-virtual-field mac cls-cur field)) 

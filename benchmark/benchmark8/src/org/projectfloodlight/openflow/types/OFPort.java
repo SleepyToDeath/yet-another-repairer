@@ -101,6 +101,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
         private final static OFPort p0 = new OFPort(0);
         private final static OFPort p1 = new OFPort(1);
         private final static OFPort p2 = new OFPort(2);
+		/*
         private final static OFPort p3 = new OFPort(3);
         private final static OFPort p4 = new OFPort(4);
         private final static OFPort p5 = new OFPort(5);
@@ -146,6 +147,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
         private final static OFPort p46 = new OFPort(46);
         private final static OFPort p47 = new OFPort(47);
         private final static OFPort p48 = new OFPort(48);
+		*/
     }
 
     /** raw openflow port number as a signed 32 bit integer */
@@ -172,6 +174,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
                 return PrecachedPort.p1;
             case 2:
                 return PrecachedPort.p2;
+				/*
             case 3:
                 return PrecachedPort.p3;
             case 4:
@@ -262,6 +265,7 @@ public class OFPort /* implements OFValueType<OFPort> */ {
                 return PrecachedPort.p47;
             case 48:
                 return PrecachedPort.p48;
+				*/
             case OFPP_MAX_INT:
                 return MAX;
             case OFPP_IN_PORT_INT:
@@ -537,9 +541,9 @@ public class OFPort /* implements OFValueType<OFPort> */ {
 
     @Override
     public int hashCode() {
-        final int prime = 53;
+//        final int prime = 53;
         int result = 1;
-        result = prime * result + portNumber;
+ //       result = prime * result + portNumber;
         return result;
     }
 

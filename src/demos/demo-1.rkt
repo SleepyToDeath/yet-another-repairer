@@ -35,8 +35,6 @@
 (define buggy (p:transform-all (program
 	(class-list cls-list))))
 
-(pretty-print buggy)
-
 (define input1 (list (cons 0 "int")))
 (define output1 (list (cons var-ret-name 0)))
 (define input2 (list (cons 100 "int")))

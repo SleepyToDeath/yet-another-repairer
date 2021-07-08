@@ -1,4 +1,4 @@
-public class java.util.HashMap extends java.util.Collection
+public class java.util.HashSet extends java.lang.Object
 {
 	private int[] VStore;
 }

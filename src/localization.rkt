@@ -132,10 +132,10 @@
 		(pretty-print string-id-table)
 		(eprintf (pretty-format string-id-table))
 
-		(display "\nbad deferred values:\n")
-		(print-pending-eval spec-id-bad sol-bad)
-		(display "good deferred values:\n")
-		(print-pending-eval spec-id-good sol-good)
+;		(display "\nbad deferred values:\n")
+;		(print-pending-eval spec-id-bad sol-bad)
+;		(display "good deferred values:\n")
+;		(print-pending-eval spec-id-good sol-good)
 
 		(display2 "\n ++++++++++++++++++++ Bug Location: ++++++++++++++++++++++\n")
 		(print-location bugl)

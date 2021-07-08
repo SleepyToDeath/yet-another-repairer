@@ -16,7 +16,7 @@
 (define op-add (typed-op (list + bvadd)))
 (define op-sub (typed-op (list - bvsub)))
 (define op-mul (typed-op (list * bvadd)))
-(define op-div (typed-op (list / bvadd)))
+(define op-div (typed-op (list quotient bvadd)))
 (define op-mod (typed-op (list modulo bvsmod)))
 
 (define op-gt (typed-op (list > bvsgt)))

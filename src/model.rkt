@@ -120,7 +120,7 @@
 			(define value.maybe (memory-aread mem addr-kv key addr-type))
 			(define value (if (equal? value.maybe (not-found addr-type)) (nullptr addr-type) value.maybe))
 			(defer-eval current-spec-id "Map.get" (list obj addr-kv key value args))
-			(display (~a "Map.get: " (list obj addr-kv key value args) "\n"))
+;			(display (~a "Map.get: " (list obj addr-kv key value args) "\n"))
 			(define mem-ret (memory-sforce-write mem ret value 0 addr-type))
 			mem-ret
 		))
@@ -142,7 +142,7 @@
 			(define key (map-hash-func (first args) mem))
 			(define addr-kv (memory-fread mem (map-fid-kv) obj addr-type))
 			(define value (memory-aread mem addr-kv key addr-type))
-			(define flag (not (equal? value (not-found addr-type))))
+			(define flag (if (not (equal? value (not-found addr-type))) 1 0))
 			(defer-eval current-spec-id "Map.containsKey" (list obj addr-kv key value flag args))
 			(define mem-ret (memory-sforce-write mem ret flag 0 addr-type))
 			mem-ret
@@ -226,7 +226,7 @@
 			(define key (hashmap-hash-func (first args) mem))
 			(define addr-kv (memory-fread mem (hashmap-fid-kv) obj addr-type))
 			(define value (memory-aread mem addr-kv key addr-type))
-			(define flag (not (equal? value (not-found addr-type))))
+			(define flag (if (not (equal? value (not-found addr-type))) 1 0))
 			(defer-eval current-spec-id "HashMap.containsKey" (list obj addr-kv key value flag args))
 			(define mem-ret (memory-sforce-write mem ret flag 0 addr-type))
 			mem-ret
@@ -287,13 +287,73 @@
 			(define key (hashset-hash-func (first args) mem))
 			(define addr-kv (memory-fread mem (hashset-fid-v) obj addr-type))
 			(define value (memory-aread mem addr-kv key addr-type))
-			(define flag (equal? value hashset-exists-flag))
+			(define flag (if (equal? value hashset-exists-flag) 1 0))
 			(define mem-ret (memory-sforce-write mem ret flag 0 addr-type))
 			mem-ret
 		))
 ))
 
 (map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) HashSet-funcs)
+
+;==============================================
+
+;================= Set ===================
+;[!] Need source file
+
+;hash func: h(x) = x modulo a large prime number
+;[!] Assuming collision free
+
+(define set-class-name (string-id "java.util.Set"))
+(define set-hash-func model-all-hash-func)
+(define set-max-capacity model-all-capacity)
+(define set-fname-v (string-id "VStore"))
+(define (set-fid-v)
+	(vfield-id current-context set-class-name set-fname-v))
+(define set-exists-flag 1)
+
+(define Set-funcs (list
+	(cons
+		(cons "java.util.Set" "<init>")
+		(lambda (mem obj ret args)
+			(define fid-class-name (vfield-id current-context set-class-name field-name-class))
+			(define mem-bind (memory-fwrite mem fid-class-name obj set-class-name addr-type))
+			(match-define (cons addr-kv mem-arr) (memory-alloc mem-bind set-max-capacity))
+			(define mem-ass (memory-fwrite mem-arr (set-fid-v) obj addr-kv addr-type))
+			mem-ass
+		))
+
+	(cons
+		(cons "java.util.Set" "remove")
+		(lambda (mem obj ret args) 
+			(define key (set-hash-func (first args) mem))
+			(define addr-kv (memory-fread mem (set-fid-v) obj addr-type))
+			(define mem-rm (memory-awrite mem addr-kv key (not-found addr-type) addr-type))
+			mem-rm
+		))
+
+	(cons
+		(cons "java.util.Set" "add")
+		(lambda (mem obj ret args)
+			(define key (set-hash-func (first args) mem))
+			(define value set-exists-flag)
+			(define addr-kv (memory-fread mem (set-fid-v) obj addr-type))
+			(define mem-put (memory-awrite mem addr-kv key value addr-type))
+			mem-put
+		))
+
+	(cons
+		(cons "java.util.Set" "contains")
+		(lambda (mem obj ret args)
+			(define key (set-hash-func (first args) mem))
+			(define addr-kv (memory-fread mem (set-fid-v) obj addr-type))
+			(define value (memory-aread mem addr-kv key addr-type))
+			(define flag (if (equal? value set-exists-flag) 1 0))
+			(define mem-ret (memory-sforce-write mem ret flag 0 addr-type))
+			mem-ret
+		))
+))
+
+(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Set-funcs)
 
 ;==============================================
 

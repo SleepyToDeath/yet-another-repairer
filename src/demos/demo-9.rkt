@@ -22,6 +22,7 @@
 
 (define src-classes (list
 "java.lang.Object.jimple"
+"java.lang.Integer.jimple"
 "java.util.HashMap.jimple"
 "java.util.Map.jimple"
 "net.floodlightcontroller.staticflowentry.StaticFlowEntryPusher.jimple"
@@ -40,22 +41,25 @@
 (define buggy (program
 	(class-list cls-list)))
 
-(pretty-print buggy)
-
-(define input1 (list (cons 1 "int")))
+(define input1 (list (cons 135 "int") (cons 0 "int")))
 (define output1 (list (cons var-ret-name 3)))
-(define input2 (list (cons 2 "int")))
+(define input2 (list (cons 136 "int") (cons 0 "int")))
 (define output2 (list (cons var-ret-name 3)))
+(define input3 (list (cons 0 "int") (cons 88 "int")))
+(define output3 (list (cons var-ret-name 3)))
 
 (define (verify input output)
 	(define mac (ast->machine buggy))
 	(define mac-in (assign-input mac input))
 	(define mac-fin (compute mac-in))
+	(machine-prepare-recursion mac-fin)
 	(compare-output mac-fin output))
 
 (verify input1 output1)
 (display2 (~a "Executed " line-counter-c " lines of code\n"))
 (verify input2 output2)
+(display2 (~a "Executed " line-counter-c " lines of code\n"))
+(verify input3 output3)
 (display2 (~a "Executed " line-counter-c " lines of code\n"))
 
 (pretty-print string-id-table)
@@ -64,7 +68,7 @@
 (display "===============================================================================================================\n")
 
 (output-smt #t)
-(define bugl (localize-bug buggy (list (cons input1 output1) (cons input2 output2)) null))
+(define bugl (localize-bug buggy (list (cons input1 output1)) (list (cons input3 output3))))
 (pretty-print bugl)
 
 ;(match-define (cons soft hard) (ast->relation buggy))

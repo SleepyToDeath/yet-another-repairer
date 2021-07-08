@@ -47,7 +47,7 @@ import net.floodlightcontroller.core.IOFSwitch;
 //import net.floodlightcontroller.core.module.FloodlightModuleException;
 //import net.floodlightcontroller.core.module.IFloodlightModule;
 //import net.floodlightcontroller.core.module.IFloodlightService;
-import net.floodlightcontroller.core.types.MacVlanPair;
+//import net.floodlightcontroller.core.types.MacVlanPair;
 //import net.floodlightcontroller.debugcounter.IDebugCounter;
 //import net.floodlightcontroller.debugcounter.IDebugCounterService;
 //import net.floodlightcontroller.debugcounter.IDebugCounterService.MetaData;
@@ -66,7 +66,7 @@ import net.floodlightcontroller.core.types.MacVlanPair;
 //import org.projectfloodlight.openflow.protocol.OFVersion;
 //import org.projectfloodlight.openflow.protocol.action.OFAction;
 //import org.projectfloodlight.openflow.types.IpProtocol;
-import org.projectfloodlight.openflow.types.MacAddress;
+//import org.projectfloodlight.openflow.types.MacAddress;
 //import org.projectfloodlight.openflow.types.OFBufferId;
 import org.projectfloodlight.openflow.types.OFPort;
 //import org.projectfloodlight.openflow.types.OFVlanVidMatch;
@@ -91,7 +91,7 @@ public class LearningSwitch {
 
     // Stores the learned state for each switch
 //    protected Map<IOFSwitch, Map<MacVlanPair, OFPort>> macVlanToSwitchPortMap;
-    protected Map<IOFSwitch, Map<MacVlanPair, OFPort>> macVlanToSwitchPortMap = new HashMap<>();
+    protected HashMap<IOFSwitch, HashMap<VlanVid, OFPort>> macVlanToSwitchPortMap = new HashMap<>();
 
 
     // flow-mod - for use in the cookie
@@ -133,8 +133,8 @@ public class LearningSwitch {
      * @param vlan The VLAN that the host is on
      * @param portVal The switchport that the host is on
      */
-    protected void addToPortMap(IOFSwitch sw, MacAddress mac, VlanVid vlan, OFPort portVal) {
-        Map<MacVlanPair, OFPort> swMap = macVlanToSwitchPortMap.get(sw);
+    protected void addToPortMap(IOFSwitch sw, VlanVid vlan, OFPort portVal) {
+        HashMap<VlanVid, OFPort> swMap = macVlanToSwitchPortMap.get(sw);
 
         if (vlan == VlanVid.FULL_MASK) {
             // OFMatch.loadFromPacket sets VLAN ID to 0xffff if the packet contains no VLAN tag;
@@ -149,7 +149,7 @@ public class LearningSwitch {
             swMap = new HashMap<>();
             macVlanToSwitchPortMap.put(sw, swMap);
         }
-        swMap.put(new MacVlanPair(mac, vlan), portVal);
+        swMap.put(vlan, portVal);
     }
 
     /**
@@ -158,16 +158,18 @@ public class LearningSwitch {
      * @param mac The MAC address of the host to remove
      * @param vlan The VLAN that the host is on
      */
+	 /*
     protected void removeFromPortMap(IOFSwitch sw, MacAddress mac, VlanVid vlan) {
         if (vlan == VlanVid.FULL_MASK) {
             vlan = VlanVid.ofVlan(0);
         }
 
-        Map<MacVlanPair, OFPort> swMap = macVlanToSwitchPortMap.get(sw);
+        HashMap<MacVlanPair, OFPort> swMap = macVlanToSwitchPortMap.get(sw);
         if (swMap != null) {
             swMap.remove(new MacVlanPair(mac, vlan));
         }
     }
+	*/
 
     /**
      * Get the port that a MAC/VLAN pair is associated with
@@ -176,15 +178,15 @@ public class LearningSwitch {
      * @param vlan The VLAN number to get
      * @return The port the host is on
      */
-    public OFPort getFromPortMap(IOFSwitch sw, MacAddress mac, VlanVid vlan) {
+    public OFPort getFromPortMap(IOFSwitch sw, VlanVid vlan) {
         if (vlan == VlanVid.FULL_MASK) {
             vlan = VlanVid.FULL_MASK;
             // expected:
             // vlan = VlanVid.ofVlan(0);
         }
-        Map<MacVlanPair, OFPort> swMap = macVlanToSwitchPortMap.get(sw);
+        HashMap<VlanVid, OFPort> swMap = macVlanToSwitchPortMap.get(sw);
         if (swMap != null) {
-            return swMap.get(new MacVlanPair(mac, vlan));
+            return swMap.get(vlan);
         }
 
         // if none found

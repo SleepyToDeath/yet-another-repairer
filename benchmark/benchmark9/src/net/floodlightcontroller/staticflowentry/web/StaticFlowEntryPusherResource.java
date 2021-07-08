@@ -51,7 +51,7 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
      * @param Map containing the fields of the flow
      * @return state indicating whether a flow is valid or not
      */
-    public int checkFlow(Map<String, Object> rows) {
+    public int checkFlow(Map<String, Integer> rows) {
         //Declaring & Initializing flags
         int state = 0;
         boolean dl_type = false;
@@ -70,20 +70,24 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
         int icmp_type = -1;
 
         //Determine the dl_type if set
+		/*
         if (rows.containsKey(StaticFlowEntryPusher.COLUMN_DL_TYPE)) {
-            if (((String) rows.get(StaticFlowEntryPusher.COLUMN_DL_TYPE)).startsWith("0x")) {
-                eth_type = Integer.parseInt(((String) rows.get(StaticFlowEntryPusher.COLUMN_DL_TYPE)).replaceFirst("0x", ""), 16);
-                dl_type = true;
-            } else {
-                eth_type = Integer.parseInt((String) rows.get(StaticFlowEntryPusher.COLUMN_DL_TYPE));
-                dl_type = true;
-            }
-            if (eth_type == 0x86dd) { /* or 34525 */
+//            if (((String) rows.get(StaticFlowEntryPusher.COLUMN_DL_TYPE)).startsWith("0x")) {
+//                eth_type = Integer.parseInt(((String) rows.get(StaticFlowEntryPusher.COLUMN_DL_TYPE)).replaceFirst("0x", ""), 16);
+//                dl_type = true;
+//            } else {
+//                eth_type = Integer.parseInt((String) rows.get(StaticFlowEntryPusher.COLUMN_DL_TYPE));
+//                dl_type = true;
+//            }
+			eth_type = rows.get(StaticFlowEntryPusher.COLUMN_DL_TYPE).intValue();
+			dl_type = true;
+
+            if (eth_type == 0x86dd) { // or 34525
                 ip6 = true;
                 dl_type = true;
-            } else if (eth_type == 0x800 || /* or 2048 */
-                    eth_type == 0x806 || /* or 2054 */
-                    eth_type == 0x8035) { /* or 32821*/
+            } else if (eth_type == 0x800 || // or 2048 
+                    eth_type == 0x806 || // or 2054 
+                    eth_type == 0x8035) { // or 32821
                 ip4 = true;
                 dl_type = true;
             }
@@ -114,32 +118,36 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
         }
         if (rows.containsKey(StaticFlowEntryPusher.COLUMN_NW_PROTO)) {
             nw_proto = true;
-            if (((String) rows.get(StaticFlowEntryPusher.COLUMN_NW_PROTO)).startsWith("0x")) {
-                nw_protocol = Integer.parseInt(((String) rows.get(StaticFlowEntryPusher.COLUMN_NW_PROTO)).replaceFirst("0x", ""), 16);
-            } else {
-                nw_protocol = Integer.parseInt((String) rows.get(StaticFlowEntryPusher.COLUMN_NW_PROTO));
-            }
+//            if (((String) rows.get(StaticFlowEntryPusher.COLUMN_NW_PROTO)).startsWith("0x")) {
+//                nw_protocol = Integer.parseInt(((String) rows.get(StaticFlowEntryPusher.COLUMN_NW_PROTO)).replaceFirst("0x", ""), 16);
+//            } else {
+//                nw_protocol = Integer.parseInt((String) rows.get(StaticFlowEntryPusher.COLUMN_NW_PROTO));
+//            }
+			nw_protocol = rows.get(StaticFlowEntryPusher.COLUMN_NW_PROTO).intValue();
         }
         if (rows.containsKey(StaticFlowEntryPusher.COLUMN_ICMP6_CODE)) {
             icmp6_code = true;
             ip6 = true;
         }
+		*/
         if (rows.containsKey(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE)) {
             icmp6_type = true;
             ip6 = true;
             // expected:
             // if (((String) rows.get(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE)).startsWith("0x")) {
-            if (((String) rows.get(StaticFlowEntryPusher.COLUMN_ICMP_TYPE)).startsWith("0x")) {
-                icmp_type = Integer.parseInt(((String) rows.get(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE)).replaceFirst("0x", ""), 16);
+            if (rows.get(StaticFlowEntryPusher.COLUMN_ICMP_TYPE).intValue() < 100) {
+                int icmp_type_hex = rows.get(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE).intValue();
+				icmp_type = (icmp_type_hex / 10 * 16) + (icmp_type_hex % 10);
             } else {
                 // instrumented:
-                if (((String) rows.get(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE)).startsWith("0x")) {
+                if (rows.get(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE).intValue() < 100) {
                     error = true;
                     return -1;
                 }
-                icmp_type = Integer.parseInt((String) rows.get(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE));
+                icmp_type = rows.get(StaticFlowEntryPusher.COLUMN_ICMP6_TYPE).intValue();
             }
         }
+		/*
         if (rows.containsKey(StaticFlowEntryPusher.COLUMN_ND_SLL)) {
             nd_sll = true;
             ip6 = true;
@@ -167,6 +175,8 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
                 return state;
             }
         }
+		*/
+
         if (icmp6_type == true || icmp6_code == true ) {
             if (nw_proto == true) {
                 if (nw_protocol != 0x3A) { /* or 58 */
@@ -182,11 +192,12 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
             }
         }
 
+/*
         if (nd_sll == true || nd_tll == true || nd_target == true) {
             if (icmp6_type == true) {
                 //icmp_type must be set to 135/136 to set ipv6_nd_target
                 if (nd_target == true) {
-                    if (!(icmp_type == 135 || icmp_type == 136)) { /* or 0x87 / 0x88 */
+                    if (!(icmp_type == 135 || icmp_type == 136)) { // or 0x87 / 0x88
                         //invalid icmp6_type
                         state = 6;
                         return state;
@@ -224,6 +235,7 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
             state = 7;
             return state;
         }
+		*/
 
         return state;
 
@@ -240,25 +252,26 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
      * @param Map containing the fields of the flow
      * @return state indicating whether a flow is valid or not
      */
-    public static int checkActions(Map<String, Object> entry) {
+    public static int checkActions(Map<String, Integer> entry) {
 
         boolean ip6 = false;
         boolean ip4 = false;
-        String actions = null;
+        Integer actions = null;
 
         if (entry.containsKey(StaticFlowEntryPusher.COLUMN_ACTIONS) ||
                 entry.containsKey(StaticFlowEntryPusher.COLUMN_INSTR_APPLY_ACTIONS) ||
                 entry.containsKey(StaticFlowEntryPusher.COLUMN_INSTR_WRITE_ACTIONS)) {
             if (entry.containsKey(StaticFlowEntryPusher.COLUMN_ACTIONS)) {
-                actions = (String) entry.get(StaticFlowEntryPusher.COLUMN_ACTIONS);
+                actions = entry.get(StaticFlowEntryPusher.COLUMN_ACTIONS);
             }
             else if (entry.containsKey(StaticFlowEntryPusher.COLUMN_INSTR_APPLY_ACTIONS)) {
-                actions = (String) entry.get(StaticFlowEntryPusher.COLUMN_INSTR_APPLY_ACTIONS);
+                actions = entry.get(StaticFlowEntryPusher.COLUMN_INSTR_APPLY_ACTIONS);
             }
             else if (entry.containsKey(StaticFlowEntryPusher.COLUMN_INSTR_WRITE_ACTIONS)) {
-                actions = (String) entry.get(StaticFlowEntryPusher.COLUMN_INSTR_WRITE_ACTIONS);
+                actions = entry.get(StaticFlowEntryPusher.COLUMN_INSTR_WRITE_ACTIONS);
             }
 
+/*
             if (actions.contains(MatchUtils.STR_ICMPV6_CODE) || actions.contains(MatchUtils.STR_ICMPV6_TYPE) ||
                     actions.contains(MatchUtils.STR_IPV6_DST) || actions.contains(MatchUtils.STR_IPV6_SRC) ||
                     actions.contains(MatchUtils.STR_IPV6_FLOW_LABEL) || actions.contains(MatchUtils.STR_IPV6_ND_SSL) ||
@@ -272,6 +285,10 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
                     actions.contains(MatchUtils.STR_ICMP_TYPE)) {
                 ip4 = true;
             }
+			*/
+			ip6 = false;
+			ip4 = false;
+
         }
 
         if (ip6 == false && ip4 == false) {

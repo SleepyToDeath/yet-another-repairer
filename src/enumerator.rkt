@@ -10,6 +10,7 @@
 (require "match-define.rkt")
 (require "string-id.rkt")
 (require "formula.rkt")
+(require "format.rkt")
 (require "map.rkt")
 
 (require "syntax.rkt")
@@ -71,7 +72,7 @@
 	(define fields (map (lambda (fname) (cons cname fname)) 
 		(map car (append (class-vfields cls) (class-sfields cls)))))
 	(define funcs (remove func-name-init (remove-duplicates (map function-name (all-functions mac)))))
-	(define consts (list -1 1))
+	(define consts (list -1 1 0))
 ;	(define ops (list bvand bvor bvxor op-mod op-cmp equal? op-neq op-gt op-ge op-lt op-le bvlshr op-add op-sub op-mul op-div))
 	(define ops (list equal? op-neq op-add op-sub))
 ;	(define ops (list op-add op-sub))

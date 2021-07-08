@@ -30,6 +30,9 @@ public class VlanVid /* implements OFValueType<VlanVid> */ {
     // public static final VlanVid FULL_MASK = ZERO;
     public static final VlanVid FULL_MASK = new VlanVid((short)0xFFFF);
 
+	// [orion] to avoid deep cmp in Map
+	private static final VlanVid VID0 = new VlanVid((short)0);
+
     private final short vid;
 
     private VlanVid(short vid) {
@@ -39,9 +42,12 @@ public class VlanVid /* implements OFValueType<VlanVid> */ {
     public static VlanVid ofVlan(int vid) {
         if (vid == NO_MASK.vid)
             return NO_MASK;
+        if (vid == 0)
+            return VID0;
+		return null;
 //        if ((vid & VALIDATION_MASK) != vid)
 //            throw new IllegalArgumentException(String.format("Illegal VLAN value: %x", vid));
-        return new VlanVid((short) vid);
+//        return new VlanVid((short) vid);
     }
 
     /** @return the actual VLAN tag this vid identifies */

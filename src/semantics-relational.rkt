@@ -404,6 +404,7 @@
 		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
 
 		(if (not in-target?) (assert id) #f)
+		(if (and (equal? (function-name func) func-name-main) (not (or (inst-virtual-call? inst) (inst-static-call? inst)))) (assert id) #f)
 
 		(define fml-feasible-path (implies mark (ormap car (get-mem-in-list func-fml pc))))
 		(if (not summary?) (assert fml-feasible-path) #f)
