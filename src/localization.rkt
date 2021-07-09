@@ -49,7 +49,8 @@
 			(sfunc-id cls-cl func-name-clinit (map cdr (function-args f-cl))))
 			class-names-clinit
 			funcs-clinit)))
-;	(set! funcs-init (list 271))
+;[ABLATION-MOD]
+	(set! funcs-init null)
 
 	(display (~a "total locations: " (length soft) "\n"))
 
@@ -68,6 +69,9 @@
 	(pretty-print global-resets)
 	(do-all-resets! #t)
 
+;[ABLATION-MOD]
+	(set! funcs null)
+
 	(define (solve-localize spec-id spec bug-num)
 		(pretty-print task-resets)
 		(do-all-resets! #f)
@@ -82,6 +86,8 @@
 
 		(finalize-selectors!)
 
+		(pretty-print valid-selectors)
+
 		(define sum (apply + (map (lambda (id) (if id 1 0)) valid-selectors)))
 		(define bug-sum (equal? sum (- (length valid-selectors) bug-num)))
 
@@ -91,6 +97,8 @@
 		(define sol (solve (assert (and (andmap+ identity hard) bug-sum))))
 ;		(define sol (optimize 	#:maximize (list (count-truth hard))
 ;								#:guarantee (assert bug-sum)))
+;		(define sol (optimize 	#:maximize (list sum)
+;								#:guarantee (assert (andmap+ identity hard))))
 		(define t2 (timer-check))
 		(display2 (~a "\n Solved. Took " t2 " ms \n"))
 		(more-loc-time! t2)
@@ -109,8 +117,8 @@
 				(solve (assert #t)))
 			(solve-localize spec-id-good spec-good 0)))
 
-;	(display "\n Model: \n")
-;	(pretty-print sol-good)
+	(display "\n Model: \n")
+	(pretty-print sol-bad)
 
 	(if (or (unsat? sol-bad) (unsat? sol-good))
 		(begin
@@ -122,6 +130,7 @@
 		(begin
 		(define bugl (ormap (lambda (l) 
 			(define id (location-selector l))
+			(pretty-print id)
 			(if	(and 
 					(member (~a id) (map (lambda (b) (~a b)) bad-selectors))
 					(not (evaluate id sol-bad)))

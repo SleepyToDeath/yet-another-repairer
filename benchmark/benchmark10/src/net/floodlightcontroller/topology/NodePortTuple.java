@@ -31,30 +31,40 @@ package net.floodlightcontroller.topology;
  */
 
 public class NodePortTuple { // implements Comparable<NodePortTuple> {
-    protected long nodeId; // switch DPID
+    protected String nodeId; // switch DPID
     protected short portId; // switch port id
+
+	private static final NodePortTuple t1003 = new NodePortTuple("100", (short) 2);
 
     /**
      * Creates a NodePortTuple
      * @param nodeId The DPID of the switch
      * @param portId The port of the switch
      */
-    public NodePortTuple(long nodeId, short portId) {
+    private NodePortTuple(String nodeId, short portId) {
         this.nodeId = nodeId;
         this.portId = portId;
     }
 
-    public NodePortTuple(long nodeId, int portId) {
+    private NodePortTuple(String nodeId, int portId) {
         this.nodeId = nodeId;
         this.portId = (short) portId;
     }
 
+	//to avoid deep cmp
+	public static NodePortTuple of(String nodeId, short portId) {
+		if (nodeId == "100" && portId == (short) 2)
+			return t1003;
+		else
+			return null;
+	}
+
 //    @JsonProperty("switch")
 //    @JsonSerialize(using=DPIDSerializer.class)
-    public long getNodeId() {
+    public String getNodeId() {
         return nodeId;
     }
-    public void setNodeId(long nodeId) {
+    public void setNodeId(String nodeId) {
         this.nodeId = nodeId;
     }
 //    @JsonProperty("port")
@@ -74,10 +84,10 @@ public class NodePortTuple { // implements Comparable<NodePortTuple> {
 
     @Override
     public int hashCode() {
-        final int prime = 31;
+//        final int prime = 31;
         int result = 1;
-        result = prime * result + (int) (nodeId ^ (nodeId >>> 32));
-        result = prime * result + portId;
+ //       result = prime * result + (int) (nodeId ^ (nodeId >>> 32));
+  //      result = prime * result + portId;
         return result;
     }
 

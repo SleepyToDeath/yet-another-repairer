@@ -18,7 +18,7 @@
 package net.floodlightcontroller.core;
 
 //import java.util.List;
-import java.util.Map;
+import java.util.HashMap;
 
 //import net.floodlightcontroller.core.module.IFloodlightService;
 //import net.floodlightcontroller.packet.Ethernet;
@@ -82,7 +82,7 @@ public interface IFloodlightProviderService { // extends
      * contain switches that are connected but the controller's in the slave role.
      * @return the set of actively connected switches
      */
-    public Map<Long, IOFSwitch> getSwitches();
+    public HashMap<String, IOFSwitch> getSwitches();
 
     /**
      * Get the current role of the controller

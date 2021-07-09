@@ -14,7 +14,7 @@ public class LinkDiscoveryManagerTest {
         lldptlv.setLength(input);
         LLDP lldp = new LLDP();
         lldp.setPortId(lldptlv);
-        long sw = 100; // hard-coded
+        String sw = "100"; // hard-coded
         Command cmd = manager.handleLldp(lldp, sw, (short) 2, true, null);
         return cmd == Command.STOP ? 1 : 0;
     }

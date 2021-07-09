@@ -320,7 +320,9 @@
 	(list-ref (function-formula-lids func-fml) pc))
 
 
-(define contains-target-alt? (curry contains-target? function-formula-func))
+;(define contains-target-alt? (curry contains-target? function-formula-func))
+;[ABLATION-MOD]
+(define (contains-target-alt? x y z) #t)
 
 
 ;return a new func-fml
@@ -403,7 +405,12 @@
 		(display (~a "In Target? " (if in-target? "++++++++++++"  "------------") "\n"))
 		(display (~a "Summary? " (if summary? "++++++++++++"  "------------") "\n"))
 
-		(if (not in-target?) (assert id) #f)
+;[ABLATION-MOD]
+;		(if (not in-target?) (assert id) #f)
+;[ABLATION-MOD]
+		(if (member (function-formula-class func-fml) localization-good-classes) (assert id) #f)
+;[ABLATION-MOD]
+		(if (equal? (function-name func) func-name-boot) (assert id) #f)
 		(if (and (equal? (function-name func) func-name-main) (not (or (inst-virtual-call? inst) (inst-static-call? inst)))) (assert id) #f)
 
 		(define fml-feasible-path (implies mark (ormap car (get-mem-in-list func-fml pc))))
@@ -432,12 +439,13 @@
 		(define (label-mark label) 
 			(get-pmark func-fml (label-pc label)))
 
+;[ABLATION-MOD]
 		(define (select-fml? fml)
-			(if in-target?
-				(begin 
+;			(if in-target?
+;				(begin 
 ;				(display (~a "selector application: " (implies id fml) "\n"))
 				(implies id fml))
-				fml))
+;				fml))
 
 		;[?] should `equal?` be changed to `implies` ?
 		(define (iassert-pc-next fml-path fml-op)
@@ -652,7 +660,8 @@
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
 					(begin
-;					(assert id)
+;[ABLATION-MOD]
+					(assert id)
 					(update-mem-only (mfunc mem-0 ret args-v)))
 
 					(begin
@@ -663,7 +672,7 @@
 					(define func-invoked (alloc-lstate (imap-get (machine-fmap mac) sid default-type)))
 					(match-define (cons func-fml-in fml-in) (invoke-setup func-invoked mem-in args))
 					(define funcs-ret (invoke->relation func-fml-in mac spec-id target-sids (or summary? trigger-summary?)))
-;					(pretty-print inst)
+					(pretty-print inst)
 
 					(define mem-ret.tmp (root-invoke-ret-mem funcs-ret (or summary? trigger-summary?)))
 					(define mem-ret.tmp2 (if trigger-summary? (memory-sym-commit mem-ret.tmp) mem-ret.tmp))
@@ -692,7 +701,8 @@
 				(define mfunc (model-lookup cls-name func-name))
 				(if mfunc 
 					(begin
-;					(assert id)
+;[ABLATION-MOD]
+					(assert id)
 					(update-mem-only (mfunc mem-0 obj-addr0 ret args-v)))
 
 					(begin

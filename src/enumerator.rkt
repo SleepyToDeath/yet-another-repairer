@@ -122,7 +122,7 @@
 		[(lexpr rhs) (expr->vars rhs)]
 		[(dexpr rhs) (expr->vars rhs)]
 		[(expr rhs) (expr->vars rhs)]
-		[(expr-const value) (expr->vars value)]
+		[(expr-const value) null]
 		[(expr-var name) (expr->vars name)]
 		[(expr-binary operand1 operator operand2) (append (expr->vars operand1) (expr->vars operand2))]
 		[(expr-array array index) (append (expr->vars array) (expr->vars index))]

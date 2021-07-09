@@ -228,7 +228,7 @@ public class LinkDiscoveryManager implements IOFMessageListener {
     /**
      * List of ports through which LLDP/BDDPs are not sent.
      */
-    protected Set<NodePortTuple> suppressLinkDiscovery = new HashSet<>();
+    protected HashSet<NodePortTuple> suppressLinkDiscovery = new HashSet<>();
 
     /**
      * A list of ports that are quarantined for discovering links through them.
@@ -594,7 +594,7 @@ public class LinkDiscoveryManager implements IOFMessageListener {
     }
      */
 
-    public Command handleLldp(LLDP lldp, long sw, short inPort,
+    public Command handleLldp(LLDP lldp, String sw, short inPort,
                                boolean isStandard, FloodlightContext cntx) {
         // If LLDP is suppressed on this port, ignore received packet as well
 //        IOFSwitch iofSwitch = floodlightProvider.getSwitches().get(sw);
@@ -988,8 +988,8 @@ public class LinkDiscoveryManager implements IOFMessageListener {
     }
     */
 
-    protected boolean isLinkDiscoverySuppressed(long sw, short portNumber) {
-        return this.suppressLinkDiscovery.contains(new NodePortTuple(sw,
+    protected boolean isLinkDiscoverySuppressed(String sw, short portNumber) {
+        return this.suppressLinkDiscovery.contains(NodePortTuple.of(sw,
                 portNumber));
     }
 
@@ -1153,7 +1153,7 @@ public class LinkDiscoveryManager implements IOFMessageListener {
      * @param isStandard
      * @return
      */
-    protected boolean isIncomingDiscoveryAllowed(long sw, short port,
+    protected boolean isIncomingDiscoveryAllowed(String sw, short port,
                                                  boolean isStandard) {
 
         if (isLinkDiscoverySuppressed(sw, port)) {

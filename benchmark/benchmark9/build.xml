@@ -34,7 +34,6 @@
         <copy file="../model/java.lang.Object.jimple" todir="sootOutput"/>
         <copy file="../model/java.lang.Integer.jimple" todir="sootOutput"/>
         <copy file="../model/java.util.HashMap.jimple" todir="sootOutput"/>
-        <copy file="../model/java.util.Map.jimple" todir="sootOutput"/>
     </target>
 
 </project>

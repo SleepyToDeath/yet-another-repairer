@@ -1,4 +1,100 @@
 public class java.util.HashSet extends java.lang.Object
 {
 	private int[] VStore;
+
+	public void <init>() {
+		java.util.HashSet r0;
+		int[] a0;
+
+        r0 := @this: java.util.HashSet;
+
+        specialinvoke r0.<java.lang.Object: void <init>()>();
+
+		a0 = newarray (int)[2000];
+
+		r0.<java.util.HashSet: int[] VStore> = a0;
+
+        return;
+	}
+
+	public void remove(java.lang.Object) {
+		java.util.HashSet r0;
+		int[] a0;
+		int key, keyReal;
+
+        r0 := @this: java.util.HashSet;
+
+		a0 = <java.util.HashSet: int[] VStore>;
+
+        key := @parameter0: java.lang.Object;
+
+		keyReal = key;
+
+		if key <= 129000 goto label1;
+
+		keyReal = key - 129000;
+
+	label1:
+		
+		a0[keyReal] = -6666666;
+
+		return;
+	}
+
+	public void add(java.lang.Object) {
+		java.util.HashSet r0;
+		int[] a0;
+		int key, keyReal;
+
+        r0 := @this: java.util.HashSet;
+
+		a0 = <java.util.HashSet: int[] VStore>;
+
+        key := @parameter0: java.lang.Object;
+
+		keyReal = key;
+
+		if key <= 129000 goto label1;
+
+		keyReal = key - 129000;
+
+	label1:
+		
+		a0[keyReal] = 1;
+
+		return;
+	}
+
+	public boolean contains(java.lang.Object) {
+		java.util.HashSet r0;
+		int[] a0;
+		int key, keyReal;
+		java.lang.Object result;
+
+        r0 := @this: java.util.HashSet;
+
+		a0 = <java.util.HashSet: int[] VStore>;
+
+        key := @parameter0: java.lang.Object;
+
+		keyReal = key;
+
+		if key <= 129000 goto label1;
+
+		keyReal = key - 129000;
+
+	label1:
+		
+		result = a0[keyReal];
+
+		if result == -6666666 goto label2;
+
+		return 1;
+
+	label2:
+		return 0;
+	}
+
+
+
 }

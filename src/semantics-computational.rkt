@@ -30,6 +30,7 @@
 ;machine(init) X list of names -> machine(fin)
 (define (compute mac)
 	(define mac-init (build-virtual-table mac))
+	(display (~a "Memory object-base: " (vtab-meta-top (memory-v-meta (machine-mem mac-init))) "\n"))
 	(display (~a "Total number of classes: " (length (machine-classes mac-init)) "\n"))
 	(display (~a "Total number of functions: " (length (all-functions mac-init)) "\n"))
 ;	(display (~a "mem size 2.1: " (memory-heap-size (machine-mem mac-init)) " \n"))
@@ -80,6 +81,7 @@
 ;			(display "\n")
 ;			(println string-id-map)
 ;			(display "\n")
+;			(pretty-print (id->string (function-name func)))
 ;			(pretty-print (formatter inst-cur))
 			(set! line-counter-c (+ line-counter-c 1))
 ;			(display (~a "mem size 2.2: " (memory-heap-size (machine-mem mac)) " \n"))
@@ -400,11 +402,13 @@
 				;[-TODO] expr type
 				[(expr-var v) (memory-sforce-write mem0 (string-id (variable-name v)) v-new 0 (jtype->mtype v-new-jt))]
 				[(expr-array arr idx)
+					(begin
+;					(display (~a "array addr: " arr " index: " idx "\n"))
 					(letrec
 						([addr (memory-sforce-read mem0 (string-id (variable-name arr)) 0)]
 						[idx-e (ast->expression idx)]
 						[idx-v (car (expr-eval idx-e m))])
-						(memory-awrite mem0 addr idx-v v-new (jtype->mtype v-new-jt)))]
+						(memory-awrite mem0 addr idx-v v-new (jtype->mtype v-new-jt))))]
 				[(expr-field obj cls fname)
 					(letrec
 						([addr 

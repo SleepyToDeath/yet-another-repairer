@@ -34,7 +34,6 @@
         <copy file="../model/java.lang.Object.jimple" todir="sootOutput"/>
         <copy file="../model/java.lang.Enum.jimple" todir="sootOutput"/>
         <copy file="../model/java.util.HashSet.jimple" todir="sootOutput"/>
-        <copy file="../model/java.util.Set.jimple" todir="sootOutput"/>
         <copy file="../model/java.util.HashMap.jimple" todir="sootOutput"/>
     </target>
 

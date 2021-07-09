@@ -28,7 +28,7 @@ package net.floodlightcontroller.packet;
 public class LLDPTLV {
     protected byte type;
     protected short length;
-    protected byte[] value;
+    protected int value;
 
     /**
      * @return the type
@@ -63,14 +63,14 @@ public class LLDPTLV {
     /**
      * @return the value
      */
-    public byte[] getValue() {
+    public int getValue() {
         return value;
     }
 
     /**
      * @param value the value to set
      */
-    public LLDPTLV setValue(byte[] value) {
+    public LLDPTLV setValue(int value) {
         this.value = value;
         return this;
     }

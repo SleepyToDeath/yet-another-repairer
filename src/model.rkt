@@ -149,7 +149,8 @@
 		))
 ))
 
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Map-funcs)
+;[ABLATION-ABS]
+;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Map-funcs)
 
 ;==============================================
 
@@ -233,7 +234,8 @@
 		))
 ))
 
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) HashMap-funcs)
+;[ABLATION-ABS]
+;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) HashMap-funcs)
 
 ;==============================================
 
@@ -293,7 +295,8 @@
 		))
 ))
 
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) HashSet-funcs)
+;[ABLATION-ABS]
+;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) HashSet-funcs)
 
 ;==============================================
 
@@ -353,7 +356,8 @@
 		))
 ))
 
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Set-funcs)
+;[ABLATION-ABS]
+;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Set-funcs)
 
 ;==============================================
 
@@ -388,13 +392,15 @@
 		))
 ))
 
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) ArrayList-funcs)
+;[ABLATION-ABS]
+;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) ArrayList-funcs)
 ;==============================================
 
 ;================= Optional ===================
 (define Optional-funcs (list ))
 
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Optional-funcs)
+;[ABLATION-ABS]
+;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Optional-funcs)
 ;==============================================
 
 ;================== String ====================
@@ -417,7 +423,8 @@
 		(lambda (mem ret args)
 			mem))
 ))
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Enum-funcs)
+;[ABLATION-ABS]
+;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Enum-funcs)
 ;==============================================
 
 ;================= Object =====================
@@ -429,7 +436,8 @@
 			(define mem-ret (memory-sforce-write mem ret obj 0 addr-type))
 			mem-ret))
 ))
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Object-funcs)
+;[ABLATION-ABS]
+;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Object-funcs)
 ;==============================================
 
 ;=================== Math =====================
@@ -442,8 +450,8 @@
 			(define mem-ret (memory-sforce-write mem ret math-random-num 0 int-type))
 			mem-ret))
 ))
-
-(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Math-funcs)
+;[ABLATION-ABS]
+;(map (lambda (m) (model-register (caar m) (cdar m) (cdr m))) Math-funcs)
 ;==============================================
 
 ;================ Collection ==================

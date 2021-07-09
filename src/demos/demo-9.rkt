@@ -24,7 +24,7 @@
 "java.lang.Object.jimple"
 "java.lang.Integer.jimple"
 "java.util.HashMap.jimple"
-"java.util.Map.jimple"
+;"java.util.Map.jimple"
 "net.floodlightcontroller.staticflowentry.StaticFlowEntryPusher.jimple"
 "net.floodlightcontroller.staticflowentry.web.StaticFlowEntryPusherResource.jimple"
 "net.floodlightcontroller.staticflowentry.web.StaticFlowEntryPusherResourceTest.jimple"

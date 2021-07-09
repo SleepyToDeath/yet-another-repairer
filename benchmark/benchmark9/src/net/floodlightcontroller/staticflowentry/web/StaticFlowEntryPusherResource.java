@@ -18,7 +18,7 @@
 package net.floodlightcontroller.staticflowentry.web;
 
 //import java.io.IOException;
-import java.util.Map;
+import java.util.HashMap;
 
 
 //import org.restlet.resource.Delete;
@@ -51,7 +51,7 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
      * @param Map containing the fields of the flow
      * @return state indicating whether a flow is valid or not
      */
-    public int checkFlow(Map<String, Integer> rows) {
+    public int checkFlow(HashMap<String, Integer> rows) {
         //Declaring & Initializing flags
         int state = 0;
         boolean dl_type = false;
@@ -252,7 +252,7 @@ public class StaticFlowEntryPusherResource /* extends ServerResource */ {
      * @param Map containing the fields of the flow
      * @return state indicating whether a flow is valid or not
      */
-    public static int checkActions(Map<String, Integer> entry) {
+    public static int checkActions(HashMap<String, Integer> entry) {
 
         boolean ip6 = false;
         boolean ip4 = false;
