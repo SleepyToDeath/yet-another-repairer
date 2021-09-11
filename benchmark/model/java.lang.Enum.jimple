@@ -1,0 +1,12 @@
+public class java.lang.Enum extends java.lang.Object
+{
+	public static void <init>(java.lang.String,int) {
+        java.lang.Enum r0;
+
+        r0 := @this: java.lang.Enum;
+
+		return r0;
+	}
+
+}
+

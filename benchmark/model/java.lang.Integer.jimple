@@ -1,0 +1,30 @@
+public class java.lang.Integer extends java.lang.Object
+{
+	public int value;
+	public static void <init>(int) {
+        java.lang.Integer r0;
+		int r1;
+
+        r0 := @this: java.lang.Integer;
+
+        r1 := @parameter0: int;
+
+        specialinvoke r0.<java.lang.Object: void <init>()>();
+
+        r0.<java.lang.Integer: int value> = r1;
+
+        return;
+	}
+
+	public int intValue() {
+        java.lang.Integer r0;
+		int r1;
+		
+        r0 := @this: java.lang.Integer;
+
+        r1 = r0.<java.lang.Integer: int value>;
+
+		return r1;
+	}
+}
+

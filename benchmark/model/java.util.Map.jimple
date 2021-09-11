@@ -1,0 +1,7 @@
+public class java.util.Map extends java.lang.Object
+{
+	private int[] KVStore;
+    public java.lang.Object get(java.lang.Object)
+	{
+	}
+}
